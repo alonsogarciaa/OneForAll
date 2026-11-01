@@ -1,0 +1,28 @@
+appId: com.oneforall.app
+productName: OneForAll
+copyright: Copyright © 2026 pazos
+directories:
+  output: dist
+  buildResources: build/resources
+files:
+  - out/**
+  - package.json
+extraResources:
+  - from: build/runtime
+    to: runtime
+    filter:
+      - "**/*"
+      - "!_dl/**"
+      - "!**/__pycache__/**"
+asar: true
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  shortcutName: OneForAll
+  artifactName: OneForAll Setup ${version}.${ext}
