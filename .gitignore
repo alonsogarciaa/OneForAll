@@ -9,3 +9,5 @@ build/runtime/
 .pytest_cache/
 test-results/
 playwright-report/
+.launch-tmp.mjs
+.dbg-tmp.mjs

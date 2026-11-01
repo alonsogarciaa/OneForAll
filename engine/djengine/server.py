@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Annotated, Any, Callable, Literal, Union
 
 from fastapi import APIRouter, Body, Depends, FastAPI, Header, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -103,6 +104,14 @@ def create_app(services: Services, token: str) -> FastAPI:
         await svc.jobs.cancel_all()
 
     app = FastAPI(lifespan=lifespan)
+    # The Electron renderer loads from file:// (origin "null") or the dev server on localhost.
+    # Web pages never get the token, but they are still kept out of CORS.
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origin_regex=r"^(null|http://localhost:\d+)$",
+        allow_methods=["*"],
+        allow_headers=["X-Token", "Content-Type"],
+    )
     app.state.services = svc
     api = APIRouter(dependencies=[Depends(require_token)])
 

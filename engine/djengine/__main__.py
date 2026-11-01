@@ -28,6 +28,8 @@ def main(argv: list[str] | None = None) -> None:
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind(("127.0.0.1", args.port))
     port = sock.getsockname()[1]
+    # Listen before announcing the port: early connections wait in the backlog until uvicorn accepts them.
+    sock.listen(128)
     config = uvicorn.Config(app, log_level="warning")
     server = uvicorn.Server(config)
 
