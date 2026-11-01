@@ -90,6 +90,8 @@ class TrackRecord:
     musical_key: str | None = None
     camelot: str | None = None
     missing: bool = False
+    lufs: float | None = None
+    analyzed_at: str | None = None
 
 
 @dataclass
@@ -115,6 +117,10 @@ class Library:
         self._conn.row_factory = sqlite3.Row
         with self._lock:
             self._conn.executescript(_SCHEMA)
+            cols = {r[1] for r in self._conn.execute("PRAGMA table_info(tracks)")}
+            for col, decl in (("lufs", "REAL"), ("analyzed_at", "TEXT")):  # phase 2 migration
+                if col not in cols:
+                    self._conn.execute(f"ALTER TABLE tracks ADD COLUMN {col} {decl}")
             self._conn.commit()
 
     def _exec(self, sql: str, params=()) -> sqlite3.Cursor:
@@ -179,6 +185,17 @@ class Library:
             self._conn.executemany("UPDATE tracks SET missing=0 WHERE id=?", [(i,) for i in present])
             self._conn.commit()
         return len(missing)
+
+    def track_by_path(self, path: str) -> TrackRecord | None:
+        rows = self._query("SELECT * FROM tracks WHERE path=?", (str(path),))
+        return self._to_track(rows[0]) if rows else None
+
+    def set_track_analysis(self, path: str, bpm: float | None, musical_key: str, camelot: str, lufs: float | None) -> bool:
+        cur = self._exec(
+            "UPDATE tracks SET bpm=?, musical_key=?, camelot=?, lufs=?, analyzed_at=? WHERE path=?",
+            (bpm, musical_key, camelot, lufs, _now(), str(path)),
+        )
+        return cur.rowcount > 0
 
     def add_history(self, video_id, title, artist, action, status, track_id=None) -> int:
         cur = self._exec(

@@ -2,7 +2,9 @@ import json
 import logging
 from pathlib import Path
 
-from pydantic import BaseModel, Field, ValidationError
+from typing import Literal
+
+from pydantic import BaseModel, Field, ValidationError, model_validator
 
 log = logging.getLogger(__name__)
 
@@ -18,6 +20,16 @@ class Settings(BaseModel):
     name_template: str = "{artist} - {title}"
     download_concurrency: int = Field(default=3, ge=1, le=6)
     tinted: bool = False
+    analyze_on_download: bool = True
+    key_notation: Literal["camelot", "musical"] = "camelot"
+    bpm_min: int = Field(default=70, ge=40, le=250)
+    bpm_max: int = Field(default=180, ge=40, le=250)
+
+    @model_validator(mode="after")
+    def _bpm_range(self):
+        if self.bpm_min >= self.bpm_max:
+            raise ValueError("El mínimo debe ser menor que el máximo")
+        return self
 
 
 def load_settings(path: Path) -> Settings:

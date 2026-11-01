@@ -22,6 +22,7 @@ from .settings import Settings, load_settings, save_settings
 
 log = logging.getLogger(__name__)
 CONVERT_CONCURRENCY = 2
+ANALYSIS_CONCURRENCY = 2
 
 
 class EventHub:
@@ -46,13 +47,15 @@ class Services:
     downloader: Any
     fake: bool
     hub: EventHub = field(default_factory=EventHub)
+    analysis: Any = None
+    allowed_paths: set = field(default_factory=set)  # files the user picked this session (/audio)
     shutdown: Callable[[], None] | None = None
 
 
 def build_services(paths: AppPaths, fake: bool) -> Services:
     settings = load_settings(paths.settings_path)
     hub = EventHub()
-    jobs = JobManager(paths.tmp_dir, hub.broadcast, {"download": settings.download_concurrency, "convert": CONVERT_CONCURRENCY})
+    jobs = JobManager(paths.tmp_dir, hub.broadcast, {"download": settings.download_concurrency, "convert": CONVERT_CONCURRENCY, "analysis": ANALYSIS_CONCURRENCY})
     jobs.purge_orphans()
     library = Library(paths.db_path)
     library.refresh_missing()
@@ -62,7 +65,10 @@ def build_services(paths: AppPaths, fake: bool) -> Services:
         search, downloader = FakeSearch(), fake_downloader
     else:
         search, downloader = SearchService(), download_audio
-    return Services(paths, settings, library, jobs, search, downloader, fake, hub)
+    from .analysis.store import AnalysisStore
+
+    analysis = AnalysisStore(paths.db_path, paths.root / "analysis")
+    return Services(paths, settings, library, jobs, search, downloader, fake, hub, analysis=analysis)
 
 
 # --- request bodies -----------------------------------------------------------
