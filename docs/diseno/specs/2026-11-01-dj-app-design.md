@@ -163,32 +163,17 @@ Todos los errores se registran en `logs/engine.log` (rotación 5 × 2 MB).
 - **Modo Tintado:** sube la opacidad del cristal al 70 %.
 - Durante la implementación se usan las skills `impeccable` y `ui-ux-pro-max`.
 
-## 8. Fases siguientes (diseño detallado en su propia spec)
+## 8. Fases siguientes (hoja de ruta revisada el 2026-11-02)
 
-- **Fase 2 – Análisis DJ**
-  - BPM y tonalidad (Camelot) con un banco de pruebas propio (≥ 50 pistas con BPM/tonalidad conocidos) para medir la precisión.
-  - Corrección doble/mitad de tempo a un rango DJ configurable (por defecto 70–180).
-  - Candidatos de librería: essentia (si hay wheel para Windows), madmom, librosa; se elige por precisión medida.
-  - Análisis opcional al descargar, también en playlists.
-  - Forma de onda.
-  - Ventana de datos para cualquier archivo propio.
-  - Tap tempo.
-  - Buscador por BPM y tonalidad en la biblioteca, con compatibilidad armónica (misma clave, ±1 Camelot, relativa) para mashups.
-- **Fase 3 – Stems**
-  - Modelos ONNX (familia Demucs/Roformer) con el módulo `accel`. 4 o 6 stems.
-  - Carpeta de stems elegible; por defecto `<carpeta de música>/Stems/<canción>/`.
-  - Desde el buscador: "solo voz / batería / bajo / todos los stems".
-  - Cancelar limpia los archivos y detiene la animación. Tras cancelar, para volver a lanzar hay que elegir de nuevo la canción.
-  - Se ejecuta dentro del motor, sin abrir otra instancia de la app (bug review #5).
-- **Fase 4 – Herramientas de audio**
-  - Mejora con IA (super-resolución tipo AudioSR o Apollo, en ONNX si es viable). Se marca como "audio reconstruido".
-  - Cambiador de BPM y tono (Rubber Band).
-  - Exportación de playlists a Rekordbox XML.
-- **Fase 5 – Descubrimiento**
-  - Recomendaciones por canción (relacionados de YouTube Music, álbum y artistas participantes).
-  - Recomendaciones por texto (búsqueda temática en YouTube Music).
-  - Importar enlaces de Spotify, Apple Music o SoundCloud → metadatos → búsqueda en YouTube. Si no hay coincidencia, se marca "no encontrada".
-- **Fase 6:** empaquetado y prueba en Mac.
+Se incorporan todas las funciones de [stemdeck](https://github.com/stemdeckapp/stemdeck) a petición del dueño. Cada fase tiene su propia spec.
+
+| Fase | Contenido |
+|---|---|
+| **2. Análisis** | BPM, tonalidad (Camelot), loudness, forma de onda, rejilla de beats, tap tempo, ventana de datos, buscador armónico. Spec: `2026-11-02-oneforall-fase2-analisis-design.md` |
+| **3. Stems + mezclador** | 6 stems (`htdemucs_6s`), voz principal/coros (UVR-MDX-NET Karaoke 2), elegir stems antes de separar, cola, aceleración NVIDIA/AMD/Intel/CPU, carpeta de stems elegible, "solo voz/batería/bajo" desde el buscador. Mezclador de práctica: silencio, solo y volumen por stem, velocidad 0,5–0,99× sin cambiar el tono, bucle sobre la onda, cambio de tonalidad global o por stem, metrónomo con cuenta atrás y compases. Exportar mezcla, zip de stems y bucle; arrastrar al DAW |
+| **4. Herramientas** | Mejora de audio con IA, cambiar BPM y tono del archivo, editar la rejilla de beats, detección de secciones, Rekordbox XML, exportar vídeo con la imagen original |
+| **5. Descubrimiento y datos** | Recomendaciones por canción y por texto, búsqueda en SoundCloud, importar enlaces de Spotify/Apple Music/SoundCloud, ficha de MusicBrainz/Wikipedia/Discogs, letras sincronizadas (LRCLIB) y transcripción de la voz |
+| **6. Biblioteca y extras** | Carpetas de colores, #etiquetas, favoritos, papelera, modo guía, acceso desde el móvil por la red local, idiomas, aviso de actualizaciones, empaquetado para Mac |
 
 ## 9. Estructura del proyecto
 
