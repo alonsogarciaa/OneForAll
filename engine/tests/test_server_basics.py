@@ -1,0 +1,43 @@
+import re
+import subprocess
+import sys
+import threading
+
+from djengine.settings import load_settings
+
+
+def test_health_requires_token(client):
+    assert client.get("/health").status_code == 401
+    assert client.get("/health", headers={"X-Token": "bad"}).status_code == 401
+    assert client.get("/health", headers={"X-Token": "t"}).json() == {"ok": True}
+
+
+def test_settings_roundtrip_persists(client, paths):
+    h = {"X-Token": "t"}
+    s = client.get("/settings", headers=h).json()
+    assert s["default_format"] == "mp3" and s["name_template"] == "{artist} - {title}"
+    s["default_format"] = "flac"
+    assert client.put("/settings", json=s, headers=h).status_code == 200
+    assert load_settings(paths.settings_path).default_format == "flac"
+
+
+def test_corrupt_settings_fall_back_to_defaults(paths):
+    paths.settings_path.write_text("{not json")
+    assert load_settings(paths.settings_path).download_concurrency == 3
+
+
+def test_cli_prints_port_line(tmp_path):
+    proc = subprocess.Popen(
+        [sys.executable, "-m", "djengine", "--port", "0", "--token", "t", "--data-root", str(tmp_path)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+    )
+    lines = []
+    t = threading.Thread(target=lambda: lines.append(proc.stdout.readline()), daemon=True)
+    t.start()
+    t.join(15)
+    proc.kill()
+    proc.wait()
+    assert lines, "no port line within 15 s"
+    assert re.fullmatch(r'\{"port": \d+\}', lines[0].strip())
