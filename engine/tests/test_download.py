@@ -53,3 +53,27 @@ async def test_download_failure_maps(ctx, monkeypatch):
     with pytest.raises(UserError) as ei:
         await download_audio(ctx, "https://youtu.be/private")
     assert ei.value.code == "unavailable"
+
+
+@pytest.mark.parametrize("url", [
+    "file:///C:/Windows/win.ini",
+    "http://i.ytimg.com/vi/x/hq.jpg",
+    "https://127.0.0.1:8000/secret",
+    "https://evil.example.com/x.jpg",
+    "https://i.ytimg.com.evil.com/x.jpg",
+])
+def test_thumbnail_rejects_non_youtube_urls(url, monkeypatch):
+    from djengine import download
+
+    opened = []
+    monkeypatch.setattr(download.urllib.request, "urlopen", lambda *a, **k: opened.append(a))
+    assert download.fetch_thumbnail(url) is None
+    assert opened == []
+
+
+def test_thumbnail_allows_youtube_hosts():
+    from djengine.download import thumbnail_url_allowed
+
+    assert thumbnail_url_allowed("https://i.ytimg.com/vi/x/hq.jpg")
+    assert thumbnail_url_allowed("https://yt3.googleusercontent.com/abc=s576")
+    assert thumbnail_url_allowed("https://lh3.ggpht.com/abc")

@@ -6,6 +6,7 @@ import shlex
 import sys
 import urllib.request
 from pathlib import Path
+from urllib.parse import urlparse
 
 from .errors import UserError, user_error
 from .tools import find_tool
@@ -76,13 +77,25 @@ async def download_audio(ctx, url: str) -> Path:
     return files[0]
 
 
+THUMB_HOST_SUFFIXES = ("ytimg.com", "googleusercontent.com", "ggpht.com")
+THUMB_MAX_BYTES = 5 * 1024 * 1024
+
+
+def thumbnail_url_allowed(url: str) -> bool:
+    # The URL arrives from the UI request body, so only YouTube image CDNs over https are fetched.
+    u = urlparse(url)
+    host = (u.hostname or "").lower()
+    return u.scheme == "https" and any(host == s or host.endswith("." + s) for s in THUMB_HOST_SUFFIXES)
+
+
 def fetch_thumbnail(url: str | None) -> bytes | None:
-    if not url:
+    if not url or not thumbnail_url_allowed(url):
         return None
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=10) as r:
-            return r.read()
+            data = r.read(THUMB_MAX_BYTES + 1)
+            return data if len(data) <= THUMB_MAX_BYTES else None
     except Exception as e:
         log.info("thumbnail fetch failed for %s: %s", url, e)
         return None
