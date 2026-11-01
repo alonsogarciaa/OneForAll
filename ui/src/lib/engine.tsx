@@ -85,3 +85,8 @@ export function EngineProvider({ children }: { children: ReactNode }) {
 
   return <Ctx.Provider value={{ client, status, retry }}>{children}</Ctx.Provider>
 }
+
+/** Test helper: renders children against a given (mock) client. */
+export function EngineTestProvider({ client, children }: { client: EngineClient; children: ReactNode }) {
+  return <Ctx.Provider value={{ client, status: 'ready', retry: () => undefined }}>{children}</Ctx.Provider>
+}

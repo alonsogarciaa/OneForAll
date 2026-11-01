@@ -293,3 +293,6 @@
 .empty svg {
   color: var(--lg-text-tertiary);
 }
+.search-pill input:focus-visible {
+  box-shadow: none;
+}
