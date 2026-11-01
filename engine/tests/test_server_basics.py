@@ -72,3 +72,18 @@ def test_cors_rejects_web_origins(client):
 def test_info_reports_folders(client, paths):
     r = client.get("/info", headers={"X-Token": "t"}).json()
     assert r["logs_dir"] == str(paths.logs_dir) and r["data_dir"] == str(paths.root)
+
+
+def test_engine_exits_when_parent_dies(tmp_path):
+    parent = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(4)"])
+    engine = subprocess.Popen(
+        [sys.executable, "-m", "djengine", "--port", "0", "--data-root", str(tmp_path), "--parent-pid", str(parent.pid)],
+        stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
+    )
+    try:
+        assert engine.stdout.readline().startswith('{"port"')  # running while the parent lives
+        assert engine.poll() is None
+        parent.wait()
+        engine.wait(timeout=15)  # raises TimeoutExpired if the engine keeps running as an orphan
+    finally:
+        engine.kill()

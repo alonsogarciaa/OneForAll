@@ -100,7 +100,7 @@ export class EngineProcess extends EventEmitter {
 
   private spawnOnce(): Promise<EngineInfo> {
     const [cmd, ...pre] = this.opts.pythonCmd
-    const args = [...pre, '--port', '0']
+    const args = [...pre, '--port', '0', '--parent-pid', String(process.pid)]
     if (this.opts.dataRoot) args.push('--data-root', this.opts.dataRoot)
     if (this.opts.fake) args.push('--fake')
     const env = { ...process.env, PYTHONUNBUFFERED: '1', PYTHONIOENCODING: 'utf-8' }

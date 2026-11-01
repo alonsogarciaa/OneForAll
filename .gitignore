@@ -11,3 +11,4 @@ test-results/
 playwright-report/
 .launch-tmp.mjs
 .dbg-tmp.mjs
+test-results/
