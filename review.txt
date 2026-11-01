@@ -1,0 +1,36 @@
+BUGS
+- Si vuelves a descargar un archivo con el mismo nombre en la misma carpeta te crea una carpeta dentro de esa carpeta, dentro de la nueva carpeta esta el archivo con el mismo nombre (1), el archivo repetido deberia de aparecer con el (1) en la misma carpeta sin crear una nueva.
+- Cuando cancelas el proceso de stems no se cancela la animacion de la barra.
+- Si no pulsas la opcion de analizar bpm y tonalidad y le das a descargar te aparece en la siguiente ventana: BPM/KEY: se procesara al descargar.
+- Cuando intento utilizar los stems me abre otra vez el programa y solo me crea una carpeta llamada stems, no hace los stems, solo hace la carpeta. La carpeta de stems se crea en la carpeta que tienes seleccionada en el menu "Descargador".
+- Cuando buscas algo en el buscador hay resultados bugeados. (inserto foto).
+- Cuando descargas playlist y tienes la opcion de bpm y tonalidad activada no funciona.
+- Al cancelar procesos a veces se quedan archivos residuales.
+- A veces te da un tempo incorrecto.
+- A veces te da una tonalidad incorrecta.
+
+MEJORAS 
+- Que los avisos aparezcan en una nueva ventana (como cuando descargas una cancion que te aparecen los datos en una ventana nueva)
+- Opcion de borrar solo canciones seleccionadas del historial o borrar todo (ahora solo hay borrar todo el historial).
+- Elegir donde guardar los stems.
+- Buscar una cancion en el buscador y que te de la opcion de: descargar el archivo en varios formatos, descargar solo vocal, descargar solo bateria, descargar solo bajos, descargar stems...
+- Que el buscador te de informacion como bpm, tonalidad, duracion de la cancion y visualizaciones.
+- Que el historial te de informacion como bpm, tonalidad, duracion de la cancion y visualizaciones.
+- Descargar desde otras plataformas de audio (yo lo que haria seria coger la informacion de dicha plataforma y que el programa con dicha informacion la busque en youtube y la descargue desde youtube, supongo que asi ahorrarias codigo porque estas reutilizando lo que ya tienes hecho de youtube, el problema es como haya cosas en otras plataformas de audio y que en youtube no esten).
+- Intentar que en el buscador solo aparezcan canciones, mezclas, sesiones de dj, remixes... (buscas jijantes y en vez de aparecerte la cancion de jijantes aparecen videos de gerard romero xd, buscas la graciosa y hay un video de un guiri de 12min, hay videos de turismo...).
+- Cuando cancelas proceso obligar a seleccionar cancion (en separador de stems).
+
+IMPLEMENTACIONES
+- Añadir aviso si intentas cerrar la aplicacion convirtiendo archivos o descargando canciones
+- Añadir boton de cancelar un solo proceso, si estoy utilizando el descargador, el conversor y los stems que pueda solo cancelar los stems o solo cancelar el conversor...
+- Añadir ventana de datos que funcione seleccionando tu propio archivo.
+- Añadir tap tempo (herramienta brutal para comprobar manualmente el tempo de una cancion).
+- Añadir base de datos de tus canciones.
+- Añadir con la base de datos de tus canciones hacer que si intentas descargar una cancion que ya tienes en la base de datos salte un aviso.
+- Añadir buscador de bpm y key de tus canciones (brutal a la hora de hacer mashups, ya que muchas veces sacan una nueva cancion que sabes que se va a pegar, quieres hacer un mashup y tienes que buscar canciones con bpms parecidos y tonalidad compatible).
+- Añadir ventana de cambiador de bpm y de tono.
+- Añadir ventana de recomendaciones en base a lo que descargas/buscas. por ejemplo la graciosa de quevedo, que en esa ventana te salgan canciones parecidas o de los artistas que participan en ese tema, por ejemplo, que salgan mas canciones del album de quevedo, alguna de elvis crespo...
+- Añadir ventana de recomendaciones en base a texto. por ejemplo si pongo, reggaeton antiguo que me salgan canciones de reggaeton antiguo, si pongo quevedo que me salgan canciones de quevedo...
+
+OTRO PROYECTO
+- El mismo programa hacerlo plugin vst para que se pueda meter en DAWs, seria una buenisima herramienta para samplear y hacer canciones con esos samples, ya que estas buscando la cancion desde el propio daw, la estas descargando y puedes quedarte solo con el stem que tu quieras para asi hacer una cancion.
