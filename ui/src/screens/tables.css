@@ -1,0 +1,86 @@
+.toolbar {
+  display: flex;
+  gap: 8px;
+}
+.filter {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.filter svg {
+  position: absolute;
+  left: 11px;
+  color: var(--lg-text-tertiary);
+  pointer-events: none;
+}
+.filter .field {
+  width: 300px;
+  padding-left: 32px;
+  border-radius: var(--radius-pill);
+}
+.stable {
+  display: flex;
+  flex-direction: column;
+}
+.stable-row {
+  display: grid;
+  align-items: center;
+  gap: 12px;
+  min-height: 42px;
+  padding: 0 10px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+.stable-row > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--lg-text-secondary);
+}
+.stable-row > span .cell-strong {
+  color: var(--lg-text-primary);
+  font-weight: 500;
+}
+.stable-head {
+  position: sticky;
+  top: -20px;
+  z-index: 2;
+  min-height: 34px;
+  border-radius: 0;
+  border-bottom: 1px solid var(--hairline);
+  background: var(--surface-content);
+}
+.stable-head > span {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--lg-text-tertiary);
+}
+.stable-row:not(.stable-head):hover {
+  background: var(--surface-hover);
+}
+.stable-row[aria-selected='true'] {
+  background: rgba(0, 122, 255, 0.18);
+}
+.stable-row[aria-selected='true']:hover {
+  background: rgba(0, 122, 255, 0.24);
+}
+.stable input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.cell-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.row-missing .cell-strong {
+  color: var(--lg-text-tertiary);
+}
+.txt-ok {
+  color: var(--success);
+}
+.txt-err {
+  color: var(--danger);
+}
