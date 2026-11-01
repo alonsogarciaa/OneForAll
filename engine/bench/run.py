@@ -36,9 +36,11 @@ def _analyze(item: dict, tempo_methods: list[str], key_methods: list[str]) -> di
         t0 = time.perf_counter()
         out["tempo"][m] = estimate_tempo(y, SR, method=m).bpm
         out["secs"][f"tempo:{m}"] = time.perf_counter() - t0
+    y44 = decode(Path(item["audio"]), sr=44100) if "cnn" in key_methods else None
     for m in key_methods:
         t0 = time.perf_counter()
-        out["key"][m] = estimate_key(y, SR, method=m).camelot
+        # the CNN was trained on 44.1 kHz input: feed it native-rate audio, as the app does
+        out["key"][m] = (estimate_key(y44, 44100, method=m) if m == "cnn" else estimate_key(y, SR, method=m)).camelot
         out["secs"][f"key:{m}"] = time.perf_counter() - t0
     return out
 
