@@ -12,3 +12,5 @@ playwright-report/
 .launch-tmp.mjs
 .dbg-tmp.mjs
 test-results/
+engine/bench/data/
+engine/bench/results.json

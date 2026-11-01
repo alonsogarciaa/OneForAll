@@ -188,3 +188,10 @@ async def test_cancel_during_final_emit_is_refused(tmp_root):
     release.set()
     await wait_done(mgr, job.id)
     assert mgr.get(job.id).status == "done" and mgr.active_count() == 0
+
+
+def test_user_error_survives_pickle():
+    import pickle
+
+    e = pickle.loads(pickle.dumps(UserError("offline", "Sin conexión")))
+    assert (e.code, e.message) == ("offline", "Sin conexión")

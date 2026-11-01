@@ -6,6 +6,9 @@ class UserError(Exception):
         self.code = code
         self.message = message
 
+    def __reduce__(self):  # picklable, so errors cross process-pool boundaries
+        return (UserError, (self.code, self.message))
+
 
 class JobCancelled(Exception):
     pass
