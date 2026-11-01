@@ -66,7 +66,7 @@ def test_thumbnail_rejects_non_youtube_urls(url, monkeypatch):
     from djengine import download
 
     opened = []
-    monkeypatch.setattr(download.urllib.request, "urlopen", lambda *a, **k: opened.append(a))
+    monkeypatch.setattr(download._opener, "open", lambda *a, **k: opened.append(a))
     assert download.fetch_thumbnail(url) is None
     assert opened == []
 
@@ -77,3 +77,16 @@ def test_thumbnail_allows_youtube_hosts():
     assert thumbnail_url_allowed("https://i.ytimg.com/vi/x/hq.jpg")
     assert thumbnail_url_allowed("https://yt3.googleusercontent.com/abc=s576")
     assert thumbnail_url_allowed("https://lh3.ggpht.com/abc")
+
+
+def test_thumbnail_redirect_to_other_host_is_refused():
+    import urllib.error
+    import urllib.request
+
+    from djengine.download import SafeRedirect
+
+    req = urllib.request.Request("https://i.ytimg.com/vi/x/hq.jpg")
+    h = SafeRedirect()
+    with pytest.raises(urllib.error.HTTPError):
+        h.redirect_request(req, None, 302, "Found", {}, "http://169.254.169.254/latest")
+    assert h.redirect_request(req, None, 302, "Found", {}, "https://i.ytimg.com/vi/y/hq.jpg") is not None

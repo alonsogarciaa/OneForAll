@@ -4,6 +4,7 @@ import os
 import re
 import shlex
 import sys
+import urllib.error
 import urllib.request
 from pathlib import Path
 from urllib.parse import urlparse
@@ -88,12 +89,24 @@ def thumbnail_url_allowed(url: str) -> bool:
     return u.scheme == "https" and any(host == s or host.endswith("." + s) for s in THUMB_HOST_SUFFIXES)
 
 
+class SafeRedirect(urllib.request.HTTPRedirectHandler):
+    """Follows a redirect only when the new URL passes the same thumbnail allowlist."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if not thumbnail_url_allowed(newurl):
+            raise urllib.error.HTTPError(newurl, code, "redirect to disallowed host", headers, fp)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+_opener = urllib.request.build_opener(SafeRedirect)
+
+
 def fetch_thumbnail(url: str | None) -> bytes | None:
     if not url or not thumbnail_url_allowed(url):
         return None
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=10) as r:
+        with _opener.open(req, timeout=10) as r:
             data = r.read(THUMB_MAX_BYTES + 1)
             return data if len(data) <= THUMB_MAX_BYTES else None
     except Exception as e:
