@@ -168,3 +168,23 @@ def test_purge_orphans(tmp_root, events):
 
     assert JobManager(tmp_root, emit, {}).purge_orphans() == 1
     assert list(tmp_root.iterdir()) == []
+
+
+async def test_cancel_during_final_emit_is_refused(tmp_root):
+    release = asyncio.Event()
+
+    async def emit(e):
+        if e["type"] == "job.done":
+            await release.wait()  # slow listener while the job is finishing
+
+    mgr = JobManager(tmp_root, emit, {"download": 1})
+
+    async def r(ctx):
+        return {"ok": 1}
+
+    job = mgr.submit("download", "t", r)
+    await asyncio.sleep(0.1)  # runner done, final emit pending
+    assert await mgr.cancel(job.id) is False
+    release.set()
+    await wait_done(mgr, job.id)
+    assert mgr.get(job.id).status == "done" and mgr.active_count() == 0

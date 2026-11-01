@@ -38,4 +38,15 @@ describe('jobsStore', () => {
     expect(activeJobs(st).map((j) => j.id)).toEqual(['c1'])
     expect(childrenOf(st, 'p').map((j) => j.id)).toEqual(['c1', 'c2'])
   })
+
+  it('keeps reset rows when the restarted engine reports no jobs', () => {
+    const s = useJobsStore.getState()
+    s.applyEvent(ev('job.progress', job('a', { status: 'running', pct: 40 })))
+    s.markEngineReset()
+    s.setAll([job('n', { status: 'running' })])
+    const { jobs, order } = useJobsStore.getState()
+    expect(jobs.a.status).toBe('failed')
+    expect(jobs.a.error?.message).toBe('El motor se reinició')
+    expect(order).toEqual(['a', 'n'])
+  })
 })

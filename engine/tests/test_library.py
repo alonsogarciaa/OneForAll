@@ -30,8 +30,10 @@ def test_normalize_key_strips_noise():
     assert normalize_key("Rosalía", "Despechá") == normalize_key("Rosalia", "Despecha")
 
 
-def test_duplicate_by_video_id_and_by_name(lib):
-    lib.add_track(rec(video_id="abc", artist="Quevedo", title="La Graciosa"))
+def test_duplicate_by_video_id_and_by_name(lib, tmp_path):
+    f = tmp_path / "q.mp3"
+    f.write_bytes(b"x")
+    lib.add_track(rec(video_id="abc", artist="Quevedo", title="La Graciosa", path=str(f)))
     assert lib.find_duplicate("abc", "", "") is not None
     assert lib.find_duplicate("zzz", "QUEVEDO", "La Graciosa (Lyrics)") is not None
     assert lib.find_duplicate("zzz", "Other", "Song") is None
@@ -65,3 +67,8 @@ def test_playlist_tracks(lib):
     lib.add_playlist_track(pid, tid, 0)
     with sqlite3.connect(lib.db_path) as c:
         assert c.execute("SELECT COUNT(*) FROM playlist_tracks").fetchone()[0] == 1
+
+
+def test_deleted_file_is_not_a_duplicate(lib, tmp_path):
+    lib.add_track(rec(video_id="abc", artist="Quevedo", title="La Graciosa", path=str(tmp_path / "gone.mp3")))
+    assert lib.find_duplicate("abc", "Quevedo", "La Graciosa") is None

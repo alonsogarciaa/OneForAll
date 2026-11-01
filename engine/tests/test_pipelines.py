@@ -109,8 +109,11 @@ async def test_cancel_mid_download_leaves_nothing(svc, music_dir, monkeypatch):
 async def test_playlist_continues_on_failure_and_skips_existing(svc, music_dir):
     info = svc.search.get_playlist("PLfake")
     existing = info.tracks[1]
+    have = music_dir / "have.mp3"
+    have.parent.mkdir(parents=True, exist_ok=True)
+    have.write_bytes(b"x")
     svc.library.add_track(TrackRecord(None, existing.id, existing.title, existing.artist, "", 5, None,
-                                      "C:/x.mp3", "mp3", 320, None, ""))
+                                      str(have), "mp3", 320, None, ""))
     job = await start_playlist(svc, "PLfake", ConvertOptions(format="mp3"))
     await wait_done(svc.jobs, job.id)
     r = svc.jobs.get(job.id).result
@@ -119,6 +122,15 @@ async def test_playlist_continues_on_failure_and_skips_existing(svc, music_dir):
     assert r["failed"][0]["target"]["id"] == "fakeprivate" and r["options"]["format"] == "mp3"
     assert (music_dir / "Fake Playlist").is_dir()
     assert len(list((music_dir / "Fake Playlist").glob("*.mp3"))) == 1
+
+
+async def test_track_whose_file_was_deleted_downloads_again(svc, music_dir, tmp_path):
+    svc.library.add_track(TrackRecord(None, "vid1", "B", "A", "", 5, None, str(tmp_path / "gone.mp3"), "mp3", 320, None, ""))
+    job = svc.jobs.submit("download", "B", make_download_runner(
+        svc, DownloadRequest(target=song("A", "B"), options=ConvertOptions(format="mp3"), skip_existing=True), music_dir))
+    await wait_done(svc.jobs, job.id)
+    assert not (svc.jobs.get(job.id).result or {}).get("skipped")
+    assert (music_dir / "A - B.mp3").exists()
 
 
 async def test_convert_keeps_original(svc, sine_wav, tmp_path):

@@ -35,7 +35,14 @@ export const useJobsStore = create<JobsState>((set) => ({
     })
   },
   setAll(jobs) {
-    set({ jobs: Object.fromEntries(jobs.map((j) => [j.id, j])), order: jobs.map((j) => j.id), meta: {} })
+    // The engine's list wins, but finished rows it no longer knows (e.g. after a restart) stay visible.
+    set((s) => {
+      const server = new Set(jobs.map((j) => j.id))
+      const kept = s.order.filter((id) => !server.has(id) && s.jobs[id] && isFinal(s.jobs[id]))
+      const merged: Record<string, Job> = Object.fromEntries(kept.map((id) => [id, s.jobs[id]]))
+      for (const j of jobs) merged[j.id] = j
+      return { jobs: merged, order: [...kept, ...jobs.map((j) => j.id)], meta: {} }
+    })
   },
   markEngineReset() {
     set((s) => {

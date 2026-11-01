@@ -91,6 +91,7 @@ class JobManager:
         self._tasks: dict[str, asyncio.Task] = {}
         self._ctxs: dict[str, JobContext] = {}
         self._last_progress: dict[str, float] = {}
+        self._finalizing: set[str] = set()  # outcome decided, status not yet set: cancel is refused
         self._emit_tail: asyncio.Task | None = None  # each event waits for the previous one: delivery keeps order
 
     # --- public -----------------------------------------------------------
@@ -109,7 +110,7 @@ class JobManager:
         if job is None or job.status in FINAL:
             return False
         ctx = self._ctxs.get(job_id)
-        if ctx is not None and ctx.finishing:
+        if job_id in self._finalizing or (ctx is not None and ctx.finishing):
             return False
         for child in list(job.children):
             await self.cancel(child)
@@ -200,6 +201,7 @@ class JobManager:
             log.exception("job %s (%s) crashed", job.id, job.type)
             job.error = {"code": "internal", "message": "Error inesperado"}
         finally:
+            self._finalizing.add(job.id)
             ctx = self._ctxs.pop(job.id, None)
             if ctx is not None:
                 for p in ctx.processes:
@@ -210,8 +212,11 @@ class JobManager:
         # The final status is set only after cleanup and after the event went out,
         # so anyone who sees a final status can rely on both.
         status, event_type = outcome
-        await self._emit({"type": event_type, "job": {**job.to_dict(), "status": status}})
-        job.status = status  # type: ignore[assignment]
+        try:
+            await self._emit({"type": event_type, "job": {**job.to_dict(), "status": status}})
+        finally:
+            job.status = status  # type: ignore[assignment]
+            self._finalizing.discard(job.id)
 
     def _progress(self, job: Job, stage: str, pct: float, speed, eta) -> None:
         if job.status in FINAL:

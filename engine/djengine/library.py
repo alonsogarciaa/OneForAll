@@ -151,14 +151,15 @@ class Library:
         return cur.lastrowid
 
     def find_duplicate(self, video_id: str | None, artist: str, title: str) -> TrackRecord | None:
+        """Only tracks whose file still exists count: a deleted file should be downloadable again."""
+        candidates: list[sqlite3.Row] = []
         if video_id:
-            rows = self._query("SELECT * FROM tracks WHERE video_id=?", (video_id,))
-            if rows:
-                return self._to_track(rows[0])
+            candidates += self._query("SELECT * FROM tracks WHERE video_id=?", (video_id,))
         if title:
-            rows = self._query("SELECT * FROM tracks WHERE norm_key=? ORDER BY id DESC", (normalize_key(artist, title),))
-            if rows:
-                return self._to_track(rows[0])
+            candidates += self._query("SELECT * FROM tracks WHERE norm_key=? ORDER BY id DESC", (normalize_key(artist, title),))
+        for r in candidates:
+            if Path(r["path"]).exists():
+                return self._to_track(r)
         return None
 
     def list_tracks(self, q: str = "") -> list[TrackRecord]:
