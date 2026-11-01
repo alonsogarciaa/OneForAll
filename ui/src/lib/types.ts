@@ -66,6 +66,8 @@ export interface Job {
   error: { code: string; message: string } | null
   result: Record<string, any> | null
   children: string[]
+  /** Original request, used for "Reintentar". */
+  payload?: Record<string, any> | null
 }
 
 export type FormatId = 'mp3' | 'aac' | 'alac' | 'opus' | 'ogg' | 'flac' | 'wav' | 'aiff' | 'original'

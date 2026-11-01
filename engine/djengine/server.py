@@ -162,7 +162,8 @@ def create_app(services: Services, token: str) -> FastAPI:
                 if dup is not None:
                     return JSONResponse(status_code=409, content={"duplicate": asdict(dup)})
             runner = make_download_runner(svc, body.request, Path(svc.settings.music_dir))
-            return {"job": svc.jobs.submit("download", t.title, runner).to_dict()}
+            payload = {"request": body.request.model_dump()}
+            return {"job": svc.jobs.submit("download", t.title, runner, payload=payload).to_dict()}
         if isinstance(body, PlaylistJobBody):
             try:
                 job = await start_playlist(svc, body.id, body.options)
@@ -171,7 +172,8 @@ def create_app(services: Services, token: str) -> FastAPI:
                 raise HTTPException(status_code=502, detail={"code": "offline", "message": "No se pudo cargar la playlist."})
             return {"job": job.to_dict()}
         jobs = [
-            svc.jobs.submit("convert", Path(p).name, make_convert_runner(svc, Path(p), body.options)).to_dict()
+            svc.jobs.submit("convert", Path(p).name, make_convert_runner(svc, Path(p), body.options),
+                            payload={"paths": [p], "options": body.options.model_dump()}).to_dict()
             for p in body.paths
         ]
         return {"jobs": jobs}

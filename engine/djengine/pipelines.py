@@ -132,14 +132,13 @@ async def start_playlist(svc, playlist_id: str, options: ConvertOptions) -> Job:
     async def parent(ctx: JobContext) -> dict:
         _ensure_dir(folder)
         pl_db = svc.library.add_playlist(info.id, info.title, str(folder))
-        kids = [
-            svc.jobs.submit(
-                "download", t.title,
-                make_download_runner(svc, DownloadRequest(target=t, options=options, skip_existing=True), folder, pl_db, i),
-                parent_id=ctx.job.id,
-            )
-            for i, t in enumerate(info.tracks)
-        ]
+        kids = []
+        for i, t in enumerate(info.tracks):
+            req = DownloadRequest(target=t, options=options, skip_existing=True)
+            kids.append(svc.jobs.submit(
+                "download", t.title, make_download_runner(svc, req, folder, pl_db, i),
+                parent_id=ctx.job.id, payload={"request": req.model_dump()},
+            ))
         total = len(kids) or 1
         while True:
             finished = [svc.jobs.get(k.id) for k in kids if svc.jobs.get(k.id).status in FINAL]
@@ -147,20 +146,21 @@ async def start_playlist(svc, playlist_id: str, options: ConvertOptions) -> Job:
             if len(finished) == len(kids):
                 break
             await asyncio.sleep(0.2)
-        result = {"done": 0, "skipped": 0, "failed": [], "cancelled": 0}
-        for k in kids:
+        result = {"done": 0, "skipped": 0, "failed": [], "cancelled": 0, "options": options.model_dump()}
+        for k, track in zip(kids, info.tracks):
             j = svc.jobs.get(k.id)
             if j.status == "done" and (j.result or {}).get("skipped"):
                 result["skipped"] += 1
             elif j.status == "done":
                 result["done"] += 1
             elif j.status == "failed":
-                result["failed"].append({"title": j.title, "child_id": j.id, **(j.error or {})})
+                result["failed"].append({"title": j.title, "child_id": j.id, "target": track.model_dump(), **(j.error or {})})
             else:
                 result["cancelled"] += 1
         return result
 
-    return svc.jobs.submit("playlist", info.title, parent)
+    return svc.jobs.submit("playlist", info.title, parent,
+                           payload={"type": "playlist", "id": playlist_id, "options": options.model_dump()})
 
 
 def make_convert_runner(svc, src: Path, options: ConvertOptions) -> Runner:

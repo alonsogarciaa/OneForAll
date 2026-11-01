@@ -31,6 +31,7 @@ class Job:
     error: dict | None = None
     result: dict | None = None
     children: list[str] = field(default_factory=list)
+    payload: dict | None = None  # the original request, so the UI can offer "Reintentar"
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -93,8 +94,9 @@ class JobManager:
         self._emit_tail: asyncio.Task | None = None  # each event waits for the previous one: delivery keeps order
 
     # --- public -----------------------------------------------------------
-    def submit(self, type: str, title: str, runner: Runner, parent_id: str | None = None) -> Job:
-        job = Job(id=uuid.uuid4().hex, type=type, title=title, parent_id=parent_id)
+    def submit(self, type: str, title: str, runner: Runner, parent_id: str | None = None,
+               payload: dict | None = None) -> Job:
+        job = Job(id=uuid.uuid4().hex, type=type, title=title, parent_id=parent_id, payload=payload)
         self._jobs[job.id] = job
         if parent_id and parent_id in self._jobs:
             self._jobs[parent_id].children.append(job.id)

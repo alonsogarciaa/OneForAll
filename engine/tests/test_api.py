@@ -42,6 +42,7 @@ def test_download_then_duplicate_409(api):
     body = {"type": "download", "request": {"target": song, "options": {"format": "mp3", "quality": "320"}}}
     r = api.post("/jobs", json=body, headers=H)
     assert r.status_code == 200
+    assert r.json()["job"]["payload"]["request"]["target"]["id"] == song["id"]
     assert wait_job(api, r.json()["job"]["id"])["status"] == "done"
     assert api.get("/search", params={"q": "graciosa", "kind": "songs"}, headers=H).json()[0]["in_library"] is True
     r2 = api.post("/jobs", json=body, headers=H)

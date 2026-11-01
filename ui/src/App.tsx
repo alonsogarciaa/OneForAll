@@ -2,6 +2,8 @@ import { AppShell } from './components/AppShell'
 import { EngineProvider, useEngine } from './lib/engine'
 import { useUiStore, type Route } from './stores/uiStore'
 import { SearchScreen } from './screens/SearchScreen'
+import { DownloadsScreen } from './screens/DownloadsScreen'
+import { PlaylistSummaryHost } from './components/PlaylistSummarySheet'
 
 const TITLES: Record<Route, string> = {
   buscar: 'Buscar',
@@ -15,6 +17,7 @@ const TITLES: Record<Route, string> = {
 function Screen() {
   const route = useUiStore((s) => s.route)
   if (route === 'buscar') return <SearchScreen />
+  if (route === 'descargas') return <DownloadsScreen />
   // Remaining screens are filled in by later tasks; until then each shows its title.
   return <h1 className="screen-title">{TITLES[route]}</h1>
 }
@@ -41,7 +44,12 @@ function Body() {
       </div>
     )
   }
-  return <Screen />
+  return (
+    <>
+      <Screen />
+      <PlaylistSummaryHost />
+    </>
+  )
 }
 
 export function App() {

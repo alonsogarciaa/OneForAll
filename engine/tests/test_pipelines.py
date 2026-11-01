@@ -116,6 +116,7 @@ async def test_playlist_continues_on_failure_and_skips_existing(svc, music_dir):
     r = svc.jobs.get(job.id).result
     assert r["done"] == 1 and r["skipped"] == 1
     assert r["failed"][0]["code"] == "unavailable" and r["failed"][0]["title"]
+    assert r["failed"][0]["target"]["id"] == "fakeprivate" and r["options"]["format"] == "mp3"
     assert (music_dir / "Fake Playlist").is_dir()
     assert len(list((music_dir / "Fake Playlist").glob("*.mp3"))) == 1
 
