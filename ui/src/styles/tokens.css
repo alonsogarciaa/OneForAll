@@ -28,7 +28,7 @@
 
   /* App surfaces */
   --surface-sidebar: rgba(20, 20, 24, 0.5);
-  --surface-content: rgba(24, 24, 27, 0.975);
+  --surface-content: #18181b;
   --surface-raised: rgba(255, 255, 255, 0.06);
   --surface-hover: rgba(255, 255, 255, 0.08);
   --surface-active: rgba(255, 255, 255, 0.13);
@@ -63,7 +63,7 @@
   --lg-specular-gradient: linear-gradient(165deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0) 45%);
 
   --surface-sidebar: rgba(246, 246, 250, 0.55);
-  --surface-content: rgba(255, 255, 255, 0.975);
+  --surface-content: #ffffff;
   --surface-raised: rgba(120, 120, 128, 0.08);
   --surface-hover: rgba(120, 120, 128, 0.1);
   --surface-active: rgba(120, 120, 128, 0.16);

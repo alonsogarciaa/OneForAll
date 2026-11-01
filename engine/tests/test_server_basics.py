@@ -67,3 +67,8 @@ def test_cors_rejects_web_origins(client):
         "Origin": "https://evil.example.com", "Access-Control-Request-Method": "GET", "Access-Control-Request-Headers": "x-token",
     })
     assert "access-control-allow-origin" not in r.headers
+
+
+def test_info_reports_folders(client, paths):
+    r = client.get("/info", headers={"X-Token": "t"}).json()
+    assert r["logs_dir"] == str(paths.logs_dir) and r["data_dir"] == str(paths.root)

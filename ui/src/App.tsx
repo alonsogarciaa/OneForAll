@@ -1,20 +1,13 @@
 import { AppShell } from './components/AppShell'
 import { EngineProvider, useEngine } from './lib/engine'
-import { useUiStore, type Route } from './stores/uiStore'
+import { useUiStore } from './stores/uiStore'
 import { SearchScreen } from './screens/SearchScreen'
 import { DownloadsScreen } from './screens/DownloadsScreen'
 import { LibraryScreen } from './screens/LibraryScreen'
 import { HistoryScreen } from './screens/HistoryScreen'
+import { ConverterScreen } from './screens/ConverterScreen'
+import { SettingsScreen } from './screens/SettingsScreen'
 import { PlaylistSummaryHost } from './components/PlaylistSummarySheet'
-
-const TITLES: Record<Route, string> = {
-  buscar: 'Buscar',
-  descargas: 'Descargas',
-  biblioteca: 'Biblioteca',
-  historial: 'Historial',
-  conversor: 'Conversor',
-  ajustes: 'Ajustes'
-}
 
 function Screen() {
   const route = useUiStore((s) => s.route)
@@ -22,8 +15,8 @@ function Screen() {
   if (route === 'descargas') return <DownloadsScreen />
   if (route === 'biblioteca') return <LibraryScreen />
   if (route === 'historial') return <HistoryScreen />
-  // Remaining screens are filled in by later tasks; until then each shows its title.
-  return <h1 className="screen-title">{TITLES[route]}</h1>
+  if (route === 'conversor') return <ConverterScreen />
+  return <SettingsScreen />
 }
 
 function Body() {

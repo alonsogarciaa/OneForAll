@@ -53,6 +53,7 @@ export function createClient(
 
   return {
     health: () => json<{ ok: boolean }>('/health'),
+    info: () => json<{ logs_dir: string; data_dir: string }>('/info'),
     search: (q: string, kind: SearchKind) => json<SearchResult[]>(`/search?${new URLSearchParams({ q, kind })}`),
     getPlaylist: (id: string) => json<PlaylistInfo>(`/playlist/${encodeURIComponent(id)}`),
     async download(req: DownloadRequest): Promise<{ job: Job } | { duplicate: TrackRecord }> {

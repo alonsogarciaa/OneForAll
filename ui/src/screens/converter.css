@@ -1,0 +1,78 @@
+.converter-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 24px;
+  align-items: start;
+}
+.dropzone {
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  padding: 40px 24px;
+  border: 1.5px dashed var(--lg-glass-border);
+  border-radius: var(--radius-panel);
+  color: var(--lg-text-secondary);
+  text-align: center;
+  transition: background-color 180ms var(--ease-out), border-color 180ms;
+}
+.dropzone p {
+  margin: 0;
+  color: var(--lg-text-primary);
+  font-weight: 500;
+}
+.dropzone.is-over {
+  border-color: var(--accent);
+  background: rgba(0, 122, 255, 0.1);
+}
+.dropzone-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+.file-list {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+}
+.file-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px 6px 12px;
+  border-radius: 10px;
+}
+.file-list li:hover {
+  background: var(--surface-hover);
+}
+.file-list li svg:first-child {
+  color: var(--lg-text-tertiary);
+  flex: none;
+}
+.file-list li span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.converter-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+  border-radius: var(--radius-panel);
+  background: var(--surface-raised);
+}
+.converter-panel h2 {
+  font-size: 16px;
+}
+.format-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.converter-hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--lg-text-secondary);
+}

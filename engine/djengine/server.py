@@ -119,6 +119,10 @@ def create_app(services: Services, token: str) -> FastAPI:
     def health():
         return {"ok": True}
 
+    @api.get("/info")
+    def info():
+        return {"logs_dir": str(svc.paths.logs_dir), "data_dir": str(svc.paths.root)}
+
     @api.get("/settings")
     def get_settings():
         return svc.settings.model_dump()

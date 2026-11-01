@@ -9,15 +9,18 @@ interface Props {
   onClose(): void
   /** Hide "Original" (it only makes sense for downloads). */
   allowOriginal?: boolean
+  /** Render in place (no popover behaviour), e.g. inside the converter panel. */
+  inline?: boolean
 }
 
 const FORMATS = Object.keys(FORMAT_NAMES) as FormatId[]
 
-export function FormatMenu({ value, onChange, onClose, allowOriginal = true }: Props) {
+export function FormatMenu({ value, onChange, onClose, allowOriginal = true, inline = false }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const lossless = LOSSLESS.includes(value.format)
 
   useEffect(() => {
+    if (inline) return
     const onDown = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && onClose()
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     document.addEventListener('mousedown', onDown)
@@ -26,13 +29,19 @@ export function FormatMenu({ value, onChange, onClose, allowOriginal = true }: P
       document.removeEventListener('mousedown', onDown)
       document.removeEventListener('keydown', onKey)
     }
-  }, [onClose])
+  }, [onClose, inline])
 
   const setFormat = (format: FormatId) =>
     onChange({ format, quality: format === 'mp3' ? '320' : null, sample_rate: null, bit_depth: LOSSLESS.includes(format) ? 16 : null })
 
   return (
-    <div ref={ref} className="format-menu glass" role="dialog" aria-label="Formato de descarga" onClick={(e) => e.stopPropagation()}>
+    <div
+      ref={ref}
+      className={inline ? 'format-inline' : 'format-menu glass'}
+      role={inline ? 'group' : 'dialog'}
+      aria-label={inline ? 'Formato de salida' : 'Formato de descarga'}
+      onClick={(e) => e.stopPropagation()}
+    >
       <label className="format-field">
         <span>Formato</span>
         <select className="field" aria-label="Formato" value={value.format} onChange={(e) => setFormat(e.target.value as FormatId)}>
