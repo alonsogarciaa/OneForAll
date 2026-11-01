@@ -9,12 +9,7 @@ import uvicorn
 
 from .app_paths import AppPaths, default_root
 from .logs import setup_logging
-from .server import Services, create_app
-from .settings import load_settings
-
-
-def build_services(paths: AppPaths, fake: bool) -> Services:
-    return Services(paths, load_settings(paths.settings_path), None, None, None, None, fake)
+from .server import build_services, create_app
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -27,13 +22,19 @@ def main(argv: list[str] | None = None) -> None:
     paths = AppPaths.from_root(args.data_root or default_root())
     setup_logging(paths.logs_dir)
     token = secrets.token_urlsafe(32)
-    app = create_app(build_services(paths, args.fake), token)
+    services = build_services(paths, args.fake)
+    app = create_app(services, token)
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind(("127.0.0.1", args.port))
     port = sock.getsockname()[1]
     config = uvicorn.Config(app, log_level="warning")
     server = uvicorn.Server(config)
+
+    def stop() -> None:
+        server.should_exit = True
+
+    services.shutdown = stop
     print(json.dumps({"port": port, "token": token}), flush=True)
     sys.stdout.flush()
     server.run(sockets=[sock])

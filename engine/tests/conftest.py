@@ -2,8 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from djengine.app_paths import AppPaths
-from djengine.server import Services, create_app
-from djengine.settings import load_settings
+from djengine.server import build_services, create_app
 
 
 @pytest.fixture
@@ -13,8 +12,7 @@ def paths(tmp_path):
 
 @pytest.fixture
 def client(paths):
-    svc = Services(paths, load_settings(paths.settings_path), None, None, None, None, False)
-    return TestClient(create_app(svc, token="t"))
+    return TestClient(create_app(build_services(paths, fake=True), token="t"))
 
 
 # --- shared helpers for audio tests ---------------------------------------
