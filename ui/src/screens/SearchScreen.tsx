@@ -15,6 +15,17 @@ const KINDS: { kind: SearchKind; label: string }[] = [
 ]
 const DEBOUNCE_MS = 400
 
+/** YouTube Music sometimes repeats a video; rows are keyed by id, so repeats must go. */
+export function uniqueResults(rs: SearchResult[]): SearchResult[] {
+  const seen = new Set<string>()
+  return rs.filter((r) => {
+    const k = `${r.kind}-${r.id}`
+    if (seen.has(k)) return false
+    seen.add(k)
+    return true
+  })
+}
+
 export function SearchScreen() {
   const client = useClient()
   const query = useUiStore((s) => s.query)
@@ -53,7 +64,7 @@ export function SearchScreen() {
     setLoading(true)
     client
       .search(term, kind)
-      .then((r) => my === seq.current && setResults(r))
+      .then((r) => my === seq.current && setResults(uniqueResults(r)))
       .catch((e) => my === seq.current && (toast(e.message, 'error'), setResults([])))
       .finally(() => my === seq.current && setLoading(false))
   }, [client, term, kind, toast])

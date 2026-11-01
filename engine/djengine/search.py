@@ -52,13 +52,15 @@ def parse_views(text: str | None) -> int | None:
 
 def filter_results(items: list[SearchResult]) -> list[SearchResult]:
     out = []
+    seen: set[str] = set()
     for it in items:
-        if not it.title.strip() or not it.id:
+        if not it.title.strip() or not it.id or it.id in seen:  # YouTube Music repeats some videos
             continue
         if it.kind == "song" and (it.duration_s is None or not SONG_MIN_S <= it.duration_s <= SONG_MAX_S):
             continue
         if it.kind == "video" and (it.duration_s is None or it.duration_s < VIDEO_MIN_S):
             continue
+        seen.add(it.id)
         out.append(it)
     return out
 

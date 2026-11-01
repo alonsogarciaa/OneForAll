@@ -98,3 +98,10 @@ def test_playlist(svc):
 def test_search_online():
     r = SearchService().search("la graciosa quevedo", "songs")
     assert any("graciosa" in x.title.lower() for x in r[:3])
+
+
+def test_repeated_videos_are_removed():
+    from djengine.search import SearchResult
+
+    mk = lambda i: SearchResult(kind="song", id=i, title="t" + i, artist="a", duration_s=200, views=None, thumbnail=None, url="u")
+    assert [x.id for x in filter_results([mk("a"), mk("b"), mk("a")])] == ["a", "b"]

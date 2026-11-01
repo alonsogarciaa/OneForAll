@@ -73,4 +73,19 @@ describe('SearchScreen', () => {
     await userEvent.selectOptions(screen.getByLabelText('Formato'), 'flac')
     expect(screen.getByText('Convertir audio de YouTube a un formato sin pérdida no aumenta su calidad.')).toBeInTheDocument()
   })
+
+  it('leaves no rows from the previous search when results repeat an id', async () => {
+    const search = vi
+      .fn()
+      .mockResolvedValueOnce([song({ id: 'a1', title: 'Vieja 1' }), song({ id: 'a1', title: 'Vieja 1' }), song({ id: 'a2', title: 'Vieja 2' })])
+      .mockResolvedValueOnce([song({ id: 'b1', title: 'Nueva 1' }), song({ id: 'b2', title: 'Nueva 2' })])
+    setup(makeClient({ search }))
+    useUiStore.getState().submitQuery('primera')
+    await screen.findByText('Vieja 2')
+    useUiStore.getState().submitQuery('segunda')
+    await screen.findByText('Nueva 2')
+    expect(screen.queryByText('Vieja 1')).toBeNull()
+    expect(screen.queryByText('Vieja 2')).toBeNull()
+    expect(document.querySelectorAll('[data-row]')).toHaveLength(2)
+  })
 })
