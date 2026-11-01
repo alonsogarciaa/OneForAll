@@ -1,0 +1,220 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  /* Transparent so the Windows 11 acrylic material shows through the sidebar. */
+  background: transparent;
+  color: var(--lg-text-primary);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  overflow: hidden;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin: 0;
+  text-wrap: balance;
+}
+
+::selection {
+  background: rgba(0, 122, 255, 0.4);
+}
+
+input,
+textarea {
+  caret-color: var(--accent);
+  user-select: text;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 140, 0.35);
+  border-radius: 10px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(128, 128, 140, 0.55);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Glass material: fill + edge highlight + soft offset shadow + backdrop blur ------- */
+.glass {
+  position: relative;
+  background: var(--glass-fill);
+  border: 1px solid var(--lg-glass-border);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 8px 24px var(--lg-glass-shadow),
+    0 1px 2px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(var(--lg-glass-blur)) saturate(var(--lg-glass-saturate));
+}
+.glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--lg-specular-gradient);
+  pointer-events: none;
+  opacity: 0.55;
+}
+@supports not (backdrop-filter: blur(1px)) {
+  .glass {
+    background: var(--glass-fill-strong);
+  }
+}
+
+/* --- Buttons -------------------------------------------------------------------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 16px;
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
+  font: 500 14px/1 var(--font-body);
+  color: var(--lg-text-primary);
+  background: var(--surface-raised);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 160ms var(--ease-out), transform 160ms var(--ease-out), opacity 160ms;
+}
+.btn:hover {
+  background: var(--surface-hover);
+}
+.btn:active {
+  transform: scale(0.97);
+}
+.btn:disabled {
+  opacity: 0.42;
+  cursor: default;
+  transform: none;
+}
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+.btn-primary:hover {
+  background: var(--accent-hover);
+}
+.btn-danger {
+  color: var(--danger);
+}
+.btn-ghost {
+  background: transparent;
+}
+.btn-ghost:hover {
+  background: var(--surface-hover);
+}
+.btn-sm {
+  height: 28px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+.icon-btn {
+  width: 32px;
+  padding: 0;
+}
+
+/* --- Segmented control ----------------------------------------------------------- */
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-raised);
+  gap: 2px;
+}
+.segmented button {
+  height: 28px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--lg-text-secondary);
+  font: 500 14px/1 var(--font-body);
+  cursor: pointer;
+  transition: background-color 180ms var(--ease-out), color 180ms;
+}
+.segmented button[aria-pressed='true'] {
+  background: var(--surface-active);
+  color: var(--lg-text-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* --- Inputs -------------------------------------------------------------------- */
+.field {
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--hairline);
+  background: var(--surface-raised);
+  color: var(--lg-text-primary);
+  font: 400 14px var(--font-body);
+}
+.field::placeholder {
+  color: var(--lg-text-tertiary);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 500;
+  background: rgba(52, 199, 89, 0.16);
+  color: var(--success);
+}
+.badge-muted {
+  background: var(--surface-raised);
+  color: var(--lg-text-secondary);
+}
+.badge-warn {
+  background: rgba(255, 149, 0, 0.16);
+  color: var(--lg-orange);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
+}

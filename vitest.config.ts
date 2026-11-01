@@ -6,8 +6,7 @@ export default defineConfig({
   test: {
     globals: true,
     include: ['app/**/*.test.ts', 'ui/src/**/*.test.{ts,tsx}'],
-    environment: 'node',
-    environmentMatchGlobs: [['ui/**', 'jsdom']],
+    environment: 'jsdom',
     setupFiles: ['ui/src/test/setup.ts']
   }
 })

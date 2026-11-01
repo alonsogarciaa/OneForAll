@@ -1,0 +1,89 @@
+/* Liquid Glass tokens (from Liquid_Glass.md), dark by default. */
+:root {
+  --lg-obsidian: #0a0a0f;
+  --lg-slate: #1c1c1e;
+  --lg-graphite: #2c2c2e;
+  --lg-fog: #f2f2f7;
+  --lg-white: #ffffff;
+
+  --lg-glass-bg: rgba(255, 255, 255, 0.15);
+  --lg-glass-border: rgba(255, 255, 255, 0.25);
+  --lg-glass-specular: rgba(255, 255, 255, 0.6);
+  --lg-glass-shadow: rgba(0, 0, 0, 0.25);
+  --lg-glass-blur: 20px;
+  --lg-glass-saturate: 180%;
+
+  --lg-blue: #007aff;
+  --lg-indigo: #5856d6;
+  --lg-teal: #5ac8fa;
+  --lg-green: #34c759;
+  --lg-orange: #ff9500;
+  --lg-red: #ff3b30;
+
+  --lg-text-primary: #ffffff;
+  --lg-text-secondary: rgba(235, 235, 245, 0.68);
+  --lg-text-tertiary: rgba(235, 235, 245, 0.42);
+
+  --lg-specular-gradient: linear-gradient(165deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0) 45%);
+
+  /* App surfaces */
+  --surface-sidebar: rgba(20, 20, 24, 0.5);
+  --surface-content: rgba(24, 24, 27, 0.975);
+  --surface-raised: rgba(255, 255, 255, 0.06);
+  --surface-hover: rgba(255, 255, 255, 0.08);
+  --surface-active: rgba(255, 255, 255, 0.13);
+  --glass-fill: rgba(44, 44, 48, 0.58);
+  --glass-fill-strong: rgba(40, 40, 44, 0.78);
+  --hairline: rgba(255, 255, 255, 0.08);
+  --scrim: rgba(0, 0, 0, 0.42);
+  --accent: var(--lg-blue);
+  --accent-hover: #2b8cff;
+  --accent-text: #4da3ff;
+  --danger: var(--lg-red);
+  --success: var(--lg-green);
+  --focus-ring: 0 0 0 3px rgba(0, 122, 255, 0.55);
+
+  --radius-panel: 20px;
+  --radius-card: 16px;
+  --radius-pill: 980px;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: 'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif;
+
+  color-scheme: dark;
+}
+
+[data-theme='light'] {
+  --lg-text-primary: #000000;
+  --lg-text-secondary: rgba(60, 60, 67, 0.72);
+  --lg-text-tertiary: rgba(60, 60, 67, 0.48);
+  --lg-glass-border: rgba(0, 0, 0, 0.08);
+  --lg-glass-shadow: rgba(0, 0, 0, 0.12);
+  --lg-specular-gradient: linear-gradient(165deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0) 45%);
+
+  --surface-sidebar: rgba(246, 246, 250, 0.55);
+  --surface-content: rgba(255, 255, 255, 0.975);
+  --surface-raised: rgba(120, 120, 128, 0.08);
+  --surface-hover: rgba(120, 120, 128, 0.1);
+  --surface-active: rgba(120, 120, 128, 0.16);
+  --glass-fill: rgba(255, 255, 255, 0.6);
+  --glass-fill-strong: rgba(255, 255, 255, 0.82);
+  --hairline: rgba(0, 0, 0, 0.08);
+  --scrim: rgba(0, 0, 0, 0.22);
+  --accent-text: #0062cc;
+
+  color-scheme: light;
+}
+
+/* "Modo tintado": glass opacity to 70 % for readability. */
+[data-tinted='true'] {
+  --surface-sidebar: rgba(20, 20, 24, 0.7);
+  --glass-fill: rgba(44, 44, 48, 0.7);
+  --glass-fill-strong: rgba(40, 40, 44, 0.86);
+}
+[data-theme='light'][data-tinted='true'] {
+  --surface-sidebar: rgba(246, 246, 250, 0.7);
+  --glass-fill: rgba(255, 255, 255, 0.7);
+  --glass-fill-strong: rgba(255, 255, 255, 0.88);
+}

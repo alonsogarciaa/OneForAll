@@ -1,6 +1,6 @@
 import { join, extname, resolve } from 'node:path'
 import { existsSync, statSync } from 'node:fs'
-import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, shell } from 'electron'
 import { EngineProcess, type EngineInfo, type EngineState } from './engineProcess'
 
 const AUDIO_EXT = new Set(['.mp3', '.m4a', '.aac', '.wav', '.aif', '.aiff', '.flac', '.ogg', '.opus', '.webm'])
@@ -123,6 +123,8 @@ function registerIpc(): void {
     if (statSync(p).isDirectory() || AUDIO_EXT.has(extname(p).toLowerCase())) void shell.openPath(p)
   })
   ipcMain.on('titlebar:theme', (_e, dark: unknown) => {
+    // The acrylic/vibrancy tint follows nativeTheme, so the app theme drives it (not the OS theme).
+    nativeTheme.themeSource = dark ? 'dark' : 'light'
     if (process.platform === 'win32' && win) {
       win.setTitleBarOverlay({ color: '#00000000', symbolColor: dark ? '#ffffff' : '#1c1c1e', height: 44 })
     }
@@ -140,6 +142,7 @@ if (!app.requestSingleInstanceLock()) {
   })
   app.whenReady().then(async () => {
     Menu.setApplicationMenu(null)
+    nativeTheme.themeSource = 'dark'
     registerIpc()
     engine.on('state', (s: EngineState) => win?.webContents.send('engine:state', s))
     const ready = engine.start()

@@ -1,21 +1,17 @@
-import { StrictMode, useEffect, useState } from 'react'
+import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-
-function Placeholder() {
-  const [status, setStatus] = useState('Conectando…')
-  useEffect(() => {
-    window.oneforall
-      .getEngine()
-      .then(({ baseUrl, token }) => fetch(`${baseUrl}/health`, { headers: { 'X-Token': token } }))
-      .then((r) => r.json())
-      .then((j) => setStatus(j.ok ? 'Motor OK' : 'Motor sin respuesta'))
-      .catch((e) => setStatus(`Error: ${e}`))
-  }, [])
-  return <p style={{ color: 'white', font: '16px system-ui', padding: 48 }}>{status}</p>
-}
+import '@fontsource/inter/400.css'
+import '@fontsource/inter/500.css'
+import '@fontsource/inter/600.css'
+import '@fontsource/plus-jakarta-sans/600.css'
+import '@fontsource/plus-jakarta-sans/700.css'
+import './styles/tokens.css'
+import './styles/glass.css'
+import './components/shell.css'
+import { App } from './App'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <Placeholder />
+    <App />
   </StrictMode>
 )
