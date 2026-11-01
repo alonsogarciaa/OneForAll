@@ -12,6 +12,11 @@ dependencies = [
   "mutagen",
   "pillow",
   "psutil",
+  "librosa>=1.0.0",
+  "numpy>=2.5.4",
+  "scipy>=1.18.1",
+  "pyloudnorm>=0.2.0",
+  "soundfile>=0.14.0",
 ]
 
 [dependency-groups]
