@@ -20,6 +20,11 @@ dependencies = [
   "mido>=1.3.3",
 ]
 
+[project.optional-dependencies]
+nn = [
+    "deeprhythm>=0.0.13",
+]
+
 [dependency-groups]
 dev = ["pytest", "pytest-asyncio", "httpx"]
 

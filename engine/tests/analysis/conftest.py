@@ -28,7 +28,7 @@ def _tone(freq: float, n: int, sr: int) -> np.ndarray:
 
 
 def make_chord_progression(tonic: str, mode: str, seconds: float = 30, sr: int = 22050) -> np.ndarray:
-    """i-iv-v-i (minor, natural) or I-IV-V-I (major) triads, plus the tonic in the bass."""
+    """i-iv-V-i (minor, harmonic: major dominant as in most real music) or I-IV-V-I triads, tonic in the bass."""
     root = NOTE_INDEX[tonic]
     scale = [0, 2, 3, 5, 7, 8, 10] if mode == "minor" else [0, 2, 4, 5, 7, 9, 11]
     degrees = [0, 3, 4, 0]
@@ -36,6 +36,8 @@ def make_chord_progression(tonic: str, mode: str, seconds: float = 30, sr: int =
     out = []
     for d in degrees:
         notes = [scale[(d + k) % 7] + 12 * ((d + k) // 7) for k in (0, 2, 4)]
+        if mode == "minor" and d == 4:
+            notes[1] += 1  # raised leading tone: E-G#-B in A minor
         chunk = sum(_tone(220.0 * 2 ** ((root + n - 9) / 12), seg, sr) for n in notes)
         chunk += 0.8 * _tone(110.0 * 2 ** ((root - 9) / 12), seg, sr)  # tonic pedal
         out.append(chunk * np.hanning(seg) ** 0.1)

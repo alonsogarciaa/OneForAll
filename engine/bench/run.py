@@ -21,6 +21,11 @@ os.environ.setdefault("ONEFORALL_TOOLS", str(HERE.parents[1] / "build" / "runtim
 
 
 def _analyze(item: dict, tempo_methods: list[str], key_methods: list[str]) -> dict:
+    for optional in ("djengine.analysis.tempo_deeprhythm", "djengine.analysis.key_cnn"):
+        try:
+            __import__(optional)  # registers extra methods when their dependencies are installed
+        except ImportError:
+            pass
     from djengine.analysis.audio_io import decode
     from djengine.analysis.key import estimate_key
     from djengine.analysis.tempo import estimate_tempo
@@ -109,7 +114,15 @@ def main() -> None:
                 print(f"{n}/{len(index)}", flush=True)
     summary = summarize(index, preds, tm, km)
     summary["failed"] = failed
-    RESULTS.write_text(json.dumps({"summary": summary, "predictions": preds}, indent=1), encoding="utf-8")
+    # merge with earlier runs so methods can be benchmarked one at a time
+    if RESULTS.exists():
+        old = json.loads(RESULTS.read_text(encoding="utf-8"))["summary"]
+        for ref, rows in summary["tempo"].items():
+            old["tempo"].setdefault(ref, {}).update(rows)
+        old["key"].update(summary["key"])
+        old["failed"] = old.get("failed", 0) + failed
+        summary = old
+    RESULTS.write_text(json.dumps({"summary": summary}, indent=1), encoding="utf-8")
     write_report(summary)
     print(json.dumps(summary, indent=1))
 
