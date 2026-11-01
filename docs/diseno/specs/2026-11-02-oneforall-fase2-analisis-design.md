@@ -15,8 +15,9 @@ Cada pista (de la biblioteca o un archivo propio) obtiene BPM, tonalidad, loudne
 
 | Tema | Decisión |
 |---|---|
-| Librerías | essentia y madmom no compilan en Windows con Python 3.12 (comprobado). Candidatas: **librosa** y **deeprhythm** (CNN de tempo, PyTorch). |
-| Método | Las dos tras una misma interfaz. El banco GiantSteps elige el ganador **por separado para tempo y para tonalidad**. |
+| Librerías | essentia y madmom no se instalan con pip en Windows + Python 3.12 (comprobado). Candidatas de tempo: **librosa** y **deeprhythm** (CNN, PyTorch). Candidatas de tonalidad: **librosa + perfiles** (`edma`, `temperley`, `krumhansl`) y la **CNN de tonalidad de madmom** (Korzeniowski & Widmer), necesaria para optar a 0,80 MIREX. |
+| Método | Todas tras una misma interfaz. El banco GiantSteps elige el ganador **por separado para tempo y para tonalidad**. |
+| Licencia del modelo de tonalidad | Los pesos de madmom son CC BY-NC-SA (no comercial): válido para el uso personal del dueño. Si algún día la app se vende, hay que sustituir ese modelo. Se anota en el README y en Ajustes → Acerca de. |
 | Rejilla de beats | Siempre de librosa (`beat_track`), alineada al BPM ganador. |
 | Referencia de precisión | Dataset público GiantSteps (tempo y tonalidad). Solo se descarga en local para el banco, nunca va en el instalador. |
 | Notación en etiquetas | Ajuste: **Camelot (por defecto)** o musical. En la app se muestran siempre las dos: «8A · Lam». |
@@ -31,7 +32,8 @@ Cada pista (de la biblioteca o un archivo propio) obtiene BPM, tonalidad, loudne
 |---|---|---|
 | `audio_io.py` | `decode(path, sr) -> np.ndarray` (mono float32) | Decodifica con ffmpeg por pipe, sin audioread. |
 | `tempo.py` | `estimate_tempo(y, sr, method) -> TempoResult(bpm, confidence, beats: list[float])` | Métodos `librosa` y `deeprhythm`. Plegado al rango DJ configurable (por defecto 70–180): duplica o divide por 2 hasta entrar. Precisión de 0,1 BPM. |
-| `key.py` | `estimate_key(y, sr, profile) -> KeyResult(tonic, mode, camelot, confidence)` | `chroma_cqt` sumado en toda la pista, correlado con los 24 perfiles rotados. Perfiles: `edma`, `temperley`, `krumhansl`. |
+| `key.py` | `estimate_key(y, sr, method) -> KeyResult(tonic, mode, camelot, confidence)` | Métodos: `edma`, `temperley`, `krumhansl` (`chroma_cqt` sumado en toda la pista, correlado con los 24 perfiles rotados) y `cnn` (modelo de madmom). |
+| `key_cnn.py` | `CnnKey.predict(path) -> KeyResult` | Inferencia de la CNN de madmom. Primera opción: madmom compilado desde el código fuente (git) dentro del runtime. Si no compila, se reimplementa su preprocesado (espectrograma logarítmico filtrado) y la inferencia en numpy con los pesos originales, verificando que da las mismas salidas que madmom en Linux/WSL o en fixtures de referencia. |
 | `loudness.py` | `measure(y_stereo, sr) -> (lufs, peak_db)` | pyloudnorm (ITU-R BS.1770). |
 | `waveform.py` | `compute(y, sr, buckets=2000) -> {peaks: [max…], low: […], mid: […], high: […]}` | Valores normalizados 0–1 por bucket. Bandas: <250 Hz, 250 Hz–4 kHz, >4 kHz. |
 | `camelot.py` | `to_camelot(tonic, mode)`, `to_musical(code, lang)`, `compatible(a, b) -> Level \| None` | Niveles: `same` (misma clave), `adjacent` (±1 con la misma letra), `relative` (mismo número con la otra letra). |
@@ -112,8 +114,11 @@ Cada pista (de la biblioteca o un archivo propio) obtiene BPM, tonalidad, loudne
   - Tempo: **Accuracy1** (±4 %) y **Accuracy2** (±4 % admitiendo ×2, ×½, ×3, ×⅓).
   - Tonalidad: **MIREX weighted score** (exacta 1, quinta 0,5, relativa 0,3, paralela 0,2) y acierto exacto.
   - Tiempo medio por pista.
-- **Elección:** gana el mejor Accuracy1 en tempo y el mejor MIREX en tonalidad. En empate (< 1 punto), el más rápido. El ganador queda fijado como valor por defecto en `analysis/config.py`.
-- **Umbral de aceptación:** Accuracy1 ≥ 75 % y MIREX ≥ 0,65. Si no se alcanza, se documenta y se pregunta al dueño antes de cerrar la fase.
+- **Elección:** gana el mejor Accuracy2 en tempo (desempate con Accuracy1) y el mejor MIREX en tonalidad. En empate (< 1 punto), el más rápido. El ganador queda fijado como valor por defecto en `analysis/config.py`.
+- **Umbrales de aceptación** (fijados con el dueño a partir del estado del arte publicado en GiantSteps):
+  - **Tempo: Accuracy2 ≥ 90 %.** Es la medida útil para un DJ: la app ya pliega 64 a 128 con el rango 70–180. Accuracy1 se informa siempre; un 90 % exacto queda por encima de lo publicado, en parte por errores en las propias anotaciones del dataset.
+  - **Tonalidad: MIREX ≥ 0,80.** Está en el límite de lo mejor publicado. Si ningún candidato llega, se presenta el mejor resultado y el dueño decide antes de cerrar la fase.
+- **Notas de tempo:** se usan las anotaciones de tempo revisadas de GiantSteps cuando estén disponibles.
 - Si con deeprhythm gana el tempo, PyTorch (CPU) entra en el runtime ya en esta fase (unos 250 MB más en el instalador; la Fase 3 lo necesitaría de todos modos).
 
 ## 7. Criterios de aceptación
@@ -124,10 +129,12 @@ Cada pista (de la biblioteca o un archivo propio) obtiene BPM, tonalidad, loudne
 4. El tap tempo con 8 pulsaciones a 120 BPM muestra 120,0 ± 0,5; "Aplicar" guarda el BPM y un reanálisis lo conserva.
 5. Armonía, con una pista 8A a 128 BPM como referencia, lista primero las 8A en 120–136 BPM, luego 7A y 9A, y luego 8B.
 6. Cancelar un análisis no deja resultado ni JSON, y no afecta a otros trabajos.
-7. El informe del banco existe en `docs/bench/` y el método elegido cumple el umbral de §6 (o hay una decisión documentada del dueño).
+7. El informe del banco existe en `docs/bench/` y el método elegido cumple los umbrales de §6: tempo Accuracy2 ≥ 90 % y tonalidad MIREX ≥ 0,80 (o hay una decisión documentada del dueño sobre la tonalidad).
 
 ## 8. Riesgos
 
 - **Audio de GiantSteps:** sale de URLs de vista previa que pueden haber caducado → se mide con lo disponible y se indica el tamaño de la muestra.
 - **Tonalidad en música urbana:** GiantSteps es solo electrónica → la precisión en reggaetón y urbano puede ser menor. Se documenta; el dueño puede validar con su colección más adelante.
 - **Peso de PyTorch** si gana deeprhythm (ver §6).
+- **CNN de tonalidad:** compilar madmom en Windows puede fallar → plan B con reimplementación en numpy (más trabajo, verificable con salidas de referencia).
+- **Música urbana sin Rekordbox:** se validará más adelante con una referencia propia (unas 30 canciones con BPM y tonalidad contrastados en fuentes públicas como Tunebat o SongBPM).
