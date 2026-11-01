@@ -36,6 +36,7 @@
   --glass-fill-strong: rgba(40, 40, 44, 0.78);
   --hairline: rgba(255, 255, 255, 0.08);
   --scrim: rgba(0, 0, 0, 0.42);
+  --surface-menu: #2c2c2e; /* native <select> popups need a solid colour */
   --accent: var(--lg-blue);
   --accent-hover: #2b8cff;
   --accent-text: #4da3ff;
@@ -71,6 +72,7 @@
   --glass-fill-strong: rgba(255, 255, 255, 0.82);
   --hairline: rgba(0, 0, 0, 0.08);
   --scrim: rgba(0, 0, 0, 0.22);
+  --surface-menu: #ffffff;
   --accent-text: #0062cc;
 
   color-scheme: light;

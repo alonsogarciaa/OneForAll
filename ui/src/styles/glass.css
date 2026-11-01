@@ -185,6 +185,13 @@ textarea {
   color: var(--lg-text-primary);
   font: 400 14px var(--font-body);
 }
+.field option,
+.field optgroup {
+  /* The select itself is translucent; without a solid colour Windows draws the
+     popup list on white and the inherited white text disappears in dark mode. */
+  background-color: var(--surface-menu);
+  color: var(--lg-text-primary);
+}
 .field::placeholder {
   color: var(--lg-text-tertiary);
 }
