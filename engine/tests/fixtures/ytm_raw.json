@@ -1,0 +1,754 @@
+{
+ "songs": [
+  {
+   "category": "Songs",
+   "resultType": "song",
+   "title": "LA GRACIOSA",
+   "album": {
+    "name": "EL BAIFO",
+    "id": "MPREb_zh5uc9IzRx3"
+   },
+   "inLibrary": false,
+   "pinnedToListenAgain": false,
+   "videoId": "Kev3r6W4TPo",
+   "videoType": "MUSIC_VIDEO_TYPE_ATV",
+   "isAvailable": true,
+   "duration": "4:18",
+   "year": null,
+   "artists": [
+    {
+     "name": "Quevedo",
+     "id": "UC7PL9aor5qNRhvhWWVXyOqA"
+    },
+    {
+     "name": "Elvis Crespo",
+     "id": "UC23tFg8bnVgRVQkLhSGElVw"
+    }
+   ],
+   "duration_seconds": 258,
+   "views": "72M",
+   "isExplicit": false,
+   "thumbnails": [
+    {
+     "url": "https://yt3.googleusercontent.com/nVCZmnacT8ffaAzaBKj5zrTxNJfwSB3RPKAZXANxWuRQy15OHujO9E-P7gM9j64eXsermkgTTPM2hGmq=w60-h60-l90-rj",
+     "width": 60,
+     "height": 60
+    },
+    {
+     "url": "https://yt3.googleusercontent.com/nVCZmnacT8ffaAzaBKj5zrTxNJfwSB3RPKAZXANxWuRQy15OHujO9E-P7gM9j64eXsermkgTTPM2hGmq=w120-h120-l90-rj",
+     "width": 120,
+     "height": 120
+    }
+   ]
+  },
+  {
+   "category": "Songs",
+   "resultType": "song",
+   "title": "Pa' Bailar",
+   "album": {
+    "name": "Pa' Bailar",
+    "id": "MPREb_2Bc7xV4iTBs"
+   },
+   "inLibrary": false,
+   "pinnedToListenAgain": false,
+   "videoId": "vQLiRgB0HqY",
+   "videoType": "MUSIC_VIDEO_TYPE_ATV",
+   "isAvailable": true,
+   "duration": "2:37",
+   "year": null,
+   "artists": [
+    {
+     "name": "Elvis Crespo",
+     "id": "UC23tFg8bnVgRVQkLhSGElVw"
+    },
+    {
+     "name": "Beéle",
+     "id": "UCupC5VkgC20rKyJMyogoswQ"
+    }
+   ],
+   "duration_seconds": 157,
+   "views": "3.4M",
+   "isExplicit": false,
+   "thumbnails": [
+    {
+     "url": "https://yt3.googleusercontent.com/o8LAhYczS_A8-lip9_igqPaF1tHoUazDGaBP3X3OCvTLXIonG-rjiMA3pH8Zi7p4NWE3hBgKKSFsu6-w=w60-h60-l90-rj",
+     "width": 60,
+     "height": 60
+    },
+    {
+     "url": "https://yt3.googleusercontent.com/o8LAhYczS_A8-lip9_igqPaF1tHoUazDGaBP3X3OCvTLXIonG-rjiMA3pH8Zi7p4NWE3hBgKKSFsu6-w=w120-h120-l90-rj",
+     "width": 120,
+     "height": 120
+    }
+   ]
+  },
+  {
+   "category": "Songs",
+   "resultType": "song",
+   "title": "GRACIOSA",
+   "album": {
+    "name": "SUMMER PHONK",
+    "id": "MPREb_yTn0AWZrnWR"
+   },
+   "inLibrary": false,
+   "pinnedToListenAgain": false,
+   "videoId": "oWicWktq_vA",
+   "videoType": "MUSIC_VIDEO_TYPE_ATV",
+   "isAvailable": true,
+   "duration": "2:26",
+   "year": null,
+   "artists": [
+    {
+     "name": "Vangelinho",
+     "id": "UCRwPnVyKltw7G8qCqP6yw6A"
+    }
+   ],
+   "duration_seconds": 146,
+   "views": "576",
+   "isExplicit": false,
+   "thumbnails": [
+    {
+     "url": "https://yt3.googleusercontent.com/erWLvfK38ZhxC8j639Zi5clLSlkaeNy_-n8iD6B5JWPPpOl_qOwU8iJ_c5ym1BIlSBELuvzrnxOHmAPY1Q=w60-h60-l90-rj",
+     "width": 60,
+     "height": 60
+    },
+    {
+     "url": "https://yt3.googleusercontent.com/erWLvfK38ZhxC8j639Zi5clLSlkaeNy_-n8iD6B5JWPPpOl_qOwU8iJ_c5ym1BIlSBELuvzrnxOHmAPY1Q=w120-h120-l90-rj",
+     "width": 120,
+     "height": 120
+    }
+   ]
+  },
+  {
+   "category": "Songs",
+   "resultType": "song",
+   "title": "La Graciosa",
+   "album": {
+    "name": "Strategy",
+    "id": "MPREb_hZuew4PxKS6"
+   },
+   "inLibrary": false,
+   "pinnedToListenAgain": false,
+   "videoId": "4Bonc5EHgCU",
+   "videoType": "MUSIC_VIDEO_TYPE_ATV",
+   "isAvailable": true,
+   "duration": "5:07",
+   "year": null,
+   "artists": [
+    {
+     "name": "Pier Gonella",
+     "id": "UCmlURMq9gufyuUC0nobMXKQ"
+    }
+   ],
+   "duration_seconds": 307,
+   "views": "1.2K",
+   "isExplicit": false,
+   "thumbnails": [
+    {
+     "url": "https://yt3.googleusercontent.com/Fkui2MEqHUzxfXzXY5_VWxVtth9pUhQC9Ng_CKQwvTb7kIimW9nGelcPU7X1546P5Cpl2sJ-CIE1-DJS=w60-h60-l90-rj",
+     "width": 60,
+     "height": 60
+    },
+    {
+     "url": "https://yt3.googleusercontent.com/Fkui2MEqHUzxfXzXY5_VWxVtth9pUhQC9Ng_CKQwvTb7kIimW9nGelcPU7X1546P5Cpl2sJ-CIE1-DJS=w120-h120-l90-rj",
+     "width": 120,
+     "height": 120
+    }
+   ]
+  },
+  {
+   "category": "Songs",
+   "resultType": "song",
+   "title": "Cuica",
+   "album": {
+    "name": "Cuica",
+    "id": "MPREb_NYmgR0hPwv9"
+   },
+   "inLibrary": false,
+   "pinnedToListenAgain": false,
+   "videoId": "zS9eDNA3K_E",
+   "videoType": "MUSIC_VIDEO_TYPE_ATV",
+   "isAvailable": true,
+   "duration": "3:20",
+   "year": null,
+   "artists": [
+    {
+     "name": "Ptazeta",
+     "id": "UCI9q5A6SUN37p0gM01E1R4Q"
+    },
+    {
+     "name": "Quevedo",
+     "id": "UC7PL9aor5qNRhvhWWVXyOqA"
+    }
+   ],
+   "duration_seconds": 200,
+   "views": "1.4M",
+   "isExplicit": false,
+   "thumbnails": [
+    {
+     "url": "https://yt3.googleusercontent.com/sImqZ7OE8XAXfkYl1HAovEQQ-E3PfwHBP-JXLUQqikEe9nmJ7o2viO7IxTjnbE_5iNFUX06EaEzDaJk=w60-h60-l90-rj",
+     "width": 60,
+     "height": 60
+    },
+    {
+     "url": "https://yt3.googleusercontent.com/sImqZ7OE8XAXfkYl1HAovEQQ-E3PfwHBP-JXLUQqikEe9nmJ7o2viO7IxTjnbE_5iNFUX06EaEzDaJk=w120-h120-l90-rj",
+     "width": 120,
+     "height": 120
+    }
+   ]
+  },
+  {
+   "category": "Songs",
+   "resultType": "song",
+   "title": "BROKEN no duration",
+   "album": {
+    "name": "Pa' Bailar",
+    "id": "MPREb_2Bc7xV4iTBs"
+   },
+   "inLibrary": false,
+   "pinnedToListenAgain": false,
+   "videoId": "vQLiRgB0HqY",
+   "videoType": "MUSIC_VIDEO_TYPE_ATV",
+   "isAvailable": true,
+   "duration": null,
+   "year": null,
+   "artists": [
+    {
+     "name": "Elvis Crespo",
+     "id": "UC23tFg8bnVgRVQkLhSGElVw"
+    },
+    {
+     "name": "Beéle",
+     "id": "UCupC5VkgC20rKyJMyogoswQ"
+    }
+   ],
+   "views": "3.4M",
+   "isExplicit": false,
+   "thumbnails": [
+    {
+     "url": "https://yt3.googleusercontent.com/o8LAhYczS_A8-lip9_igqPaF1tHoUazDGaBP3X3OCvTLXIonG-rjiMA3pH8Zi7p4NWE3hBgKKSFsu6-w=w60-h60-l90-rj",
+     "width": 60,
+     "height": 60
+    },
+    {
+     "url": "https://yt3.googleusercontent.com/o8LAhYczS_A8-lip9_igqPaF1tHoUazDGaBP3X3OCvTLXIonG-rjiMA3pH8Zi7p4NWE3hBgKKSFsu6-w=w120-h120-l90-rj",
+     "width": 120,
+     "height": 120
+    }
+   ]
+  },
+  {
+   "category": "Songs",
+   "resultType": "song",
+   "title": "",
+   "album": {
+    "name": "SUMMER PHONK",
+    "id": "MPREb_yTn0AWZrnWR"
+   },
+   "inLibrary": false,
+   "pinnedToListenAgain": false,
+   "videoId": "oWicWktq_vA",
+   "videoType": "MUSIC_VIDEO_TYPE_ATV",
+   "isAvailable": true,
+   "duration": "2:26",
+   "year": null,
+   "artists": [
+    {
+     "name": "Vangelinho",
+     "id": "UCRwPnVyKltw7G8qCqP6yw6A"
+    }
+   ],
+   "duration_seconds": 146,
+   "views": "576",
+   "isExplicit": false,
+   "thumbnails": [
+    {
+     "url": "https://yt3.googleusercontent.com/erWLvfK38ZhxC8j639Zi5clLSlkaeNy_-n8iD6B5JWPPpOl_qOwU8iJ_c5ym1BIlSBELuvzrnxOHmAPY1Q=w60-h60-l90-rj",
+     "width": 60,
+     "height": 60
+    },
+    {
+     "url": "https://yt3.googleusercontent.com/erWLvfK38ZhxC8j639Zi5clLSlkaeNy_-n8iD6B5JWPPpOl_qOwU8iJ_c5ym1BIlSBELuvzrnxOHmAPY1Q=w120-h120-l90-rj",
+     "width": 120,
+     "height": 120
+    }
+   ]
+  }
+ ],
+ "videos": [
+  {
+   "category": "Videos",
+   "resultType": "video",
+   "title": "LA GRACIOSA (feat. Elvis Crespo)",
+   "videoId": "LZPLBSRnxSY",
+   "videoType": "MUSIC_VIDEO_TYPE_OMV",
+   "isAvailable": true,
+   "duration": "4:43",
+   "year": null,
+   "artists": [
+    {
+     "name": "Quevedo",
+     "id": "UC7PL9aor5qNRhvhWWVXyOqA"
+    }
+   ],
+   "views": "41M",
+   "duration_seconds": 283,
+   "thumbnails": [
+    {
+     "url": "https://i.ytimg.com/vi/LZPLBSRnxSY/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3mgWlC9slAllXiTcGdPAJfyIBNIRQ",
+     "width": 400,
+     "height": 225
+    }
+   ]
+  },
+  {
+   "category": "Videos",
+   "resultType": "video",
+   "title": "AL GOLPITO (feat. Nueva Línea)",
+   "videoId": "-jm7ZjTqNz0",
+   "videoType": "MUSIC_VIDEO_TYPE_OMV",
+   "isAvailable": true,
+   "duration": "3:33",
+   "year": null,
+   "artists": [
+    {
+     "name": "Quevedo",
+     "id": "UC7PL9aor5qNRhvhWWVXyOqA"
+    }
+   ],
+   "views": "22M",
+   "duration_seconds": 213,
+   "thumbnails": [
+    {
+     "url": "https://i.ytimg.com/vi/-jm7ZjTqNz0/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3k6zJZEFCMMr7-v7Fyp6UBWx0SpHQ",
+     "width": 400,
+     "height": 225
+    }
+   ]
+  },
+  {
+   "category": "Videos",
+   "resultType": "video",
+   "title": "Quevedo & Elvis Crespo - LA GRACIOSA",
+   "videoId": "6L7Ac702LV8",
+   "videoType": "MUSIC_VIDEO_TYPE_UGC",
+   "isAvailable": true,
+   "duration": "4:18",
+   "year": null,
+   "artists": [
+    {
+     "name": "LatinHype",
+     "id": "UC-AlofdKECUdhXrbJQZ6iEg"
+    }
+   ],
+   "views": "9.5M",
+   "duration_seconds": 258,
+   "thumbnails": [
+    {
+     "url": "https://i.ytimg.com/vi/6L7Ac702LV8/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3nPJQ8hETLgp1dhK7zJ9AQmfXf5gA",
+     "width": 400,
+     "height": 225
+    }
+   ]
+  },
+  {
+   "category": "Videos",
+   "resultType": "video",
+   "title": "La Graciosa - Quevedo Ft  Elvis Crespo (Pilex Bootleg)",
+   "videoId": "Q9gSE6e6O0o",
+   "videoType": "MUSIC_VIDEO_TYPE_UGC",
+   "isAvailable": true,
+   "duration": "4:12",
+   "year": null,
+   "artists": [
+    {
+     "name": "P I L E X",
+     "id": "UCVFrhmZWFoHhbKkgH4WWHhw"
+    }
+   ],
+   "views": "453",
+   "duration_seconds": 252,
+   "thumbnails": [
+    {
+     "url": "https://i.ytimg.com/vi/Q9gSE6e6O0o/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3lOcK8sviCRplvdGQ8NNxoDB6yTnQ",
+     "width": 400,
+     "height": 225
+    }
+   ]
+  },
+  {
+   "category": "Videos",
+   "resultType": "video",
+   "title": "Canción Barcelona vs Real Madrid 1-2 (Parodia LA GRACIOSA - Quevedo ft. Elvis Crespo)",
+   "videoId": "o95Fuj-YBBo",
+   "videoType": "MUSIC_VIDEO_TYPE_UGC",
+   "isAvailable": true,
+   "duration": "2:18",
+   "year": null,
+   "artists": [
+    {
+     "name": "iandroJA",
+     "id": "UCOM0bh3U7Ya1fKECqEMXS6Q"
+    }
+   ],
+   "views": "61K",
+   "duration_seconds": 138,
+   "thumbnails": [
+    {
+     "url": "https://i.ytimg.com/vi/o95Fuj-YBBo/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3kiIpxjXnAvOxASxKv5M-zdtxqu1w",
+     "width": 400,
+     "height": 225
+    }
+   ]
+  }
+ ],
+ "playlists": [
+  {
+   "category": "Community playlists",
+   "resultType": "playlist",
+   "title": "Reggaeton Viejo",
+   "itemCount": null,
+   "author": "KukiiRD",
+   "browseId": "VLPLDzVDC0HAjdwbi550vHEVEBhoMzKHFByN",
+   "thumbnails": [
+    {
+     "url": "https://yt3.googleusercontent.com/pKTk5Z3SE-kzfJrQU5BHDj6XBkix63HjmZmTbBBwn9lIsLXvF8Q1vQ0vIFLrtccr5UWSV8Muy8-J=s192",
+     "width": 192,
+     "height": 192
+    },
+    {
+     "url": "https://yt3.googleusercontent.com/pKTk5Z3SE-kzfJrQU5BHDj6XBkix63HjmZmTbBBwn9lIsLXvF8Q1vQ0vIFLrtccr5UWSV8Muy8-J=s576",
+     "width": 576,
+     "height": 576
+    },
+    {
+     "url": "https://yt3.googleusercontent.com/pKTk5Z3SE-kzfJrQU5BHDj6XBkix63HjmZmTbBBwn9lIsLXvF8Q1vQ0vIFLrtccr5UWSV8Muy8-J=s1200",
+     "width": 1200,
+     "height": 1200
+    }
+   ]
+  },
+  {
+   "category": "Community playlists",
+   "resultType": "playlist",
+   "title": "REGUETON VIEJO  REGGAETON VIEJOREGUETÓN ANTIGUOTEMAZOS REGGAETON VIEJITO",
+   "itemCount": null,
+   "author": "Alejandro",
+   "browseId": "VLPLhl3eTiS5OcAU7Cf92uMjl461f4b40JX0",
+   "thumbnails": [
+    {
+     "url": "https://yt3.googleusercontent.com/KmnNh4UM_AjmSdqpWytDaz4jzDw7eip60jOPspPaognt3V3nwW904bC-jB7L5ozUm4bShYWTiPU=s192",
+     "width": 192,
+     "height": 192
+    },
+    {
+     "url": "https://yt3.googleusercontent.com/KmnNh4UM_AjmSdqpWytDaz4jzDw7eip60jOPspPaognt3V3nwW904bC-jB7L5ozUm4bShYWTiPU=s576",
+     "width": 576,
+     "height": 576
+    },
+    {
+     "url": "https://yt3.googleusercontent.com/KmnNh4UM_AjmSdqpWytDaz4jzDw7eip60jOPspPaognt3V3nwW904bC-jB7L5ozUm4bShYWTiPU=s1200",
+     "width": 1200,
+     "height": 1200
+    }
+   ]
+  },
+  {
+   "category": "Community playlists",
+   "resultType": "playlist",
+   "title": "REGUETON ANTIGUO 100% ÉXITOS🔥REGGAETON VIEJO / REGETON ANTIGUO/ REGETON VIEJO/ REGAETON ANTIGUO",
+   "itemCount": null,
+   "author": "Emmanuel Unzaga",
+   "browseId": "VLPLfwnrKp2iSDI",
+   "thumbnails": [
+    {
+     "url": "https://yt3.googleusercontent.com/1YclMI3WM1bM5GAOtbYfazqjwyVs4KtzzFEE2tdFeow0uFxCoc4qnj3sCBvtNaferJSCYnO78lclo3U=w60-h60-l90-rj",
+     "width": 60,
+     "height": 60
+    },
+    {
+     "url": "https://yt3.googleusercontent.com/1YclMI3WM1bM5GAOtbYfazqjwyVs4KtzzFEE2tdFeow0uFxCoc4qnj3sCBvtNaferJSCYnO78lclo3U=w120-h120-l90-rj",
+     "width": 120,
+     "height": 120
+    },
+    {
+     "url": "https://yt3.googleusercontent.com/1YclMI3WM1bM5GAOtbYfazqjwyVs4KtzzFEE2tdFeow0uFxCoc4qnj3sCBvtNaferJSCYnO78lclo3U=w226-h226-l90-rj",
+     "width": 226,
+     "height": 226
+    },
+    {
+     "url": "https://yt3.googleusercontent.com/1YclMI3WM1bM5GAOtbYfazqjwyVs4KtzzFEE2tdFeow0uFxCoc4qnj3sCBvtNaferJSCYnO78lclo3U=w544-h544-l90-rj",
+     "width": 544,
+     "height": 544
+    }
+   ]
+  },
+  {
+   "category": "Community playlists",
+   "resultType": "playlist",
+   "title": "Reggaetón 2012, 2013, 2014, 2015, 2016",
+   "itemCount": null,
+   "author": "Franck Pierre Franco Linero",
+   "browseId": "VLPLjso3wKJ85K0UhbtD3gv8rszYTm3REbYL",
+   "thumbnails": [
+    {
+     "url": "https://yt3.googleusercontent.com/O6wi8366vcyNF1RTSOLAWuaMk_IzkW6B_BUh1WV2Q0ZRG55WSgubuYR4IbM9P_Tcc3XoBgV3E8E=s192",
+     "width": 192,
+     "height": 192
+    },
+    {
+     "url": "https://yt3.googleusercontent.com/O6wi8366vcyNF1RTSOLAWuaMk_IzkW6B_BUh1WV2Q0ZRG55WSgubuYR4IbM9P_Tcc3XoBgV3E8E=s576",
+     "width": 576,
+     "height": 576
+    },
+    {
+     "url": "https://yt3.googleusercontent.com/O6wi8366vcyNF1RTSOLAWuaMk_IzkW6B_BUh1WV2Q0ZRG55WSgubuYR4IbM9P_Tcc3XoBgV3E8E=s1200",
+     "width": 1200,
+     "height": 1200
+    }
+   ]
+  },
+  {
+   "category": "Community playlists",
+   "resultType": "playlist",
+   "title": "reggaeton-trap 2015-2020",
+   "itemCount": null,
+   "author": "juan david",
+   "browseId": "VLPL8zkzodKrPAwfY80yrxcou3zjCe5Z1-1_",
+   "thumbnails": [
+    {
+     "url": "https://yt3.googleusercontent.com/v-akxOaa50bSyjVY9CoeN19FRIzdWsvXtDwurKRsR0XCsBYybnIEFVw3weqoV75vX3QHeFLLjyI=s192",
+     "width": 192,
+     "height": 192
+    },
+    {
+     "url": "https://yt3.googleusercontent.com/v-akxOaa50bSyjVY9CoeN19FRIzdWsvXtDwurKRsR0XCsBYybnIEFVw3weqoV75vX3QHeFLLjyI=s576",
+     "width": 576,
+     "height": 576
+    },
+    {
+     "url": "https://yt3.googleusercontent.com/v-akxOaa50bSyjVY9CoeN19FRIzdWsvXtDwurKRsR0XCsBYybnIEFVw3weqoV75vX3QHeFLLjyI=s1200",
+     "width": 1200,
+     "height": 1200
+    }
+   ]
+  }
+ ],
+ "playlist": {
+  "id": "PLDzVDC0HAjdwbi550vHEVEBhoMzKHFByN",
+  "title": "Reggaeton Viejo",
+  "tracks": [
+   {
+    "videoId": "xuBbiiwO9Ow",
+    "title": "Igual Que Ayer",
+    "artists": [
+     {
+      "name": "Rakim & Ken-y",
+      "id": "UCJaOXKmuXlR0YW5Ljj4c4rg"
+     }
+    ],
+    "album": {
+     "name": "Masterpiece: Nuestra Obra Maestra",
+     "id": "MPREb_3TQtsXGVsf2"
+    },
+    "likeStatus": "INDIFFERENT",
+    "inLibrary": false,
+    "pinnedToListenAgain": false,
+    "feedbackTokens": {
+     "add": null,
+     "remove": "AB9zfpI7gNC_IoeFVn0IGm3xczvGhHCYVC8xz_SrCFFhXTV-_-eCAXTdeCe5DOpbxiMvLEx0Q72kNHzl5Vc0BBEPVQlKzJrhbw"
+    },
+    "thumbnails": [
+     {
+      "url": "https://yt3.googleusercontent.com/iVGf0BbnfZBxe_ji8yVpwrnNNsiZUkJq7VaTQryzu3MsMluFcI3MoOervfvEuRtB3tYfhrtIFUOHmHxk1w=w60-h60-l90-rj",
+      "width": 60,
+      "height": 60
+     },
+     {
+      "url": "https://yt3.googleusercontent.com/iVGf0BbnfZBxe_ji8yVpwrnNNsiZUkJq7VaTQryzu3MsMluFcI3MoOervfvEuRtB3tYfhrtIFUOHmHxk1w=w120-h120-l90-rj",
+      "width": 120,
+      "height": 120
+     }
+    ],
+    "isAvailable": true,
+    "isExplicit": false,
+    "videoType": "MUSIC_VIDEO_TYPE_ATV",
+    "views": null,
+    "communityVoteStatus": null,
+    "duration": "3:53",
+    "duration_seconds": 233
+   },
+   {
+    "videoId": "7KkNxxlN3Nk",
+    "title": "Doncella (Remix) (Remix Mix)",
+    "artists": [
+     {
+      "name": "Zion y Lennox",
+      "id": "UC8U7wOw_Hd7ltvcWOWAp21g"
+     }
+    ],
+    "album": {
+     "name": "Motivando a la Yal",
+     "id": "MPREb_iOa2RxWOFyE"
+    },
+    "likeStatus": "INDIFFERENT",
+    "inLibrary": false,
+    "pinnedToListenAgain": false,
+    "feedbackTokens": {
+     "add": null,
+     "remove": "AB9zfpKrQGzGyoudY-NOMW4R95pHeKFRR67jc9t0v8haUyF6t-JXIb51NmI7CB7w-2ZjmdTIDbFjjuSY1kQLGB4Ebp1AkOgbPg"
+    },
+    "thumbnails": [
+     {
+      "url": "https://yt3.googleusercontent.com/_-dkfWEhBDYqRjqERVkD1RPIzfABheIW4KAgIxTlX1q0mwR89Dvl4p8VN5encELwI77vddT1kq4FqK94=w60-h60-l90-rj",
+      "width": 60,
+      "height": 60
+     },
+     {
+      "url": "https://yt3.googleusercontent.com/_-dkfWEhBDYqRjqERVkD1RPIzfABheIW4KAgIxTlX1q0mwR89Dvl4p8VN5encELwI77vddT1kq4FqK94=w120-h120-l90-rj",
+      "width": 120,
+      "height": 120
+     }
+    ],
+    "isAvailable": true,
+    "isExplicit": false,
+    "videoType": "MUSIC_VIDEO_TYPE_ATV",
+    "views": null,
+    "communityVoteStatus": null,
+    "duration": "3:11",
+    "duration_seconds": 191
+   },
+   {
+    "videoId": "xB-dMUTLU3U",
+    "title": "Porque Me Tratas Así?",
+    "artists": [
+     {
+      "name": "Wisin & Yandel",
+      "id": "UCJ0-R-v3CaJNYMqfp9tivqA"
+     }
+    ],
+    "album": {
+     "name": "Wisin Vs Yandel \"Los Extraterrestres\"",
+     "id": "MPREb_DRjYSXWStny"
+    },
+    "likeStatus": "INDIFFERENT",
+    "inLibrary": false,
+    "pinnedToListenAgain": false,
+    "feedbackTokens": {
+     "add": null,
+     "remove": "AB9zfpJm0ljmi7zBUEhHBBZCE4EOGH_pntMl6odG3GZEPWB3uRg2ZF4CoZ8ffN7yJDZK61zArN0pSFvGR_-oG5O7U-Opcv1m5Q"
+    },
+    "thumbnails": [
+     {
+      "url": "https://yt3.googleusercontent.com/3WQjZiEtJ5R-ulShyOfd64AkaeprtoCoNRLlpCZIKvwh7W6HvrethkI6kKyPnfPhODL3mwTX4FNRwB9obQ=w60-h60-s-l90-rj",
+      "width": 60,
+      "height": 60
+     },
+     {
+      "url": "https://yt3.googleusercontent.com/3WQjZiEtJ5R-ulShyOfd64AkaeprtoCoNRLlpCZIKvwh7W6HvrethkI6kKyPnfPhODL3mwTX4FNRwB9obQ=w120-h120-s-l90-rj",
+      "width": 120,
+      "height": 120
+     }
+    ],
+    "isAvailable": true,
+    "isExplicit": false,
+    "videoType": "MUSIC_VIDEO_TYPE_ATV",
+    "views": null,
+    "communityVoteStatus": null,
+    "duration": "4:04",
+    "duration_seconds": 244,
+    "creditsBrowseId": "MPTCxB-dMUTLU3U"
+   },
+   {
+    "videoId": "yDlQwGN4ku8",
+    "title": "Pa Que la Pases Bien",
+    "artists": [
+     {
+      "name": "Arcangel",
+      "id": "UCVcAt8IIKIeubRSigcYXgtA"
+     }
+    ],
+    "album": null,
+    "likeStatus": "INDIFFERENT",
+    "inLibrary": false,
+    "pinnedToListenAgain": false,
+    "feedbackTokens": {
+     "add": null,
+     "remove": "AB9zfpJp3wXEy1iKGw0AlMKk1T8EEZEOahVwCEkgkNAlN-jjX-uli2V7UyRsF_eI98P5yyTcejT_onzALjlYSUiqXRqENIipRw"
+    },
+    "thumbnails": [
+     {
+      "url": "https://i.ytimg.com/vi/yDlQwGN4ku8/hq720.jpg",
+      "width": 1280,
+      "height": 720
+     }
+    ],
+    "isAvailable": true,
+    "isExplicit": false,
+    "videoType": "MUSIC_VIDEO_TYPE_ATV",
+    "views": null,
+    "communityVoteStatus": null,
+    "duration": "3:35",
+    "duration_seconds": 215
+   },
+   {
+    "videoId": "a4xxzUEHKek",
+    "title": "Un Sueño",
+    "artists": [
+     {
+      "name": "Rakim Y Ken-Y",
+      "id": "UCJaOXKmuXlR0YW5Ljj4c4rg"
+     }
+    ],
+    "album": {
+     "name": "Gargolas 5: The Next Generation",
+     "id": "MPREb_fvvkadL5jJj"
+    },
+    "likeStatus": "INDIFFERENT",
+    "inLibrary": false,
+    "pinnedToListenAgain": false,
+    "feedbackTokens": {
+     "add": null,
+     "remove": "AB9zfpLUUgBGssZk78gpAfAtX2LG4eP-UOqYYklLf6E-4MBGTG9-6crzEGZwkEHuegepmYvuagILOMbBRJ3Ysf-AQdF118rKQA"
+    },
+    "thumbnails": [
+     {
+      "url": "https://yt3.googleusercontent.com/tY7cWBQEzi9H2AVHM9h7J5VNzxZYFSTmTf0EchgrLmNiEQdGwKaEdbTmvJ88j_omgMf7VZwwMpGEMKV_=w60-h60-l90-rj",
+      "width": 60,
+      "height": 60
+     },
+     {
+      "url": "https://yt3.googleusercontent.com/tY7cWBQEzi9H2AVHM9h7J5VNzxZYFSTmTf0EchgrLmNiEQdGwKaEdbTmvJ88j_omgMf7VZwwMpGEMKV_=w120-h120-l90-rj",
+      "width": 120,
+      "height": 120
+     }
+    ],
+    "isAvailable": true,
+    "isExplicit": false,
+    "videoType": "MUSIC_VIDEO_TYPE_ATV",
+    "views": null,
+    "communityVoteStatus": null,
+    "duration": "4:06",
+    "duration_seconds": 246
+   }
+  ]
+ },
+ "song_details": {
+  "videoDetails": {
+   "videoId": "abc123",
+   "title": "Single Song",
+   "author": "Some Artist",
+   "lengthSeconds": "201",
+   "viewCount": "12345",
+   "thumbnail": {
+    "thumbnails": [
+     {
+      "url": "https://i.ytimg.com/vi/abc123/hq.jpg",
+      "width": 480,
+      "height": 360
+     }
+    ]
+   }
+  }
+ }
+}
