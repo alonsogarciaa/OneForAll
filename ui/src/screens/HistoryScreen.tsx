@@ -32,6 +32,7 @@ export function HistoryScreen() {
   const [rows, setRows] = useState<HistoryEntry[] | null>(null)
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [confirmAll, setConfirmAll] = useState(false)
+  const openData = useUiStore((s) => s.openData)
 
   const load = useCallback(() => {
     client.history().then(setRows).catch((e) => toast(e.message, 'error'))
@@ -71,7 +72,15 @@ export function HistoryScreen() {
         </div>
       )}
       {rows && rows.length > 0 && (
-        <SelectableTable rows={rows} columns={COLUMNS} selected={selected} onSelect={setSelected} rowId={(h) => h.id} rowLabel={(h) => h.title} />
+        <SelectableTable
+          rows={rows}
+          columns={COLUMNS}
+          selected={selected}
+          onSelect={setSelected}
+          rowId={(h) => h.id}
+          rowLabel={(h) => h.title}
+          onActivate={(h) => h.path && openData(h.path)}
+        />
       )}
       {confirmAll && (
         <GlassSheet

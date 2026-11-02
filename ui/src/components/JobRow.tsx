@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronRight, FolderOpen, RotateCcw, X } from 'lucide-react'
+import { AudioLines, ChevronRight, FolderOpen, RotateCcw, X } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import { useClient } from '../lib/engine'
 import { childrenOf, isFinal, useJobsStore } from '../stores/jobsStore'
@@ -12,7 +12,13 @@ const STAGE_LABEL: Record<string, string> = {
   downloading: 'Descargando',
   converting: 'Convirtiendo',
   tagging: 'Etiquetando',
-  finalizing: 'Finalizando'
+  finalizing: 'Finalizando',
+  decoding: 'Analizando: leyendo audio',
+  tempo: 'Analizando: tempo',
+  key: 'Analizando: tonalidad',
+  loudness: 'Analizando: volumen',
+  waveform: 'Analizando: forma de onda',
+  saving: 'Analizando: guardando'
 }
 
 export function statusLabel(j: Job): string {
@@ -75,6 +81,12 @@ export function JobRow({ job, nested = false }: { job: Job; nested?: boolean }) 
           <button className="btn btn-sm" onClick={cancel}>
             <X size={14} />
             Cancelar
+          </button>
+        )}
+        {job.status === 'done' && job.result?.path && (
+          <button className="btn btn-sm btn-ghost" onClick={() => useUiStore.getState().openData(job.result!.path)}>
+            <AudioLines size={14} />
+            Datos
           </button>
         )}
         {job.status === 'done' && job.result?.path && (

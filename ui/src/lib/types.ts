@@ -55,6 +55,7 @@ export interface HistoryEntry {
   at: string
   bpm?: number | null
   camelot?: string | null
+  path?: string | null
 }
 
 export type JobStatus = 'queued' | 'running' | 'done' | 'failed' | 'cancelled'

@@ -53,6 +53,7 @@ export function LibraryScreen() {
   const [rows, setRows] = useState<TrackRecord[] | null>(null)
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const fileInput = useRef<HTMLInputElement>(null)
+  const openData = useUiStore((s) => s.openData)
 
   const load = useCallback(() => {
     client.library(q).then(setRows).catch((e) => toast(e.message, 'error'))
@@ -96,7 +97,7 @@ export function LibraryScreen() {
             accept=".mp3,.m4a,.aac,.wav,.aif,.aiff,.flac,.ogg,.opus,.webm"
             onChange={(e) => {
               const f = e.target.files?.[0]
-              if (f) analyze([window.oneforall.pathForFile(f)])
+              if (f) openData(window.oneforall.pathForFile(f)) // the data sheet analyses it if needed
               e.target.value = ''
             }}
           />
@@ -120,7 +121,7 @@ export function LibraryScreen() {
           onSelect={setSelected}
           rowId={(t) => t.id}
           rowLabel={(t) => t.title}
-          onActivate={(t) => !t.missing && window.oneforall.openPath(t.path)}
+          onActivate={(t) => !t.missing && openData(t.path)}
           rowClass={(t) => (t.missing ? 'row-missing' : undefined)}
         />
       )}

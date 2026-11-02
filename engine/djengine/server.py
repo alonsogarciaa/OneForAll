@@ -108,6 +108,22 @@ AUDIO_EXT = {".mp3", ".m4a", ".aac", ".wav", ".aif", ".aiff", ".flac", ".ogg", "
 LEVEL_ORDER = {"same": 0, "adjacent": 1, "relative": 2}
 
 
+def _audio_info(path: Path) -> dict:
+    import mutagen
+
+    try:
+        f = mutagen.File(path)
+        info = f.info if f is not None else None
+    except Exception:
+        info = None
+    return {
+        "format": path.suffix.lstrip(".").lower(),
+        "bitrate": int(getattr(info, "bitrate", 0) or 0) // 1000 or None,
+        "sample_rate": getattr(info, "sample_rate", None),
+        "size_bytes": path.stat().st_size if path.exists() else None,
+    }
+
+
 def _norm(p: str | Path) -> str:
     return os.path.normcase(os.path.realpath(str(p)))
 
@@ -229,7 +245,7 @@ def create_app(services: Services, token: str) -> FastAPI:
         rec = svc.analysis.get(Path(path))
         if rec is None:
             raise HTTPException(status_code=404, detail={"code": "not_analyzed", "message": "Sin analizar"})
-        return {"record": asdict(rec), "sidecar": svc.analysis.get_sidecar(Path(path))}
+        return {"record": asdict(rec), "sidecar": svc.analysis.get_sidecar(Path(path)), "info": _audio_info(Path(path))}
 
     @api.put("/analysis/bpm")
     def manual_bpm(body: ManualBpm):
@@ -288,7 +304,8 @@ def create_app(services: Services, token: str) -> FastAPI:
         rows = []
         for h in svc.library.list_history():
             t = tracks.get(h.track_id)
-            rows.append({**asdict(h), "bpm": t.bpm if t else None, "camelot": t.camelot if t else None})
+            rows.append({**asdict(h), "bpm": t.bpm if t else None, "camelot": t.camelot if t else None,
+                         "path": t.path if t else None})
         return rows
 
     @api.delete("/history")

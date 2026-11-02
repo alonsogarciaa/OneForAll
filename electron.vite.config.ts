@@ -5,7 +5,7 @@ import type { Plugin } from 'vite'
 
 const CSP =
   "default-src 'self'; script-src 'self'; connect-src 'self' http://127.0.0.1:* ws://127.0.0.1:*; " +
-  "img-src 'self' https: data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:"
+  "img-src 'self' https: data:; media-src 'self' http://127.0.0.1:*; style-src 'self' 'unsafe-inline'; font-src 'self' data:"
 
 // Dev server needs inline scripts for React refresh, so the CSP is only added to the production build.
 const cspPlugin = (): Plugin => ({

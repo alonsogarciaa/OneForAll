@@ -95,6 +95,7 @@ export function ConverterScreen() {
             onDragLeave={() => setOver(false)}
             onDrop={(e) => {
               e.preventDefault()
+              e.stopPropagation() // keep the window-wide "analyse dropped file" handler out of the converter
               setOver(false)
               addFiles(Array.from(e.dataTransfer.files))
             }}

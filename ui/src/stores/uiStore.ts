@@ -19,6 +19,10 @@ interface UiState {
   submittedQuery: string
   setQuery(q: string): void
   submitQuery(q: string): void
+  /** File shown in the data sheet (waveform, BPM, key, tap tempo), or null. */
+  dataSheet: string | null
+  openData(path: string): void
+  closeData(): void
   navigate(r: Route): void
   toast(text: string, kind?: ToastKind): void
   dismissToast(id: number): void
@@ -48,6 +52,9 @@ export const useUiStore = create<UiState>((set, get) => ({
   submittedQuery: '',
   setQuery: (query) => set({ query }),
   submitQuery: (q) => set({ query: q, submittedQuery: q.trim(), route: 'buscar' }),
+  dataSheet: null,
+  openData: (dataSheet) => set({ dataSheet }),
+  closeData: () => set({ dataSheet: null }),
   navigate: (route) => set({ route }),
   toast(text, kind = 'info') {
     const id = nextId++

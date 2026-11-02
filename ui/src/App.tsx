@@ -8,6 +8,7 @@ import { HistoryScreen } from './screens/HistoryScreen'
 import { ConverterScreen } from './screens/ConverterScreen'
 import { SettingsScreen } from './screens/SettingsScreen'
 import { PlaylistSummaryHost } from './components/PlaylistSummarySheet'
+import { DataSheet } from './components/DataSheet'
 
 function Screen() {
   const route = useUiStore((s) => s.route)
@@ -17,6 +18,12 @@ function Screen() {
   if (route === 'historial') return <HistoryScreen />
   if (route === 'conversor') return <ConverterScreen />
   return <SettingsScreen />
+}
+
+function DataSheetHost() {
+  const path = useUiStore((s) => s.dataSheet)
+  const close = useUiStore((s) => s.closeData)
+  return path ? <DataSheet key={path} path={path} onClose={close} /> : null
 }
 
 function Body() {
@@ -45,6 +52,7 @@ function Body() {
     <>
       <Screen />
       <PlaylistSummaryHost />
+      <DataSheetHost />
     </>
   )
 }

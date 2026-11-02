@@ -110,9 +110,20 @@ function Toasts() {
   )
 }
 
+const AUDIO_RE = /\.(mp3|m4a|aac|wav|aif|aiff|flac|ogg|opus|webm)$/i
+
 export function AppShell({ children }: { children: ReactNode }) {
+  const openData = useUiStore((s) => s.openData)
   return (
-    <div className="app-shell">
+    <div
+      className="app-shell"
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => {
+        e.preventDefault()
+        const f = Array.from(e.dataTransfer.files).find((x) => AUDIO_RE.test(x.name))
+        if (f && window.oneforall?.pathForFile) openData(window.oneforall.pathForFile(f))
+      }}
+    >
       <Sidebar />
       <main className="main">
         <TopBar />

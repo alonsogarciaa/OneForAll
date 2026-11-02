@@ -111,6 +111,7 @@ def test_analysis_endpoints_and_manual_bpm(env, tmp_path, click_track_file):
     wait(c, lambda js: final(js, "analysis"))
     got = c.get("/analysis", params={"path": str(p)}, headers=H).json()
     assert abs(got["record"]["bpm"] - 128) <= 1 and len(got["sidecar"]["waveform"]["peaks"]) == 2000
+    assert got["info"]["format"] == "wav" and got["info"]["sample_rate"] == 44100
     upd = c.put("/analysis/bpm", json={"path": str(p), "bpm": 127.5}, headers=H).json()
     assert (upd["bpm"], upd["bpm_source"]) == (127.5, "manual")
     from djengine.tags import read_tags
@@ -139,4 +140,4 @@ def test_history_includes_bpm_and_key(env):
     c.post("/jobs", json={"type": "download", "request": {"target": song(c), "options": {"format": "mp3"}}}, headers=H)
     wait(c, lambda js: final(js, "analysis"))
     h = c.get("/history", headers=H).json()[0]
-    assert h["camelot"] and "bpm" in h
+    assert h["camelot"] and "bpm" in h and h["path"].endswith(".mp3")

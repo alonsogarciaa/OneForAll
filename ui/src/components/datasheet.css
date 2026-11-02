@@ -1,0 +1,97 @@
+.ds-progress {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  color: var(--lg-text-secondary);
+}
+.ds-progress .progress {
+  margin: 0;
+}
+.ds-wave {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: var(--radius-card);
+  background: rgba(0, 0, 0, 0.28);
+}
+[data-theme='light'] .ds-wave {
+  background: #1c1c1e; /* the waveform colours are designed for a dark field */
+  color: #fff;
+}
+.waveform {
+  width: 100%;
+  height: 84px;
+  display: block;
+  cursor: pointer;
+  border-radius: 8px;
+}
+.ds-play {
+  width: 40px;
+  height: 40px;
+}
+.ds-time {
+  font-size: 13px;
+  color: rgba(235, 235, 245, 0.7);
+  min-width: 84px;
+  text-align: right;
+}
+.ds-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+.ds-fact,
+.ds-tap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--surface-raised);
+}
+.ds-tap {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  align-items: center;
+  gap: 16px;
+}
+.ds-label {
+  font-size: 13px;
+  color: var(--lg-text-secondary);
+}
+.ds-value {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.ds-sub {
+  font-size: 13px;
+  color: var(--lg-text-secondary);
+}
+.ds-badges {
+  display: flex;
+  gap: 6px;
+  min-height: 20px;
+}
+.tap-bpm {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  min-width: 70px;
+}
+.ds-tap-actions {
+  display: flex;
+  gap: 8px;
+}
+@media (max-width: 1100px) {
+  .ds-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
