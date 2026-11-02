@@ -38,6 +38,7 @@ export interface EngineOptions {
   dataRoot?: string
   fake: boolean
   toolsDir?: string
+  modelsDir?: string
   cwd?: string
 }
 
@@ -105,6 +106,7 @@ export class EngineProcess extends EventEmitter {
     if (this.opts.fake) args.push('--fake')
     const env = { ...process.env, PYTHONUNBUFFERED: '1', PYTHONIOENCODING: 'utf-8' }
     if (this.opts.toolsDir) env.ONEFORALL_TOOLS = this.opts.toolsDir
+    if (this.opts.modelsDir) env.ONEFORALL_MODELS = this.opts.modelsDir
 
     const child = spawn(cmd, args, { cwd: this.opts.cwd, env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] })
     this.child = child

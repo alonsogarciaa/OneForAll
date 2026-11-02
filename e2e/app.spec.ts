@@ -109,3 +109,29 @@ test('closing with active jobs asks first', async () => {
   // "Cancelar" keeps the window open
   expect(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length)).toBe(1)
 })
+
+test('download → automatic analysis → data sheet → tap tempo → harmony', async () => {
+  await launch()
+  await search('graciosa')
+  await downloadFirstSong()
+  await nav('Biblioteca')
+  const row = page.locator('.stable-row:not(.stable-head)').first()
+  await expect(row.locator('.key-chip')).toBeVisible({ timeout: 90_000 })
+  await expect(row).toContainText(/\d+\.\d/)
+  await row.dblclick()
+  await expect(page.locator('canvas.waveform')).toBeVisible({ timeout: 30_000 })
+  await expect(page.locator('.ds-label', { hasText: 'BPM' })).toBeVisible()
+  await page.locator('.ds-value').first().click() // focus inside the sheet, not on a button
+  await page.clock.install() // exact 500 ms between taps, independent of automation latency
+  await page.clock.pauseAt(new Date(Date.now() + 1000))
+  for (let i = 0; i < 8; i++) {
+    await page.keyboard.press('Space')
+    await page.clock.runFor(500)
+  }
+  await expect(page.locator('.tap-bpm')).toHaveText('120.0')
+  await page.clock.resume() // timers (search debounce) need real time again
+  await page.keyboard.press('Escape')
+  await nav('Armonía')
+  await page.selectOption('select[aria-label="Pista de referencia"]', { index: 1 })
+  await expect(page.getByText('No hay pistas compatibles con estos criterios')).toBeVisible()
+})

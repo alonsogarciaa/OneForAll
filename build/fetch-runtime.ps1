@@ -48,7 +48,16 @@ if (-not (Test-Path (Join-Path $py 'python.exe'))) {
     Copy-Item -Recurse (Split-Path -Parent $src) $py
 }
 $pyexe = Join-Path $py 'python.exe'
-& py -m uv pip install --python $pyexe --break-system-packages --reinstall-package djengine (Join-Path $root 'engine')
+& py -m uv pip install --python $pyexe --break-system-packages --reinstall-package djengine ((Join-Path $root 'engine') + '[nn]')
 if ($LASTEXITCODE -ne 0) { throw 'engine install failed' }
-& $pyexe -c "import djengine, fastapi, yt_dlp, ytmusicapi, mutagen, PIL, psutil; print('runtime ok')"
+& $pyexe -c "import djengine, fastapi, yt_dlp, ytmusicapi, mutagen, PIL, psutil, librosa, torch, deeprhythm; import djengine.analysis.key_cnn; print('runtime ok')"
 if ($LASTEXITCODE -ne 0) { throw 'runtime import check failed' }
+
+# --- DeepRhythm weights (otherwise downloaded on first analysis) -------------------------
+$models = Join-Path $runtime 'models'
+New-Item -ItemType Directory -Force $models | Out-Null
+$weights = Join-Path $models 'deeprhythm-0.7.pth'
+if ($Force -or -not (Test-Path $weights)) {
+    & $pyexe -c "from deeprhythm.utils import get_weights; import shutil, sys; shutil.copy(get_weights(quiet=True), sys.argv[1])" $weights
+    if ($LASTEXITCODE -ne 0) { throw 'deeprhythm weights fetch failed' }
+}

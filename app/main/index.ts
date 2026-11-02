@@ -14,6 +14,7 @@ function engineOptions() {
     return {
       pythonCmd: [join(runtime, 'python', 'python.exe'), '-m', 'djengine'],
       toolsDir: join(runtime, 'bin'),
+      modelsDir: join(runtime, 'models'),
       dataRoot,
       fake
     }
