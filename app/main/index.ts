@@ -2,6 +2,7 @@ import { join, extname, resolve } from 'node:path'
 import { existsSync, statSync } from 'node:fs'
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, shell } from 'electron'
 import { EngineProcess, type EngineInfo, type EngineState } from './engineProcess'
+import { isDraggableStem, normPath } from './drag'
 
 const AUDIO_EXT = new Set(['.mp3', '.m4a', '.aac', '.wav', '.aif', '.aiff', '.flac', '.ogg', '.opus', '.webm'])
 const ROOT = resolve(__dirname, '../..')
@@ -122,6 +123,15 @@ function registerIpc(): void {
     // Only folders and audio files: never launch arbitrary executables from a renderer request.
     if (typeof p !== 'string' || !existsSync(p)) return
     if (statSync(p).isDirectory() || AUDIO_EXT.has(extname(p).toLowerCase())) void shell.openPath(p)
+  })
+  const dragAllowed = new Set<string>()
+  ipcMain.on('drag:allow', (_e, files: unknown) => {
+    if (Array.isArray(files)) for (const f of files) if (typeof f === 'string') dragAllowed.add(normPath(f))
+  })
+  ipcMain.on('drag:start', (e, file: unknown) => {
+    if (typeof file !== 'string' || !isDraggableStem(file, dragAllowed)) return
+    const icon = app.isPackaged ? join(process.resourcesPath, 'drag.png') : join(ROOT, 'build', 'resources', 'drag.png')
+    e.sender.startDrag({ file, icon })
   })
   ipcMain.on('titlebar:theme', (_e, dark: unknown) => {
     // The acrylic/vibrancy tint follows nativeTheme, so the app theme drives it (not the OS theme).

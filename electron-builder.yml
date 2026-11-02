@@ -8,6 +8,8 @@ files:
   - out/**
   - package.json
 extraResources:
+  - from: build/resources/drag.png
+    to: drag.png
   - from: build/runtime
     to: runtime
     filter:
