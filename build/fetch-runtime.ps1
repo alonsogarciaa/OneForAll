@@ -61,3 +61,23 @@ if ($Force -or -not (Test-Path $weights)) {
     & $pyexe -c "from deeprhythm.utils import get_weights; import shutil, sys; shutil.copy(get_weights(quiet=True), sys.argv[1])" $weights
     if ($LASTEXITCODE -ne 0) { throw 'deeprhythm weights fetch failed' }
 }
+
+# --- Separation models (otherwise downloaded on first use) -------------------------------
+$torchHome = Join-Path $models 'torch'
+$uvr = Join-Path $models 'uvr'
+$hf = Join-Path $models 'hf'
+New-Item -ItemType Directory -Force $torchHome, $uvr, $hf | Out-Null
+$env:TORCH_HOME = $torchHome
+$env:HF_HOME = $hf
+$env:PATH = $bin + ';' + $env:PATH  # audio-separator shells out to ffmpeg
+& $pyexe -c "from demucs.pretrained import get_model; get_model('htdemucs_6s'); print('demucs model ok')"
+if ($LASTEXITCODE -ne 0) { throw 'demucs model fetch failed' }
+& $pyexe -c "import sys; from audio_separator.separator import Separator; s = Separator(model_file_dir=sys.argv[1], output_dir=sys.argv[1]); s.load_model(model_filename='UVR_MDXNET_KARA_2.onnx'); print('uvr model ok')" $uvr
+if ($LASTEXITCODE -ne 0) { throw 'karaoke model fetch failed' }
+Remove-Item Env:\TORCH_HOME
+Remove-Item Env:\HF_HOME
+# separation smoke test with the bundled weights only
+$env:ONEFORALL_MODELS = $models
+& $pyexe -c "import numpy as np; from djengine.stems.demucs_sep import DemucsSeparator; out = DemucsSeparator().separate(np.zeros((2, 88200), dtype=np.float32), 44100, lambda f: None, lambda: False); assert len(out) == 6; print('separation ok')"
+if ($LASTEXITCODE -ne 0) { throw 'separation smoke test failed' }
+Remove-Item Env:\ONEFORALL_MODELS

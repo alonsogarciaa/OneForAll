@@ -57,8 +57,8 @@ export function DataSheet({ path, onClose }: { path: string; onClose(): void }) 
           started.current = true
           const r = await client.analyze([path])
           setJobId(r.jobs[0]?.id ?? null)
-        } else if (e?.status !== 404) {
-          setError(e.message)
+        } else if (e?.status !== 404 || !analyzeIfMissing) {
+          setError(e?.status === 404 ? 'No se pudo obtener el análisis de este archivo' : e.message)
         }
       }
     },
@@ -221,9 +221,9 @@ export function DataSheet({ path, onClose }: { path: string; onClose(): void }) 
               <span className="ds-sub">Pulsa Tap o la barra espaciadora al ritmo</span>
             </div>
           </div>
-          <StemsSection path={path} durationS={data.sidecar.duration} />
         </>
       )}
+      <StemsSection path={path} durationS={data?.sidecar.duration ?? null} />
     </GlassSheet>
   )
 }

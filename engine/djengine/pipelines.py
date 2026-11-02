@@ -186,7 +186,12 @@ async def start_playlist(svc, playlist_id: str, options: ConvertOptions) -> Job:
 def submit_analysis(svc, path: Path, title: str | None = None, force: bool = False, reset_bpm: bool = False):
     """Top-level analysis job: never a child, so it cannot delay or fail a download or playlist."""
     from .analysis.runner import make_analysis_runner
+    from .jobs import FINAL
 
+    # one analysis per file at a time: two concurrent runs would each rewrite the tags and stale the other's cache
+    for j in svc.jobs.list():
+        if j.type == "analysis" and j.status not in FINAL and (j.payload or {}).get("paths") == [str(path)]:
+            return j
     return svc.jobs.submit(
         "analysis", title or Path(path).stem, make_analysis_runner(svc, Path(path), force=force, reset_bpm=reset_bpm),
         payload={"type": "analysis", "paths": [str(path)], "force": force, "reset_bpm": reset_bpm},

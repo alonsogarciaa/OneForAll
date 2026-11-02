@@ -59,4 +59,13 @@ describe('DataSheet', () => {
     expect(c.analyze).toHaveBeenCalledWith(['C:/m/new.mp3'])
     expect(await screen.findByText(/Analizando/)).toBeInTheDocument()
   })
+
+  it('shows stems even while the analysis is not available yet', async () => {
+    const c = client({
+      getAnalysis: vi.fn(async () => { throw new EngineError(404, 'not_analyzed', 'Sin analizar') }),
+      getStems: vi.fn(async () => ({ folder: 'C:/s', stems: [{ stem: 'vocals', file: 'C:/s/vocals.wav', size_bytes: 10 }] }))
+    })
+    render(<EngineTestProvider client={c}><DataSheet path="C:/m/new.mp3" onClose={() => undefined} /></EngineTestProvider>)
+    expect(await screen.findByText('Voz')).toBeInTheDocument()
+  })
 })
