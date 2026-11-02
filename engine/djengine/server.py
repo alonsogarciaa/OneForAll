@@ -10,14 +10,15 @@ from typing import Annotated, Any, Callable, Literal, Union
 from fastapi import APIRouter, Body, Depends, FastAPI, Header, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from .app_paths import AppPaths
 from .convert import ConvertOptions
 from .download import download_audio, ytdlp_cmd
 from .jobs import JobManager
 from .library import Library
-from .pipelines import DownloadRequest, make_convert_runner, make_download_runner, start_playlist, submit_analysis
+from .pipelines import (DownloadRequest, make_convert_runner, make_download_runner, start_playlist, submit_analysis,
+                        submit_stems)
 from .search import SearchService
 from .settings import Settings, load_settings, save_settings
 
@@ -57,7 +58,7 @@ class Services:
 def build_services(paths: AppPaths, fake: bool) -> Services:
     settings = load_settings(paths.settings_path)
     hub = EventHub()
-    jobs = JobManager(paths.tmp_dir, hub.broadcast, {"download": settings.download_concurrency, "convert": CONVERT_CONCURRENCY, "analysis": ANALYSIS_CONCURRENCY})
+    jobs = JobManager(paths.tmp_dir, hub.broadcast, {"download": settings.download_concurrency, "convert": CONVERT_CONCURRENCY, "analysis": ANALYSIS_CONCURRENCY, "stems": 1})
     jobs.purge_orphans()
     library = Library(paths.db_path)
     library.refresh_missing()
@@ -101,12 +102,34 @@ class AnalysisJobBody(BaseModel):
     reset_bpm: bool = False
 
 
+class StemsJobBody(BaseModel):
+    type: Literal["stems"]
+    paths: list[str] = Field(min_length=1)
+    stems: list[str] = Field(min_length=1)
+    karaoke: bool = False
+
+    @field_validator("stems")
+    @classmethod
+    def _known(cls, v):
+        from .stems.names import STEMS
+
+        bad = [s for s in v if s not in STEMS]
+        if bad:
+            raise ValueError(f"stem desconocido: {bad[0]}")
+        return v
+
+
+class ZipBody(BaseModel):
+    path: str
+
+
 class ManualBpm(BaseModel):
     path: str
     bpm: float = Field(gt=20, lt=400)
 
 
-JobBody = Annotated[Union[DownloadJobBody, PlaylistJobBody, ConvertJobBody, AnalysisJobBody], Field(discriminator="type")]
+JobBody = Annotated[Union[DownloadJobBody, PlaylistJobBody, ConvertJobBody, AnalysisJobBody, StemsJobBody],
+                    Field(discriminator="type")]
 
 AUDIO_EXT = {".mp3", ".m4a", ".aac", ".wav", ".aif", ".aiff", ".flac", ".ogg", ".opus", ".webm"}
 LEVEL_ORDER = {"same": 0, "adjacent": 1, "relative": 2}
@@ -221,6 +244,10 @@ def create_app(services: Services, token: str) -> FastAPI:
                 log.warning("playlist start failed: %s", e)
                 raise HTTPException(status_code=502, detail={"code": "offline", "message": "No se pudo cargar la playlist."})
             return {"job": job.to_dict()}
+        if isinstance(body, StemsJobBody):
+            for p in body.paths:
+                svc.allowed_paths.add(_norm(p))
+            return {"jobs": [submit_stems(svc, Path(p), body.stems, body.karaoke).to_dict() for p in body.paths]}
         if isinstance(body, AnalysisJobBody):
             for p in body.paths:
                 svc.allowed_paths.add(_norm(p))
@@ -266,6 +293,30 @@ def create_app(services: Services, token: str) -> FastAPI:
             svc.library.set_track_analysis(str(p), rec.bpm, track.musical_key, track.camelot, track.lufs)
         return asdict(svc.analysis.get_any(p))
 
+    @api.get("/stems")
+    def list_stems(path: str):
+        got = svc.stems.get(Path(path))
+        return {
+            "folder": str(next(iter(got.values())).parent) if got else None,
+            "stems": [{"stem": k, "file": str(v), "size_bytes": v.stat().st_size} for k, v in got.items()],
+        }
+
+    @api.post("/stems/zip")
+    def zip_stems(body: ZipBody):
+        import zipfile
+
+        got = svc.stems.get(Path(body.path))
+        if not got:
+            raise HTTPException(status_code=404, detail={"code": "no_stems", "message": "Esta canción no tiene stems"})
+        folder = next(iter(got.values())).parent
+        dst = folder / f"{folder.name} (stems).zip"
+        tmp = dst.with_suffix(".zip.part")
+        with zipfile.ZipFile(tmp, "w", zipfile.ZIP_STORED) as z:
+            for f in got.values():
+                z.write(f, arcname=f.name)
+        os.replace(tmp, dst)
+        return {"zip": str(dst)}
+
     @api.get("/harmonic")
     def harmonic(ref_track: int | None = None, bpm: float | None = None, camelot: str | None = None,
                  bpm_tolerance: float = Query(default=6, gt=0, le=20)):
@@ -295,7 +346,9 @@ def create_app(services: Services, token: str) -> FastAPI:
     @api.get("/library")
     def library(q: str = ""):
         svc.library.refresh_missing()
-        return [asdict(t) for t in svc.library.list_tracks(q)]
+        with_stems = svc.stems.sources_with_stems()
+        return [{**asdict(t), "has_stems": t.path in with_stems and bool(svc.stems.get(Path(t.path)))}
+                for t in svc.library.list_tracks(q)]
 
     @api.get("/library/duplicate")
     def duplicate(videoId: str | None = None, artist: str = "", title: str = ""):
@@ -343,7 +396,7 @@ def create_app(services: Services, token: str) -> FastAPI:
         real = _norm(path)
         if Path(real).suffix.lower() not in AUDIO_EXT or not Path(real).is_file():
             raise HTTPException(status_code=403, detail="forbidden")
-        allowed = real in svc.allowed_paths or real in {_norm(p) for p in svc.analysis.paths()}             or real in {_norm(t.path) for t in svc.library.list_tracks()}
+        allowed = real in svc.allowed_paths or svc.stems.is_stem_file(real) or real in {_norm(p) for p in svc.analysis.paths()}             or real in {_norm(t.path) for t in svc.library.list_tracks()}
         if not allowed:
             raise HTTPException(status_code=403, detail="forbidden")
         return FileResponse(real)

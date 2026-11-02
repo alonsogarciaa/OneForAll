@@ -6,7 +6,7 @@ import shutil
 from pathlib import Path
 
 import mutagen
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 from .convert import ConvertOptions, convert_file, output_ext
 from .errors import JobCancelled, UserError, user_error
@@ -20,11 +20,27 @@ from .download import fetch_thumbnail
 log = logging.getLogger(__name__)
 
 
+class ThenStems(BaseModel):
+    stems: list[str] = Field(min_length=1)
+    karaoke: bool = False
+
+    @field_validator("stems")
+    @classmethod
+    def _known(cls, v):
+        from .stems.names import STEMS
+
+        bad = [s for s in v if s not in STEMS]
+        if bad:
+            raise ValueError(f"stem desconocido: {bad[0]}")
+        return v
+
+
 class DownloadRequest(BaseModel):
     target: SearchResult
     options: ConvertOptions
     force: bool = False
     skip_existing: bool = False
+    then_stems: ThenStems | None = None
 
 
 def _ensure_dir(d: Path) -> None:
@@ -120,6 +136,8 @@ def make_download_runner(svc, req: DownloadRequest, dest_dir: Path, playlist_id:
         svc.library.add_history(t.id, t.title, t.artist, "download", "done", track_id)
         if svc.settings.analyze_on_download and svc.analysis is not None:
             submit_analysis(svc, final, t.title)
+        if req.then_stems is not None:
+            submit_stems(svc, final, req.then_stems.stems, req.then_stems.karaoke, t.title)
         if playlist_id is not None:
             svc.library.add_playlist_track(playlist_id, track_id, position or 0)
         return {"path": str(final), "track_id": track_id}
@@ -172,6 +190,16 @@ def submit_analysis(svc, path: Path, title: str | None = None, force: bool = Fal
     return svc.jobs.submit(
         "analysis", title or Path(path).stem, make_analysis_runner(svc, Path(path), force=force, reset_bpm=reset_bpm),
         payload={"type": "analysis", "paths": [str(path)], "force": force, "reset_bpm": reset_bpm},
+    )
+
+
+def submit_stems(svc, path: Path, stems: list[str], karaoke: bool = False, title: str | None = None):
+    """Top-level stems job (never a child): a failed separation cannot fail the download."""
+    from .stems.runner import make_stems_runner
+
+    return svc.jobs.submit(
+        "stems", title or Path(path).stem, make_stems_runner(svc, Path(path), list(stems), karaoke),
+        payload={"type": "stems", "paths": [str(path)], "stems": list(stems), "karaoke": karaoke},
     )
 
 
