@@ -1,7 +1,7 @@
 # OneForAll — Fase 3a: Stems — Especificación
 
 - Fecha: 2026-11-02
-- Estado: pendiente de revisión
+- Estado: aprobada (2026-11-02)
 - Base: `docs/diseno/specs/2026-11-01-dj-app-design.md` (§8, hoja de ruta) y la Fase 2 (en `main`)
 - Referencia: [stemdeck](https://github.com/stemdeckapp/stemdeck) (Apache-2.0): Demucs `htdemucs_6s` y UVR-MDX-NET Karaoke 2.
 - La Fase 3 se divide en **3a (stems, esta spec)** y **3b (mezclador de práctica)**.
@@ -23,7 +23,7 @@ Separar cualquier canción de la biblioteca, o cualquier archivo propio, en los 
 | Aceleración AMD/Intel | Intento con el núcleo de Demucs exportado a ONNX y ejecutado con `onnxruntime-directml`. Solo se activa si supera el umbral de §6. NVIDIA/CUDA queda fuera (el dueño usa AMD y añadiría unos 2,5 GB al instalador). |
 | Formato de los stems | WAV 16 bits a 44,1 kHz por defecto. Ajuste: WAV 24 bits, FLAC, MP3 320. |
 | Carpeta | Ajuste `stems_dir`, por defecto `<carpeta de música>/Stems`. Cada canción en `<stems_dir>/<Artista - Título>/`. |
-| Nombres de archivo | `voz`, `bateria`, `bajo`, `guitarra`, `piano`, `resto`, `voz_principal`, `coros` + extensión. |
+| Nombres de archivo | En inglés, como los usan los DAW (elegido por el dueño): `vocals`, `drums`, `bass`, `guitar`, `piano`, `other`, `lead_vocals`, `backing_vocals` + extensión. |
 | Fuera de alcance | El mezclador (velocidad, tono, bucles, metrónomo, exportar mezcla o bucle): Fase 3b. |
 
 ## 3. Motor
@@ -76,7 +76,7 @@ Separar cualquier canción de la biblioteca, o cualquier archivo propio, en los 
   - El runner escribe solo los stems pedidos, con los nombres de §2 en `<stems_dir>/<Artista - Título>/`.
   - La caché evita recalcular; si el archivo cambia, se recalcula.
   - Cancelar en mitad de la separación no deja nada en la carpeta final ni en `tmp/`.
-  - `karaoke: true` añade `voz_principal` y `coros`.
+  - `karaoke: true` añade `lead_vocals` y `backing_vocals`.
   - Los formatos WAV 16/24, FLAC y MP3 se leen con mutagen.
   - El zip contiene exactamente los stems guardados.
   - `/audio` sirve los stems registrados y da 403 a lo demás.
@@ -95,8 +95,8 @@ Separar cualquier canción de la biblioteca, o cualquier archivo propio, en los 
 ## 7. Criterios de aceptación
 
 1. "Separar stems" con Voz + Batería + Bajo sobre una canción real crea exactamente esos 3 archivos en `<stems_dir>/<Artista - Título>/`, en unos 2 min en el equipo del dueño (CPU).
-2. "Separar voz principal y coros" añade `voz_principal` y `coros`.
-3. "Descargar → Solo voz" desde el buscador deja la canción en la biblioteca y `voz.wav` en su carpeta de stems.
+2. "Separar voz principal y coros" añade `lead_vocals` y `backing_vocals`.
+3. "Descargar → Solo voz" desde el buscador deja la canción en la biblioteca y `vocals.wav` en su carpeta de stems.
 4. Cancelar una separación detiene la barra, no deja archivos y no afecta a otros trabajos. No se abre ninguna otra instancia de la app.
 5. La ventana de datos reproduce cada stem; arrastrarlo al Explorador copia el archivo; "Exportar zip" crea el zip.
 6. Cambiar la carpeta y el formato en Ajustes se aplica a las separaciones siguientes.
