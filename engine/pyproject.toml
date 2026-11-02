@@ -42,5 +42,5 @@ packages = ["djengine"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
-markers = ["online: hits real YouTube"]
-addopts = "-m 'not online'"
+markers = ["online: hits real YouTube", "slow: real models, minutes", "bench: accuracy benchmarks"]
+addopts = "-m 'not online and not slow and not bench'"
