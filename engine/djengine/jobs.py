@@ -97,6 +97,7 @@ class JobManager:
     # --- public -----------------------------------------------------------
     def submit(self, type: str, title: str, runner: Runner, parent_id: str | None = None,
                payload: dict | None = None) -> Job:
+        self._loop = asyncio.get_running_loop()
         job = Job(id=uuid.uuid4().hex, type=type, title=title, parent_id=parent_id, payload=payload)
         self._jobs[job.id] = job
         if parent_id and parent_id in self._jobs:
@@ -248,4 +249,10 @@ class JobManager:
         await asyncio.shield(self._enqueue(event))
 
     def _spawn_emit(self, event: dict) -> None:
+        # runners may report progress from worker threads (asyncio.to_thread): hop onto the loop
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            self._loop.call_soon_threadsafe(self._enqueue, event)
+            return
         self._enqueue(event)

@@ -118,6 +118,8 @@ def make_download_runner(svc, req: DownloadRequest, dest_dir: Path, playlist_id:
             bitrate=_bitrate(req.options), cover_path=cover_path, added_at="",
         ))
         svc.library.add_history(t.id, t.title, t.artist, "download", "done", track_id)
+        if svc.settings.analyze_on_download and svc.analysis is not None:
+            submit_analysis(svc, final, t.title)
         if playlist_id is not None:
             svc.library.add_playlist_track(playlist_id, track_id, position or 0)
         return {"path": str(final), "track_id": track_id}
@@ -161,6 +163,16 @@ async def start_playlist(svc, playlist_id: str, options: ConvertOptions) -> Job:
 
     return svc.jobs.submit("playlist", info.title, parent,
                            payload={"type": "playlist", "id": playlist_id, "options": options.model_dump()})
+
+
+def submit_analysis(svc, path: Path, title: str | None = None, force: bool = False, reset_bpm: bool = False):
+    """Top-level analysis job: never a child, so it cannot delay or fail a download or playlist."""
+    from .analysis.runner import make_analysis_runner
+
+    return svc.jobs.submit(
+        "analysis", title or Path(path).stem, make_analysis_runner(svc, Path(path), force=force, reset_bpm=reset_bpm),
+        payload={"type": "analysis", "paths": [str(path)], "force": force, "reset_bpm": reset_bpm},
+    )
 
 
 def make_convert_runner(svc, src: Path, options: ConvertOptions) -> Runner:

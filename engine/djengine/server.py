@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 import secrets
 from contextlib import asynccontextmanager
 from dataclasses import asdict, dataclass, field
@@ -8,7 +9,7 @@ from typing import Annotated, Any, Callable, Literal, Union
 
 from fastapi import APIRouter, Body, Depends, FastAPI, Header, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 from .app_paths import AppPaths
@@ -16,7 +17,7 @@ from .convert import ConvertOptions
 from .download import download_audio, ytdlp_cmd
 from .jobs import JobManager
 from .library import Library
-from .pipelines import DownloadRequest, make_convert_runner, make_download_runner, start_playlist
+from .pipelines import DownloadRequest, make_convert_runner, make_download_runner, start_playlist, submit_analysis
 from .search import SearchService
 from .settings import Settings, load_settings, save_settings
 
@@ -89,7 +90,26 @@ class ConvertJobBody(BaseModel):
     options: ConvertOptions
 
 
-JobBody = Annotated[Union[DownloadJobBody, PlaylistJobBody, ConvertJobBody], Field(discriminator="type")]
+class AnalysisJobBody(BaseModel):
+    type: Literal["analysis"]
+    paths: list[str] = Field(min_length=1)
+    force: bool = False
+    reset_bpm: bool = False
+
+
+class ManualBpm(BaseModel):
+    path: str
+    bpm: float = Field(gt=20, lt=400)
+
+
+JobBody = Annotated[Union[DownloadJobBody, PlaylistJobBody, ConvertJobBody, AnalysisJobBody], Field(discriminator="type")]
+
+AUDIO_EXT = {".mp3", ".m4a", ".aac", ".wav", ".aif", ".aiff", ".flac", ".ogg", ".opus", ".webm"}
+LEVEL_ORDER = {"same": 0, "adjacent": 1, "relative": 2}
+
+
+def _norm(p: str | Path) -> str:
+    return os.path.normcase(os.path.realpath(str(p)))
 
 
 class HistoryDelete(BaseModel):
@@ -181,6 +201,10 @@ def create_app(services: Services, token: str) -> FastAPI:
                 log.warning("playlist start failed: %s", e)
                 raise HTTPException(status_code=502, detail={"code": "offline", "message": "No se pudo cargar la playlist."})
             return {"job": job.to_dict()}
+        if isinstance(body, AnalysisJobBody):
+            for p in body.paths:
+                svc.allowed_paths.add(_norm(p))
+            return {"jobs": [submit_analysis(svc, Path(p), force=body.force, reset_bpm=body.reset_bpm).to_dict() for p in body.paths]}
         jobs = [
             svc.jobs.submit("convert", Path(p).name, make_convert_runner(svc, Path(p), body.options),
                             payload={"paths": [p], "options": body.options.model_dump()}).to_dict()
@@ -200,6 +224,54 @@ def create_app(services: Services, token: str) -> FastAPI:
     async def cancel_job(job_id: str):
         return {"cancelled": await svc.jobs.cancel(job_id)}
 
+    @api.get("/analysis")
+    def get_analysis(path: str):
+        rec = svc.analysis.get(Path(path))
+        if rec is None:
+            raise HTTPException(status_code=404, detail={"code": "not_analyzed", "message": "Sin analizar"})
+        return {"record": asdict(rec), "sidecar": svc.analysis.get_sidecar(Path(path))}
+
+    @api.put("/analysis/bpm")
+    def manual_bpm(body: ManualBpm):
+        from .analysis.runner import write_analysis_tags
+
+        p = Path(body.path)
+        if svc.analysis.get_any(p) is None:
+            raise HTTPException(status_code=404, detail={"code": "not_analyzed", "message": "Sin analizar"})
+        rec = svc.analysis.set_manual_bpm(p, body.bpm)
+        if write_analysis_tags(p, rec.bpm, None):
+            svc.analysis.restamp(p)
+        track = svc.library.track_by_path(str(p))
+        if track:
+            svc.library.set_track_analysis(str(p), rec.bpm, track.musical_key, track.camelot, track.lufs)
+        return asdict(svc.analysis.get_any(p))
+
+    @api.get("/harmonic")
+    def harmonic(ref_track: int | None = None, bpm: float | None = None, camelot: str | None = None,
+                 bpm_tolerance: float = Query(default=6, gt=0, le=20)):
+        from .analysis.camelot import compatible
+
+        tracks = [t for t in svc.library.list_tracks() if t.bpm and t.camelot and not t.missing]
+        if ref_track is not None:
+            ref = next((t for t in tracks if t.id == ref_track), None)
+            if ref is None:
+                raise HTTPException(status_code=404, detail={"code": "not_analyzed", "message": "La pista de referencia no está analizada"})
+            bpm, camelot = ref.bpm, ref.camelot
+        if not bpm or not camelot:
+            raise HTTPException(status_code=422, detail={"code": "bad_request", "message": "Indica una pista o BPM y tonalidad"})
+        out = []
+        for t in tracks:
+            if t.id == ref_track:
+                continue
+            level = compatible(camelot, t.camelot)
+            if level is None:
+                continue
+            diff = min(((t.bpm * f - bpm) / bpm * 100 for f in (1, 2, 0.5)), key=abs)
+            if abs(diff) <= bpm_tolerance:
+                out.append({"track": asdict(t), "level": level, "bpm_diff_pct": round(diff, 1)})
+        out.sort(key=lambda r: (LEVEL_ORDER[r["level"]], abs(r["bpm_diff_pct"])))
+        return out
+
     @api.get("/library")
     def library(q: str = ""):
         svc.library.refresh_missing()
@@ -212,7 +284,12 @@ def create_app(services: Services, token: str) -> FastAPI:
 
     @api.get("/history")
     def history():
-        return [asdict(h) for h in svc.library.list_history()]
+        tracks = {t.id: t for t in svc.library.list_tracks()}
+        rows = []
+        for h in svc.library.list_history():
+            t = tracks.get(h.track_id)
+            rows.append({**asdict(h), "bpm": t.bpm if t else None, "camelot": t.camelot if t else None})
+        return rows
 
     @api.delete("/history")
     def delete_history(body: HistoryDelete):
@@ -236,6 +313,19 @@ def create_app(services: Services, token: str) -> FastAPI:
         return {"ok": True}
 
     app.include_router(api)
+
+    @app.get("/audio")
+    def audio(path: str, token_q: str | None = Query(default=None, alias="token")):
+        # <audio> elements cannot send headers, so the token travels in the query string
+        if not token_q or not secrets.compare_digest(token_q, token):
+            raise HTTPException(status_code=401, detail="unauthorized")
+        real = _norm(path)
+        if Path(real).suffix.lower() not in AUDIO_EXT or not Path(real).is_file():
+            raise HTTPException(status_code=403, detail="forbidden")
+        allowed = real in svc.allowed_paths or real in {_norm(p) for p in svc.analysis.paths()}             or real in {_norm(t.path) for t in svc.library.list_tracks()}
+        if not allowed:
+            raise HTTPException(status_code=403, detail="forbidden")
+        return FileResponse(real)
 
     @app.websocket("/events")
     async def events(ws: WebSocket, token_q: str | None = Query(default=None, alias="token")):

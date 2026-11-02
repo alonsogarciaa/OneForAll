@@ -68,3 +68,24 @@ def sine_wav(tmp_path_factory):
         check=True,
     )
     return out
+
+
+@pytest.fixture
+def click_track_file():
+    """Writes a 20 s, 128 BPM click track to the given path."""
+    import numpy as np
+    import soundfile as sf
+
+    def make(path, bpm=128, seconds=20, sr=44100):
+        y = np.zeros(int(seconds * sr), dtype=np.float32)
+        n = int(0.02 * sr)
+        click = (np.sin(2 * np.pi * 1000 * np.arange(n) / sr) * np.hanning(n)).astype(np.float32)
+        t = 0.0
+        while t < seconds - 0.05:
+            i = int(t * sr)
+            y[i:i + n] += click[: len(y) - i]
+            t += 60.0 / bpm
+        sf.write(path, y, sr)
+        return path
+
+    return make

@@ -14,6 +14,7 @@ def api(tmp_path, monkeypatch):
     monkeypatch.setenv("ONEFORALL_FAKE_DELAY", "0")
     svc = build_services(AppPaths.from_root(tmp_path / "data"), fake=True)
     svc.settings.music_dir = str(tmp_path / "music")
+    svc.settings.analyze_on_download = False  # phase 1 behaviour; auto-analysis is tested in test_api_analysis
     with TestClient(create_app(svc, token="t")) as c:
         yield c
 

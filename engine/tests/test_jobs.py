@@ -195,3 +195,19 @@ def test_user_error_survives_pickle():
 
     e = pickle.loads(pickle.dumps(UserError("offline", "Sin conexión")))
     assert (e.code, e.message) == ("offline", "Sin conexión")
+
+
+async def test_report_from_worker_thread(mgr, events):
+    def blocking(ctx):
+        ctx.report("key", 40)
+        ctx.report("waveform", 85)
+
+    async def r(ctx):
+        await asyncio.to_thread(blocking, ctx)
+        return {}
+
+    job = mgr.submit("analysis", "t", r)
+    await wait_done(mgr, job.id)
+    await asyncio.sleep(0.05)
+    assert mgr.get(job.id).status == "done"
+    assert "key" in [e["job"]["stage"] for e in events if e["type"] == "job.progress"]

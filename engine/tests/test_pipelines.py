@@ -25,6 +25,7 @@ def svc(tmp_path, music_dir, monkeypatch):
 
     s = build_services(AppPaths.from_root(tmp_path / "data"), fake=True)
     s.settings.music_dir = str(music_dir)
+    s.settings.analyze_on_download = False  # phase 1 behaviour; auto-analysis is tested in test_api_analysis
     return s
 
 
