@@ -5,7 +5,7 @@ Generado al cerrar la rama `fase2` (2026-11-02). Banco: `docs/bench/2026-11-fase
 ## Resultados del banco
 
 - Tempo (deeprhythm): Accuracy2 95,8 % contra BPM de Beatport (N=527), 97,7 % contra anotación experta (N=43). Umbral 90 %: **cumple**.
-- Tonalidad (CNN de madmom): MIREX 0,797, exacta 73,0 % (N=566). Umbral 0,80: **a 0,003; pendiente de que el dueño lo acepte**.
+- Tonalidad (CNN de madmom): MIREX 0,797, exacta 73,0 % (N=566). Umbral 0,80: a 0,003, **aceptado por el dueño el 2026-11-02** (diferencia dentro del margen de medición).
 
 ## Decisiones tomadas (con su coste si fueran erróneas)
 
