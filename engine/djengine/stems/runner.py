@@ -1,7 +1,6 @@
 import asyncio
+import contextlib
 import logging
-import os
-import shutil
 import subprocess
 from pathlib import Path
 
@@ -17,6 +16,7 @@ from .separate import get_separator
 
 log = logging.getLogger(__name__)
 SR = 44100
+MAX_SECONDS = 20 * 60  # whole-song arrays: ~2 GB of RAM per 10 min of audio
 _SUBTYPE = {"wav16": "PCM_16", "wav24": "PCM_24", "flac": "PCM_16"}
 
 
@@ -31,6 +31,31 @@ def _meta(svc, path: Path) -> dict:
     except Exception:
         pass
     return {"artist": "", "title": path.stem, "album": ""}
+
+
+def _duration(path: Path) -> float | None:
+    try:
+        import mutagen
+
+        f = mutagen.File(path)
+        if f is not None and f.info and f.info.length:
+            return float(f.info.length)
+        return sf.info(str(path)).duration
+    except Exception:
+        return None
+
+
+def _folder_for(svc, path: Path) -> Path:
+    """Existing folder of this source, else <Artist - Title>, else <Artist - Title> (n) if another source owns it."""
+    existing = svc.stems.folder_for(path)
+    if existing is not None:
+        return existing
+    base = stems_folder(svc.settings, _meta(svc, path))
+    candidate, n = base, 1
+    while svc.stems.sources_in_folder(candidate) - {str(path)}:
+        candidate = base.with_name(f"{base.name} ({n})")
+        n += 1
+    return candidate
 
 
 def _encode(y: np.ndarray, dst: Path, fmt: str) -> None:
@@ -85,13 +110,25 @@ def make_stems_runner(svc, path: Path, wanted: list[str], karaoke: bool = False)
         if unknown:
             raise UserError("internal", f"Stem desconocido: {unknown[0]}")
         cached = svc.stems.get(path)
-        folder = stems_folder(svc.settings, _meta(svc, path))
+        folder = _folder_for(svc, path)
         todo = [s for s in wanted_all if s not in cached]
         if not todo:
             return {"path": str(path), "folder": str(folder), "stems": {s: str(cached[s]) for s in wanted_all}}
 
+        seconds = _duration(path)
+        if seconds is not None and seconds > MAX_SECONDS:
+            raise UserError("too_long", f"La separación admite pistas de hasta {MAX_SECONDS // 60} minutos")
+
         fmt = svc.settings.stems_format
-        produced = await asyncio.to_thread(_work, svc, ctx, path, todo, karaoke, fmt)
+        work = asyncio.ensure_future(asyncio.to_thread(_work, svc, ctx, path, todo, karaoke, fmt))
+        try:
+            produced = await asyncio.shield(work)
+        except asyncio.CancelledError:
+            # the thread cannot be killed: wait until it notices (or finishes) before tmp/ is removed
+            ctx.cancelled = True
+            with contextlib.suppress(BaseException):
+                await work
+            raise
 
         ctx.begin_finalize()
         ctx.report("saving", 96)
@@ -101,12 +138,11 @@ def make_stems_runner(svc, path: Path, wanted: list[str], karaoke: bool = False)
             raise UserError("disk", "No se puede escribir en la carpeta de stems")
         model = get_separator(svc).name
         result = {s: str(cached[s]) for s in wanted_all if s in cached}
+        from ..pipelines import _commit
+
         for stem, tmp_file in produced.items():
             final = folder / tmp_file.name
-            try:
-                os.replace(tmp_file, final)
-            except OSError:  # different drive
-                shutil.copy2(tmp_file, final)
+            _commit(tmp_file, final)  # atomic; cross-drive copies go through a .part file
             svc.stems.add(path, stem, final, model)
             result[stem] = str(final)
         return {"path": str(path), "folder": str(folder), "stems": result}

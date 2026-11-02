@@ -88,6 +88,23 @@ class StemsStore:
                 return Path(f) in self.get(src).values()
         return False
 
+    def restamp(self, path, before: tuple[int, float]) -> None:
+        """After we rewrote the source's tags ourselves: keep rows that matched the old stamp valid."""
+        size, mtime = file_stamp(path)
+        with self._lock:
+            self._conn.execute(
+                "UPDATE stems SET size=?, mtime=? WHERE path=? AND size=? AND abs(mtime - ?) < 0.001",
+                (size, mtime, str(Path(path)), before[0], before[1]),
+            )
+            self._conn.commit()
+
+    def sources_in_folder(self, folder) -> set[str]:
+        """Source files that own stems stored in this folder."""
+        target = _norm(folder)
+        with self._lock:
+            rows = self._conn.execute("SELECT path, file FROM stems").fetchall()
+        return {src for src, f in rows if _norm(Path(f).parent) == target}
+
     def sources_with_stems(self) -> set[str]:
         with self._lock:
             return {r[0] for r in self._conn.execute("SELECT DISTINCT path FROM stems")}

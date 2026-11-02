@@ -281,13 +281,16 @@ def create_app(services: Services, token: str) -> FastAPI:
     @api.put("/analysis/bpm")
     def manual_bpm(body: ManualBpm):
         from .analysis.runner import write_analysis_tags
+        from .analysis.store import file_stamp
 
         p = Path(body.path)
         if svc.analysis.get_any(p) is None:
             raise HTTPException(status_code=404, detail={"code": "not_analyzed", "message": "Sin analizar"})
         rec = svc.analysis.set_manual_bpm(p, body.bpm)
+        before = file_stamp(p)
         if write_analysis_tags(p, rec.bpm, None):  # BPM only; key and other tags untouched
             svc.analysis.restamp(p)
+            svc.stems.restamp(p, before)
         track = svc.library.track_by_path(str(p))
         if track:
             svc.library.set_track_analysis(str(p), rec.bpm, track.musical_key, track.camelot, track.lufs)
