@@ -1,0 +1,93 @@
+import os
+import sqlite3
+import threading
+from datetime import datetime, timezone
+from pathlib import Path
+
+from ..analysis.store import file_stamp
+
+_SCHEMA = """
+CREATE TABLE IF NOT EXISTS stems (
+    path TEXT NOT NULL,
+    stem TEXT NOT NULL,
+    file TEXT NOT NULL,
+    model TEXT NOT NULL,
+    size INTEGER NOT NULL,
+    mtime REAL NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (path, stem)
+);
+"""
+
+
+def _norm(p) -> str:
+    return os.path.normcase(os.path.realpath(str(p)))
+
+
+class StemsStore:
+    """Which stem files exist for which source file; rows go stale when the source or the stem changes."""
+
+    def __init__(self, db_path: Path):
+        self._lock = threading.Lock()
+        self._conn = sqlite3.connect(db_path, check_same_thread=False)
+        with self._lock:
+            self._conn.executescript(_SCHEMA)
+            self._conn.commit()
+
+    def _rows(self, path) -> list[tuple]:
+        with self._lock:
+            return self._conn.execute("SELECT stem, file, size, mtime FROM stems WHERE path=?", (str(Path(path)),)).fetchall()
+
+    def _delete(self, path, stem=None) -> None:
+        with self._lock:
+            if stem is None:
+                self._conn.execute("DELETE FROM stems WHERE path=?", (str(Path(path)),))
+            else:
+                self._conn.execute("DELETE FROM stems WHERE path=? AND stem=?", (str(Path(path)), stem))
+            self._conn.commit()
+
+    def get(self, path) -> dict[str, Path]:
+        rows = self._rows(path)
+        if not rows:
+            return {}
+        try:
+            size, mtime = file_stamp(path)
+        except OSError:
+            self._delete(path)
+            return {}
+        if any(r[2] != size or abs(r[3] - mtime) > 1e-3 for r in rows):
+            self._delete(path)  # source edited since: stems no longer match it
+            return {}
+        out = {}
+        for stem, file, _, _ in rows:
+            if Path(file).is_file():
+                out[stem] = Path(file)
+            else:
+                self._delete(path, stem)
+        return out
+
+    def add(self, path, stem: str, file: Path, model: str) -> None:
+        size, mtime = file_stamp(path)
+        with self._lock:
+            self._conn.execute(
+                "INSERT OR REPLACE INTO stems (path, stem, file, model, size, mtime, created_at) VALUES (?,?,?,?,?,?,?)",
+                (str(Path(path)), stem, str(Path(file)), model, size, mtime, datetime.now(timezone.utc).isoformat(timespec="seconds")),
+            )
+            self._conn.commit()
+
+    def folder_for(self, path) -> Path | None:
+        files = list(self.get(path).values())
+        return files[0].parent if files else None
+
+    def is_stem_file(self, file) -> bool:
+        with self._lock:
+            rows = self._conn.execute("SELECT path, file FROM stems").fetchall()
+        target = _norm(file)
+        for src, f in rows:
+            if _norm(f) == target:
+                return Path(f) in self.get(src).values()
+        return False
+
+    def sources_with_stems(self) -> set[str]:
+        with self._lock:
+            return {r[0] for r in self._conn.execute("SELECT DISTINCT path FROM stems")}
