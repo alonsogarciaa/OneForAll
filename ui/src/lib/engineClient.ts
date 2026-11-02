@@ -82,6 +82,12 @@ export function createClient(
     harmonic: (params: { ref_track?: number; bpm?: number; camelot?: string; bpm_tolerance?: number }) =>
       json<HarmonicRow[]>(`/harmonic?${new URLSearchParams(Object.entries(params).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)]))}`),
     audioUrl: (path: string) => `${baseUrl}/audio?${new URLSearchParams({ path, token })}`,
+    separate: (paths: string[], stems: string[], karaoke = false) =>
+      json<{ jobs: Job[] }>('/jobs', post('/jobs', { type: 'stems', paths, stems, karaoke })),
+    getStems: (path: string) =>
+      json<{ folder: string | null; stems: { stem: string; file: string; size_bytes: number }[] }>(`/stems?${new URLSearchParams({ path })}`),
+    zipStems: (path: string) => json<{ zip: string }>('/stems/zip', post('/stems/zip', { path })),
+    stemsBackend: () => json<{ backend: 'cpu' | 'directml' }>('/stems/backend'),
     updateYtdlp: () => json<{ ok: boolean; output: string }>('/tools/ytdlp/update', { method: 'POST' }),
 
     connectEvents(onEvent: (e: EngineEvent) => void): () => void {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AudioLines, FileAudio, FolderOpen, Library, Search } from 'lucide-react'
+import { AudioLines, FileAudio, FolderOpen, Layers, Library, Scissors, Search } from 'lucide-react'
 import { KeyChip } from '../components/KeyChip'
 import { SelectableTable, type Column } from '../components/SelectableTable'
 import { useClient } from '../lib/engine'
@@ -23,6 +23,7 @@ const COLUMNS: Column<TrackRecord>[] = [
   { key: 'artist', label: 'Artista', render: (t) => t.artist },
   { key: 'bpm', label: 'BPM', width: '62px', align: 'right', render: (t) => <span className="tabular cell-strong">{t.bpm != null ? t.bpm.toFixed(1) : '—'}</span> },
   { key: 'key', label: 'Tonalidad', width: '78px', render: (t) => <KeyChip camelot={t.camelot} /> },
+  { key: 'stems', label: 'Stems', width: '50px', render: (t) => (t.has_stems ? <Layers size={15} aria-label="Tiene stems" /> : null) },
   { key: 'lufs', label: 'LUFS', width: '58px', align: 'right', render: (t) => <span className="tabular">{t.lufs != null ? t.lufs.toFixed(1) : '—'}</span> },
   { key: 'duration', label: 'Duración', width: '72px', align: 'right', render: (t) => <span className="tabular">{t.duration_s != null ? formatDuration(t.duration_s) : '—'}</span> },
   { key: 'views', label: 'Vistas', width: '64px', align: 'right', render: (t) => <span className="tabular">{t.views != null ? formatViews(t.views) : '—'}</span> },
@@ -54,6 +55,7 @@ export function LibraryScreen() {
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const fileInput = useRef<HTMLInputElement>(null)
   const openData = useUiStore((s) => s.openData)
+  const openStems = useUiStore((s) => s.openStems)
 
   const load = useCallback(() => {
     client.library(q).then(setRows).catch((e) => toast(e.message, 'error'))
@@ -85,6 +87,17 @@ export function LibraryScreen() {
           >
             <AudioLines size={14} />
             Analizar seleccionadas ({selected.size})
+          </button>
+          <button
+            className="btn btn-sm"
+            disabled={selected.size === 0}
+            onClick={() => {
+              const picked = (rows ?? []).filter((t) => selected.has(t.id) && !t.missing)
+              openStems(picked.map((t) => t.path), picked.reduce((a, t) => a + (t.duration_s ?? 240), 0) / Math.max(1, picked.length))
+            }}
+          >
+            <Scissors size={14} />
+            Separar stems ({selected.size})
           </button>
           <button className="btn btn-sm" onClick={() => fileInput.current?.click()}>
             <FileAudio size={14} />

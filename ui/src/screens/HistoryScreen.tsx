@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { History, Trash2 } from 'lucide-react'
+import { History, Scissors, Trash2 } from 'lucide-react'
 import { SelectableTable, type Column } from '../components/SelectableTable'
 import { KeyChip } from '../components/KeyChip'
 import { GlassSheet } from '../components/GlassSheet'
@@ -33,6 +33,7 @@ export function HistoryScreen() {
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [confirmAll, setConfirmAll] = useState(false)
   const openData = useUiStore((s) => s.openData)
+  const openStems = useUiStore((s) => s.openStems)
 
   const load = useCallback(() => {
     client.history().then(setRows).catch((e) => toast(e.message, 'error'))
@@ -56,6 +57,14 @@ export function HistoryScreen() {
       <div className="screen-head">
         <h1 className="screen-title">Historial</h1>
         <div className="toolbar">
+          <button
+            className="btn btn-sm"
+            disabled={!(rows ?? []).some((h) => selected.has(h.id) && h.path)}
+            onClick={() => openStems((rows ?? []).filter((h) => selected.has(h.id) && h.path).map((h) => h.path!))}
+          >
+            <Scissors size={14} />
+            Separar stems
+          </button>
           <button className="btn btn-sm" disabled={selected.size === 0} onClick={() => remove([...selected])}>
             <Trash2 size={14} />
             Borrar seleccionadas ({selected.size})

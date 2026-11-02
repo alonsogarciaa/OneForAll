@@ -1,0 +1,37 @@
+.stem-picks {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.stem-pick {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--surface-raised);
+  cursor: pointer;
+}
+.stem-pick input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+.stem-karaoke {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--surface-raised);
+}
+.stem-karaoke small {
+  display: block;
+  font-size: 13px;
+  color: var(--lg-text-secondary);
+}
+.stem-estimate {
+  margin-top: 12px;
+}
