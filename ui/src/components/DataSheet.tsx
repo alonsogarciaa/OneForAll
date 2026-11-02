@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { FolderOpen, Pause, Play, RefreshCw, X } from 'lucide-react'
 import { GlassSheet } from './GlassSheet'
 import { Waveform } from './Waveform'
+import { StemsSection } from './StemsSection'
 import { useClient } from '../lib/engine'
 import { displayKey } from '../lib/camelot'
 import { formatDuration } from '../lib/format'
@@ -220,6 +221,7 @@ export function DataSheet({ path, onClose }: { path: string; onClose(): void }) 
               <span className="ds-sub">Pulsa Tap o la barra espaciadora al ritmo</span>
             </div>
           </div>
+          <StemsSection path={path} durationS={data.sidecar.duration} />
         </>
       )}
     </GlassSheet>

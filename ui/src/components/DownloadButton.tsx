@@ -12,10 +12,11 @@ interface Props {
   busy?: boolean
   /** Rows use the quiet variant so a long result list is not a wall of blue. */
   variant?: 'primary' | 'subtle'
+  onStems?(stems: string[] | null): void
 }
 
 /** Split pill: main part downloads with the current format, chevron opens the format menu. */
-export function DownloadButton({ options, onOptions, onDownload, label = 'Descargar', busy, variant = 'primary' }: Props) {
+export function DownloadButton({ options, onOptions, onDownload, label = 'Descargar', busy, variant = 'primary', onStems }: Props) {
   const [open, setOpen] = useState(false)
   const tone = variant === 'primary' ? 'btn-primary' : 'btn-subtle'
   return (
@@ -28,7 +29,7 @@ export function DownloadButton({ options, onOptions, onDownload, label = 'Descar
       <button className={`btn ${tone} btn-sm split-chevron`} aria-label="Elegir formato" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
         <ChevronDown size={15} />
       </button>
-      {open && <FormatMenu value={options} onChange={onOptions} onClose={() => setOpen(false)} />}
+      {open && <FormatMenu value={options} onChange={onOptions} onClose={() => setOpen(false)} onStems={onStems} />}
     </div>
   )
 }

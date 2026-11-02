@@ -9,6 +9,7 @@ interface Props {
   onOptions(o: ConvertOptions): void
   onDownload(item: SearchResult): void
   onOpen(item: SearchResult): void
+  onStems?(item: SearchResult, stems: string[] | null): void
 }
 
 export function Cover({ src, size = 48, playlist = false }: { src: string | null; size?: number; playlist?: boolean }) {
@@ -19,7 +20,7 @@ export function Cover({ src, size = 48, playlist = false }: { src: string | null
   )
 }
 
-export function ResultRow({ item, options, onOptions, onDownload, onOpen }: Props) {
+export function ResultRow({ item, options, onOptions, onDownload, onOpen, onStems }: Props) {
   const isPlaylist = item.kind === 'playlist'
   const sub = [item.artist, item.album].filter(Boolean).join(' · ')
   return (
@@ -54,7 +55,13 @@ export function ResultRow({ item, options, onOptions, onDownload, onOpen }: Prop
           Ver playlist
         </button>
       ) : (
-        <DownloadButton variant="subtle" options={options} onOptions={onOptions} onDownload={() => onDownload(item)} />
+        <DownloadButton
+          variant="subtle"
+          options={options}
+          onOptions={onOptions}
+          onDownload={() => onDownload(item)}
+          onStems={onStems && ((stems) => onStems(item, stems))}
+        />
       )}
     </div>
   )

@@ -17,12 +17,13 @@ function client(over: Record<string, unknown> = {}) {
     analyze: vi.fn(async () => ({ jobs: [{ id: 'j1' }] })),
     setManualBpm: vi.fn(async () => ({ ...record, bpm: 120, bpm_source: 'manual' })),
     audioUrl: () => 'http://x/audio',
+    getStems: vi.fn(async () => ({ folder: null, stems: [] })),
     ...over
   } as any
 }
 
 beforeEach(() => {
-  window.oneforall = { showInFolder: vi.fn() } as any
+  window.oneforall = { showInFolder: vi.fn(), allowDrag: vi.fn(), startDrag: vi.fn() } as any
 })
 
 describe('DataSheet', () => {

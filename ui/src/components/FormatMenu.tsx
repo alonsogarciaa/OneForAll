@@ -11,11 +11,13 @@ interface Props {
   allowOriginal?: boolean
   /** Render in place (no popover behaviour), e.g. inside the converter panel. */
   inline?: boolean
+  /** When given, adds the "Stems" block: download then separate. stems=null opens the picker. */
+  onStems?(stems: string[] | null): void
 }
 
 const FORMATS = Object.keys(FORMAT_NAMES) as FormatId[]
 
-export function FormatMenu({ value, onChange, onClose, allowOriginal = true, inline = false }: Props) {
+export function FormatMenu({ value, onChange, onClose, allowOriginal = true, inline = false, onStems }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const lossless = LOSSLESS.includes(value.format)
 
@@ -97,6 +99,20 @@ export function FormatMenu({ value, onChange, onClose, allowOriginal = true, inl
             Convertir audio de YouTube a un formato sin pérdida no aumenta su calidad.
           </p>
         </>
+      )}
+      {onStems && (
+        <div className="format-stems">
+          <span>Stems</span>
+          <div className="stem-buttons">
+            <button className="btn btn-sm" onClick={() => (onStems(['vocals']), onClose())}>Solo voz</button>
+            <button className="btn btn-sm" onClick={() => (onStems(['drums']), onClose())}>Solo batería</button>
+            <button className="btn btn-sm" onClick={() => (onStems(['bass']), onClose())}>Solo bajo</button>
+            <button className="btn btn-sm" onClick={() => (onStems(['vocals', 'drums', 'bass', 'guitar', 'piano', 'other']), onClose())}>
+              Todos los stems
+            </button>
+            <button className="btn btn-sm btn-ghost" onClick={() => (onStems(null), onClose())}>Elegir…</button>
+          </div>
+        </div>
       )}
     </div>
   )
