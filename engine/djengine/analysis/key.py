@@ -14,10 +14,13 @@ log = logging.getLogger(__name__)
 
 @dataclass
 class KeyResult:
-    tonic: str
-    mode: str
-    camelot: str
+    tonic: str | None  # None when there is no tonal content (silence)
+    mode: str | None
+    camelot: str | None
     confidence: float
+
+
+NO_KEY = KeyResult(None, None, None, 0.0)
 
 
 def _chroma(y: np.ndarray, sr: int) -> np.ndarray:
@@ -29,7 +32,7 @@ def _chroma(y: np.ndarray, sr: int) -> np.ndarray:
 
 def _profile_key(y: np.ndarray, sr: int, profile: str) -> KeyResult:
     if y.size == 0 or float(np.max(np.abs(y))) < 1e-6:
-        return KeyResult("C", "major", to_camelot("C", "major"), 0.0)
+        return NO_KEY
     v = _chroma(y, sr)
     scores = []
     for mode in ("major", "minor"):

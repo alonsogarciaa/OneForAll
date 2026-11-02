@@ -6,7 +6,7 @@ import librosa
 import numpy as np
 
 from ..errors import UserError
-from ..tags import read_tags, write_tags
+from ..tags import set_bpm_key
 from .audio_io import decode
 from .camelot import display_key, tag_key
 from .config import ANALYSIS_VERSION, DEFAULT_KEY_METHOD, DEFAULT_TEMPO_METHOD
@@ -34,7 +34,7 @@ def _finite(x):
 def result_dict(rec: AnalysisRecord) -> dict:
     return {
         "path": rec.path, "bpm": rec.bpm, "camelot": rec.camelot, "lufs": rec.lufs,
-        "display_key": display_key(rec.tonic, rec.mode) if rec.tonic else None,
+        "display_key": display_key(rec.tonic, rec.mode) if rec.tonic and rec.mode else None,
     }
 
 
@@ -87,38 +87,21 @@ def make_analysis_runner(svc, path: Path, force: bool = False, reset_bpm: bool =
             version=ANALYSIS_VERSION, created_at=now_iso(),
         )
         store.save(rec, {"beats": tempo.beats, "waveform": wf, "duration": round(duration, 3)})
-        if write_analysis_tags(path, rec.bpm, tag_key(key.tonic, key.mode, s.key_notation)):
+        has_key = bool(key.tonic and key.mode)  # silence: no key is stored or written
+        if write_analysis_tags(path, rec.bpm, tag_key(key.tonic, key.mode, s.key_notation) if has_key else None):
             store.restamp(path)  # our own tag write must not invalidate the cache
-        svc.library.set_track_analysis(str(path), rec.bpm, tag_key(key.tonic, key.mode, "musical"), rec.camelot, rec.lufs)
+        musical = tag_key(key.tonic, key.mode, "musical") if has_key else None
+        svc.library.set_track_analysis(str(path), rec.bpm, musical, rec.camelot, rec.lufs)
         return result_dict(rec)
 
     return run
 
 
 def write_analysis_tags(path: Path, bpm: float | None, key_tag: str | None) -> bool:
-    """Write BPM/key into the file, keeping its other tags and cover. False if the format can't be tagged."""
+    """Write only BPM/key into the file. False if the format cannot be tagged."""
     try:
-        meta = read_tags(path)
-        meta.bpm = round(bpm) if bpm else None
-        if key_tag is not None:
-            meta.key = key_tag
-        write_tags(path, meta, _existing_cover(path))
+        set_bpm_key(path, bpm, key_tag)
         return True
     except Exception as e:  # unsupported container or locked file: the analysis still counts
         log.info("analysis tags not written for %s: %s", Path(path).name, e)
         return False
-
-
-def _existing_cover(path: Path) -> bytes | None:
-    import mutagen
-
-    f = mutagen.File(path)
-    if f is None or f.tags is None:
-        return None
-    for k in list(f.tags.keys()):
-        if str(k).startswith("APIC"):
-            return f.tags[k].data
-    if "covr" in f.tags:
-        return bytes(f.tags["covr"][0])
-    pics = getattr(f, "pictures", None)
-    return pics[0].data if pics else None

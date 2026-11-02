@@ -255,7 +255,7 @@ def create_app(services: Services, token: str) -> FastAPI:
         if svc.analysis.get_any(p) is None:
             raise HTTPException(status_code=404, detail={"code": "not_analyzed", "message": "Sin analizar"})
         rec = svc.analysis.set_manual_bpm(p, body.bpm)
-        if write_analysis_tags(p, rec.bpm, None):
+        if write_analysis_tags(p, rec.bpm, None):  # BPM only; key and other tags untouched
             svc.analysis.restamp(p)
         track = svc.library.track_by_path(str(p))
         if track:

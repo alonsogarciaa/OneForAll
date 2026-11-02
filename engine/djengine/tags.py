@@ -213,3 +213,33 @@ def read_tags(path: Path) -> TrackMeta:
     if isinstance(audio, MP4):
         return _read_mp4(audio)
     return _read_vorbis(audio)
+
+
+def set_bpm_key(path: Path, bpm: float | None, key: str | None) -> None:
+    """Edit only the BPM and key fields in place; every other tag, comment and picture is left alone.
+
+    A None value leaves that field as it is (silence or failed estimate never erases user data).
+    """
+    audio = _open(Path(path))
+    if audio.tags is None:
+        audio.add_tags()
+    t = audio.tags
+    bpm_txt = _bpm_text(round(bpm)) if bpm else None
+    if isinstance(audio, (MP3, WAVE, AIFF)):
+        if bpm_txt:
+            t.setall("TBPM", [TBPM(encoding=3, text=bpm_txt)])
+        if key:
+            t.setall("TKEY", [TKEY(encoding=3, text=key)])
+    elif isinstance(audio, MP4):
+        if bpm:
+            t["tmpo"] = [int(round(bpm))]
+        if key:
+            t[MP4_KEY] = [MP4FreeForm(key.encode("utf-8"))]
+    elif isinstance(audio, (FLAC, OggVorbis, OggOpus)):
+        if bpm_txt:
+            t["BPM"] = bpm_txt
+        if key:
+            t["INITIALKEY"] = key
+    else:
+        raise ValueError(f"etiquetas no soportadas para {type(audio).__name__}")
+    audio.save()

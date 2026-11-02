@@ -16,7 +16,7 @@ def test_progressions(chord_progression, method, tonic, mode, code):
 
 def test_silence_gives_zero_confidence():
     r = estimate_key(np.zeros(5 * SR, dtype=np.float32), SR)
-    assert r.confidence == 0 and r.camelot
+    assert r.confidence == 0 and r.camelot is None  # no tonal content: no invented key
 
 
 def test_registry():

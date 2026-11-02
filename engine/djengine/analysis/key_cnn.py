@@ -11,7 +11,7 @@ import librosa
 import numpy as np
 
 from .camelot import to_camelot
-from .key import KEY_METHODS, KeyResult
+from .key import KEY_METHODS, NO_KEY, KeyResult
 
 _VENDOR = str(Path(__file__).resolve().parents[1] / "vendor")
 _FLAT_TO_SHARP = {"Db": "C#", "Eb": "D#", "Gb": "F#", "Ab": "G#", "Bb": "A#"}
@@ -47,8 +47,10 @@ def probabilities(y: np.ndarray, sr: int) -> np.ndarray:
 
 def cnn_key(y: np.ndarray, sr: int) -> KeyResult:
     if y.size == 0 or float(np.max(np.abs(y))) < 1e-6:
-        return KeyResult("C", "major", to_camelot("C", "major"), 0.0)
+        return NO_KEY
     p = probabilities(y, sr)
+    if not np.isfinite(p).all():  # clips under ~1.5 s give NaN: use the template method instead
+        return KEY_METHODS["edma"](y, sr)
     best = int(np.argmax(p))
     name, mode = _labels[best].split()
     tonic = _FLAT_TO_SHARP.get(name, name)

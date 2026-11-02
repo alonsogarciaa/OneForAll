@@ -112,3 +112,11 @@ def test_settings_validation():
     assert (s.analyze_on_download, s.key_notation, s.bpm_min, s.bpm_max) == (True, "camelot", 70, 180)
     with pytest.raises(ValidationError):
         Settings(bpm_min=180, bpm_max=70)
+
+
+def test_silent_file_gets_no_key_tag(svc, ctx, write_wav):
+    p = write_wav(np.zeros(3 * SR, dtype=np.float32), SR, "silent2.wav")
+    write_tags(p, TrackMeta("S", "A"), None)
+    run(svc, ctx, p)
+    assert svc.analysis.get(p).camelot is None
+    assert read_tags(p).key is None

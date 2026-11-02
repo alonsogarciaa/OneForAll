@@ -32,3 +32,13 @@ def test_matches_compiled_madmom(clip):
     ref = np.asarray(REF[clip])
     assert int(np.argmax(p)) == int(np.argmax(ref))
     assert np.max(np.abs(p - ref)) < 1e-3
+
+
+def test_silence_and_tiny_clips_give_no_invented_key(chord_progression):
+    import djengine.analysis.key_cnn  # noqa: F401
+
+    silent = estimate_key(np.zeros(22050 * 5, dtype=np.float32), 22050, method="cnn")
+    assert silent.tonic is None and silent.camelot is None
+    tiny = chord_progression("A", "minor", seconds=1.0)  # CNN yields NaN probabilities this short
+    r = estimate_key(tiny, 22050, method="cnn")
+    assert r.camelot is not None and np.isfinite(r.confidence)
