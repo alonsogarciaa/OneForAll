@@ -49,6 +49,7 @@ class Services:
     fake: bool
     hub: EventHub = field(default_factory=EventHub)
     analysis: Any = None
+    stems: Any = None
     allowed_paths: set = field(default_factory=set)  # files the user picked this session (/audio)
     shutdown: Callable[[], None] | None = None
 
@@ -68,8 +69,11 @@ def build_services(paths: AppPaths, fake: bool) -> Services:
         search, downloader = SearchService(), download_audio
     from .analysis.store import AnalysisStore
 
+    from .stems.store import StemsStore
+
     analysis = AnalysisStore(paths.db_path, paths.root / "analysis")
-    return Services(paths, settings, library, jobs, search, downloader, fake, hub, analysis=analysis)
+    return Services(paths, settings, library, jobs, search, downloader, fake, hub, analysis=analysis,
+                    stems=StemsStore(paths.db_path))
 
 
 # --- request bodies -----------------------------------------------------------
