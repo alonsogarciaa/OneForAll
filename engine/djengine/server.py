@@ -293,6 +293,12 @@ def create_app(services: Services, token: str) -> FastAPI:
             svc.library.set_track_analysis(str(p), rec.bpm, track.musical_key, track.camelot, track.lufs)
         return asdict(svc.analysis.get_any(p))
 
+    @api.get("/stems/backend")
+    def stems_backend():
+        from .stems.accel import backend
+
+        return {"backend": backend(svc.settings)}
+
     @api.get("/stems")
     def list_stems(path: str):
         got = svc.stems.get(Path(path))
