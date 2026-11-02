@@ -7,6 +7,7 @@ import { LibraryScreen } from './screens/LibraryScreen'
 import { HistoryScreen } from './screens/HistoryScreen'
 import { ConverterScreen } from './screens/ConverterScreen'
 import { SettingsScreen } from './screens/SettingsScreen'
+import { HarmonyScreen } from './screens/HarmonyScreen'
 import { PlaylistSummaryHost } from './components/PlaylistSummarySheet'
 import { DataSheet } from './components/DataSheet'
 
@@ -16,6 +17,7 @@ function Screen() {
   if (route === 'descargas') return <DownloadsScreen />
   if (route === 'biblioteca') return <LibraryScreen />
   if (route === 'historial') return <HistoryScreen />
+  if (route === 'armonia') return <HarmonyScreen />
   if (route === 'conversor') return <ConverterScreen />
   return <SettingsScreen />
 }

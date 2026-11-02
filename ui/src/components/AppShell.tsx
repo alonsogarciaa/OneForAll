@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { AlertCircle, CheckCircle2, Download, FolderClock, History, Info, Library, Repeat, Search, Settings2, X } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Disc3, Download, FolderClock, History, Info, Library, Repeat, Search, Settings2, X } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import { useUiStore, type Route } from '../stores/uiStore'
 import { useJobsStore, activeJobs } from '../stores/jobsStore'
@@ -8,6 +8,7 @@ const NAV: { route: Route; label: string; icon: typeof Search }[] = [
   { route: 'buscar', label: 'Buscar', icon: Search },
   { route: 'descargas', label: 'Descargas', icon: Download },
   { route: 'biblioteca', label: 'Biblioteca', icon: Library },
+  { route: 'armonia', label: 'Armonía', icon: Disc3 },
   { route: 'historial', label: 'Historial', icon: History },
   { route: 'conversor', label: 'Conversor', icon: Repeat }
 ]

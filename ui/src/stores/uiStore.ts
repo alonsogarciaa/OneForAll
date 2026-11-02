@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type Route = 'buscar' | 'descargas' | 'biblioteca' | 'historial' | 'conversor' | 'ajustes'
+export type Route = 'buscar' | 'descargas' | 'biblioteca' | 'armonia' | 'historial' | 'conversor' | 'ajustes'
 export type ToastKind = 'info' | 'error' | 'success'
 
 export interface Toast {

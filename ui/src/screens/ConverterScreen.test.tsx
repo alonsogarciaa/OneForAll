@@ -42,7 +42,8 @@ describe('ConverterScreen', () => {
 
 const settings = {
   music_dir: 'C:/Users/me/Music/OneForAll', default_format: 'mp3', default_quality: '320',
-  name_template: '{artist} - {title}', download_concurrency: 3, tinted: false
+  name_template: '{artist} - {title}', download_concurrency: 3, tinted: false,
+  analyze_on_download: true, key_notation: 'camelot', bpm_min: 70, bpm_max: 180
 }
 
 describe('SettingsScreen', () => {
@@ -77,5 +78,23 @@ describe('SettingsScreen', () => {
     const c = setup()
     await userEvent.click(await screen.findByRole('button', { name: 'Cambiar…' }))
     expect(c.putSettings).toHaveBeenLastCalledWith(expect.objectContaining({ music_dir: 'D:/Musica' }))
+  })
+
+  it('saves the analysis settings', async () => {
+    const c = setup()
+    await userEvent.click(await screen.findByRole('switch', { name: 'Analizar al descargar' }))
+    expect(c.putSettings).toHaveBeenLastCalledWith(expect.objectContaining({ analyze_on_download: false }))
+    await userEvent.click(screen.getByRole('button', { name: 'Musical' }))
+    expect(c.putSettings).toHaveBeenLastCalledWith(expect.objectContaining({ key_notation: 'musical' }))
+  })
+
+  it('refuses a bpm range where min is not below max', async () => {
+    const c = setup()
+    const min = await screen.findByLabelText('BPM mínimo')
+    const calls = c.putSettings.mock.calls.length
+    await userEvent.clear(min)
+    await userEvent.type(min, '190')
+    expect(screen.getByText('El mínimo debe ser menor que el máximo')).toBeInTheDocument()
+    expect(c.putSettings.mock.calls.slice(calls).some((a: any[]) => a[0].bpm_min >= a[0].bpm_max)).toBe(false)
   })
 })

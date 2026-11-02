@@ -93,3 +93,18 @@
     transform: rotate(360deg);
   }
 }
+.bpm-field {
+  width: 70px;
+  text-align: center;
+}
+.range-dash {
+  align-self: center;
+  color: var(--lg-text-secondary);
+}
+.settings-about {
+  margin: 0;
+  padding: 14px 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--lg-text-secondary);
+}
