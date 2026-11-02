@@ -51,3 +51,24 @@ describe('LibraryScreen', () => {
     expect(await screen.findByText('No encontrado')).toBeInTheDocument()
   })
 })
+
+describe('LibraryScreen analysis', () => {
+  const t = (id: number, title: string, over: Partial<TrackRecord> = {}) =>
+    ({ id, title, artist: 'A', album: '', duration_s: 200, views: 1, path: `C:/${title}.mp3`, format: 'mp3', added_at: '2026-11-01T10:00:00+00:00', missing: false, bpm: null, camelot: null, lufs: null, ...over }) as TrackRecord
+
+  it('shows bpm, key chip and lufs, and analyses the selected rows', async () => {
+    const c = {
+      library: vi.fn(async () => [t(1, 'Uno', { bpm: 128, camelot: '8A', lufs: -9.1 }), t(2, 'Dos')]),
+      analyze: vi.fn(async () => ({ jobs: [] }))
+    } as any
+    window.oneforall = { showInFolder: vi.fn(), openPath: vi.fn(), pathForFile: (f: File) => `C:/${f.name}` } as any
+    render(<EngineTestProvider client={c}><LibraryScreen /></EngineTestProvider>)
+    expect(await screen.findByText('128.0')).toBeInTheDocument()
+    expect(screen.getByText('8A')).toBeInTheDocument()
+    expect(screen.getByText('-9.1')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Seleccionar Uno' }))
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Seleccionar Dos' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Analizar seleccionadas (2)' }))
+    expect(c.analyze).toHaveBeenCalledWith(['C:/Uno.mp3', 'C:/Dos.mp3'])
+  })
+})

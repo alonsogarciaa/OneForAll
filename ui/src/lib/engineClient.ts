@@ -1,4 +1,5 @@
 import type {
+  AnalysisRecord, AnalysisSidecar, HarmonicRow,
   ConvertOptions, DownloadRequest, EngineEvent, HistoryEntry, Job, PlaylistInfo, SearchKind, SearchResult, Settings, TrackRecord
 } from './types'
 
@@ -74,6 +75,13 @@ export function createClient(
       json<{ deleted: number }>('/history', { method: 'DELETE', body: JSON.stringify(ids === 'all' ? { all: true } : { ids }) }),
     getSettings: () => json<Settings>('/settings'),
     putSettings: (s: Settings) => json<Settings>('/settings', { method: 'PUT', body: JSON.stringify(s) }),
+    analyze: (paths: string[], opts: { force?: boolean; reset_bpm?: boolean } = {}) =>
+      json<{ jobs: Job[] }>('/jobs', post('/jobs', { type: 'analysis', paths, ...opts })),
+    getAnalysis: (path: string) => json<{ record: AnalysisRecord; sidecar: AnalysisSidecar }>(`/analysis?${new URLSearchParams({ path })}`),
+    setManualBpm: (path: string, bpm: number) => json<AnalysisRecord>('/analysis/bpm', { method: 'PUT', body: JSON.stringify({ path, bpm }) }),
+    harmonic: (params: { ref_track?: number; bpm?: number; camelot?: string; bpm_tolerance?: number }) =>
+      json<HarmonicRow[]>(`/harmonic?${new URLSearchParams(Object.entries(params).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)]))}`),
+    audioUrl: (path: string) => `${baseUrl}/audio?${new URLSearchParams({ path, token })}`,
     updateYtdlp: () => json<{ ok: boolean; output: string }>('/tools/ytdlp/update', { method: 'POST' }),
 
     connectEvents(onEvent: (e: EngineEvent) => void): () => void {

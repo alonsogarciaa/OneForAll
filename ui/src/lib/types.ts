@@ -40,6 +40,8 @@ export interface TrackRecord {
   musical_key: string | null
   camelot: string | null
   missing: boolean
+  lufs?: number | null
+  analyzed_at?: string | null
 }
 
 export interface HistoryEntry {
@@ -51,13 +53,15 @@ export interface HistoryEntry {
   action: 'download' | 'convert'
   status: 'done' | 'failed'
   at: string
+  bpm?: number | null
+  camelot?: string | null
 }
 
 export type JobStatus = 'queued' | 'running' | 'done' | 'failed' | 'cancelled'
 
 export interface Job {
   id: string
-  type: 'download' | 'convert' | 'playlist'
+  type: 'download' | 'convert' | 'playlist' | 'analysis'
   title: string
   status: JobStatus
   stage: string
@@ -92,6 +96,37 @@ export interface Settings {
   name_template: string
   download_concurrency: number
   tinted: boolean
+  analyze_on_download: boolean
+  key_notation: 'camelot' | 'musical'
+  bpm_min: number
+  bpm_max: number
+}
+
+export interface AnalysisRecord {
+  path: string
+  bpm: number | null
+  bpm_confidence: number | null
+  bpm_source: 'auto' | 'manual'
+  tonic: string | null
+  mode: 'major' | 'minor' | null
+  camelot: string | null
+  key_confidence: number | null
+  lufs: number | null
+  peak_db: number | null
+  version: number
+  created_at: string
+}
+
+export interface AnalysisSidecar {
+  beats: number[]
+  waveform: { peaks: number[]; low: number[]; mid: number[]; high: number[] }
+  duration: number
+}
+
+export interface HarmonicRow {
+  track: TrackRecord
+  level: 'same' | 'adjacent' | 'relative'
+  bpm_diff_pct: number
 }
 
 export type EngineEvent =

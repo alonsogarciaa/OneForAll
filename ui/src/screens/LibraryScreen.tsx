@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
-import { FolderOpen, Library, Search } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { AudioLines, FileAudio, FolderOpen, Library, Search } from 'lucide-react'
+import { KeyChip } from '../components/KeyChip'
 import { SelectableTable, type Column } from '../components/SelectableTable'
 import { useClient } from '../lib/engine'
 import { useUiStore } from '../stores/uiStore'
@@ -20,10 +21,13 @@ const COLUMNS: Column<TrackRecord>[] = [
     )
   },
   { key: 'artist', label: 'Artista', render: (t) => t.artist },
-  { key: 'duration', label: 'Duración', width: '84px', align: 'right', render: (t) => <span className="tabular">{t.duration_s != null ? formatDuration(t.duration_s) : '—'}</span> },
-  { key: 'views', label: 'Visualizaciones', width: '120px', align: 'right', render: (t) => <span className="tabular">{t.views != null ? formatViews(t.views) : '—'}</span> },
-  { key: 'format', label: 'Formato', width: '90px', render: (t) => FORMAT_NAMES[t.format as FormatId] ?? t.format.toUpperCase() },
-  { key: 'added', label: 'Añadida', width: '150px', render: (t) => <span className="tabular">{formatDate(t.added_at)}</span> },
+  { key: 'bpm', label: 'BPM', width: '62px', align: 'right', render: (t) => <span className="tabular cell-strong">{t.bpm != null ? t.bpm.toFixed(1) : '—'}</span> },
+  { key: 'key', label: 'Tonalidad', width: '78px', render: (t) => <KeyChip camelot={t.camelot} /> },
+  { key: 'lufs', label: 'LUFS', width: '58px', align: 'right', render: (t) => <span className="tabular">{t.lufs != null ? t.lufs.toFixed(1) : '—'}</span> },
+  { key: 'duration', label: 'Duración', width: '72px', align: 'right', render: (t) => <span className="tabular">{t.duration_s != null ? formatDuration(t.duration_s) : '—'}</span> },
+  { key: 'views', label: 'Vistas', width: '64px', align: 'right', render: (t) => <span className="tabular">{t.views != null ? formatViews(t.views) : '—'}</span> },
+  { key: 'format', label: 'Formato', width: '70px', render: (t) => FORMAT_NAMES[t.format as FormatId] ?? t.format.toUpperCase() },
+  { key: 'added', label: 'Añadida', width: '140px', render: (t) => <span className="tabular">{formatDate(t.added_at)}</span> },
   {
     key: 'open',
     label: '',
@@ -48,6 +52,7 @@ export function LibraryScreen() {
   const [q, setQ] = useState('')
   const [rows, setRows] = useState<TrackRecord[] | null>(null)
   const [selected, setSelected] = useState<Set<number>>(new Set())
+  const fileInput = useRef<HTMLInputElement>(null)
 
   const load = useCallback(() => {
     client.library(q).then(setRows).catch((e) => toast(e.message, 'error'))
@@ -58,10 +63,44 @@ export function LibraryScreen() {
     return () => clearTimeout(t)
   }, [load, doneCount])
 
+  const analyze = async (paths: string[]) => {
+    try {
+      await client.analyze(paths)
+      toast(paths.length === 1 ? 'Analizando…' : `Analizando ${paths.length} canciones`, 'success')
+    } catch (e: any) {
+      toast(e.message, 'error')
+    }
+  }
+
   return (
     <section>
       <div className="screen-head">
         <h1 className="screen-title">Biblioteca</h1>
+        <div className="toolbar">
+          <button
+            className="btn btn-sm"
+            disabled={selected.size === 0}
+            onClick={() => analyze((rows ?? []).filter((t) => selected.has(t.id) && !t.missing).map((t) => t.path))}
+          >
+            <AudioLines size={14} />
+            Analizar seleccionadas ({selected.size})
+          </button>
+          <button className="btn btn-sm" onClick={() => fileInput.current?.click()}>
+            <FileAudio size={14} />
+            Analizar archivo…
+          </button>
+          <input
+            ref={fileInput}
+            type="file"
+            hidden
+            accept=".mp3,.m4a,.aac,.wav,.aif,.aiff,.flac,.ogg,.opus,.webm"
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              if (f) analyze([window.oneforall.pathForFile(f)])
+              e.target.value = ''
+            }}
+          />
+        </div>
         <label className="filter">
           <Search size={15} />
           <input className="field" placeholder="Filtrar por título, artista o álbum" aria-label="Filtrar biblioteca" value={q} onChange={(e) => setQ(e.target.value)} />

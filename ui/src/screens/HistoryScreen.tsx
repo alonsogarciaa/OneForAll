@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { History, Trash2 } from 'lucide-react'
 import { SelectableTable, type Column } from '../components/SelectableTable'
+import { KeyChip } from '../components/KeyChip'
 import { GlassSheet } from '../components/GlassSheet'
 import { useClient } from '../lib/engine'
 import { useUiStore } from '../stores/uiStore'
@@ -12,6 +13,8 @@ import './tables.css'
 const COLUMNS: Column<HistoryEntry>[] = [
   { key: 'title', label: 'Título', render: (h) => <span className="cell-strong">{h.title}</span> },
   { key: 'artist', label: 'Artista', render: (h) => h.artist },
+  { key: 'bpm', label: 'BPM', width: '62px', align: 'right', render: (h) => <span className="tabular">{h.bpm != null ? h.bpm.toFixed(1) : '—'}</span> },
+  { key: 'key', label: 'Tonalidad', width: '78px', render: (h) => <KeyChip camelot={h.camelot} /> },
   { key: 'action', label: 'Acción', width: '120px', render: (h) => (h.action === 'convert' ? 'Conversión' : 'Descarga') },
   {
     key: 'status',
