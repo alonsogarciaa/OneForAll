@@ -16,6 +16,10 @@ CREATE TABLE IF NOT EXISTS mixer_state (
     state_json TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS mixer_exports (
+    file_key TEXT PRIMARY KEY,
+    path_key TEXT NOT NULL
+);
 """
 
 
@@ -104,3 +108,13 @@ class MixerStore:
                 (key(path), state.model_dump_json(), datetime.now(timezone.utc).isoformat(timespec="seconds")),
             )
             self._conn.commit()
+
+    def add_export(self, path, file) -> None:
+        with self._lock:
+            self._conn.execute("INSERT OR REPLACE INTO mixer_exports (file_key, path_key) VALUES (?,?)", (key(file), key(path)))
+            self._conn.commit()
+
+    def is_export(self, file) -> bool:
+        with self._lock:
+            row = self._conn.execute("SELECT 1 FROM mixer_exports WHERE file_key=?", (key(file),)).fetchone()
+        return bool(row) and Path(file).is_file()
