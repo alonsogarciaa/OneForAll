@@ -21,6 +21,12 @@ describe('MixerEngine', () => {
     for (const n of nodes) expect(last(n)).toMatchObject({ active: true, output: 3.05, input: 0, rate: 1, semitones: 0 })
   })
 
+  it('play can start at a given context time (after a count-in)', async () => {
+    const { nodes, eng } = await setup()
+    eng.play(4.2)
+    for (const n of nodes) expect(last(n)).toMatchObject({ active: true, output: 4.2 })
+  })
+
   it('solo mutes the others with a 10 ms ramp', async () => {
     const { ctx, eng } = await setup()
     eng.apply(withState({ stems: { drums: { gain: 1, mute: false, solo: true, semis: 0 } } }))

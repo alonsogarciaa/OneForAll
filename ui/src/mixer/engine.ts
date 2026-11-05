@@ -68,13 +68,14 @@ export class MixerEngine {
     if (moved) this.reschedule(input, now + LEAD)
   }
 
-  play(): void {
+  /** Start now (plus the scheduling lead), or at a given context time (after a metronome count-in). */
+  play(at?: number): void {
     if (this.playing) return
     const loop = this.loopRange(this.state)
     let input = this.pausedAt
     if (loop && (input < loop[0] || input >= loop[1])) input = loop[0]
     this.playing = true
-    this.reschedule(input, this.ctx.currentTime + LEAD, true)
+    this.reschedule(input, at ?? this.ctx.currentTime + LEAD, true)
   }
 
   pause(): void {

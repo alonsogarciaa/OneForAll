@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Pause, Play, Repeat, SkipBack } from 'lucide-react'
+import { Download, FolderOpen, GripVertical, Package, Pause, Play, Repeat, SkipBack } from 'lucide-react'
 import { GlassSheet } from './GlassSheet'
 import { Waveform } from './Waveform'
 import { useClient } from '../lib/engine'
@@ -7,10 +7,11 @@ import { camelotShift } from '../lib/camelot'
 import { formatDuration } from '../lib/format'
 import { STEM_LABEL } from '../lib/stems'
 import { useUiStore } from '../stores/uiStore'
+import { useJobsStore } from '../stores/jobsStore'
 import { createAudioContext, decodeStem, MixerEngine } from '../mixer/engine'
 import { Metronome } from '../mixer/metronome'
 import { createStretch } from '../mixer/stretch'
-import { defaultState, mixerStems, parseState, stemState, MIXER_MAX_SECONDS, type MixState, type StemState } from '../mixer/mixState'
+import { defaultState, mixerStems, parseState, stemState, METERS, MIXER_MAX_SECONDS, type Meter, type MixState, type StemState } from '../mixer/mixState'
 import type { AnalysisSidecar } from '../lib/types'
 import './mixer.css'
 
@@ -26,6 +27,12 @@ interface Analysis {
 }
 
 const SPEEDS = [0.5, 0.75, 0.9, 1]
+const FORMATS = [
+  { v: 'wav16', label: 'WAV 16 bits' },
+  { v: 'wav24', label: 'WAV 24 bits' },
+  { v: 'flac', label: 'FLAC' },
+  { v: 'mp3', label: 'MP3 320' }
+]
 const SAVE_MS = 500
 const MISSING = 'Faltan stems de esta canción'
 const TOO_LONG = 'Pista demasiado larga para el mezclador'
@@ -34,6 +41,7 @@ const NO_MEMORY = 'No hay memoria suficiente para el mezclador'
 class MissingStem extends Error {}
 
 const comma = (n: number, d = 1) => n.toFixed(d).replace('.', ',')
+const baseFile = (p: string) => p.split(/[\\/]/).pop() ?? p
 const baseName = (p: string) => p.split(/[\\/]/).pop()?.replace(/\.[^.]+$/, '') ?? p
 
 /** Waveform for tracks never analysed: peaks of the summed stems (all bands equal). */
@@ -71,6 +79,10 @@ export function MixerSheet({ path, onClose }: { path: string; onClose(): void })
   const [duration, setDuration] = useState(0)
   const [playing, setPlaying] = useState(false)
   const [pos, setPos] = useState(0)
+  const [format, setFormat] = useState('wav16')
+  const [exportId, setExportId] = useState<string | null>(null)
+  const exportJob = useJobsStore((s) => (exportId ? s.jobs[exportId] : undefined))
+  const toast = useUiStore((s) => s.toast)
   const engine = useRef<MixerEngine | null>(null)
   const ctxRef = useRef<AudioContext | null>(null)
   const metro = useRef<Metronome | null>(null)
@@ -140,6 +152,18 @@ export function MixerSheet({ path, onClose }: { path: string; onClose(): void })
     }
   }, [client, path])
 
+  useEffect(() => {
+    client
+      .getSettings()
+      .then((st: { stems_format?: string }) => st.stems_format && setFormat(st.stems_format))
+      .catch(() => undefined)
+  }, [client])
+
+  const exportedFile: string | null = exportJob?.status === 'done' ? (exportJob.result?.file ?? null) : null
+  useEffect(() => {
+    if (exportedFile) window.oneforall.allowDrag([exportedFile])
+  }, [exportedFile])
+
   const update = useCallback(
     (fn: (s: MixState) => MixState) => {
       const next = fn(stateRef.current)
@@ -168,8 +192,12 @@ export function MixerSheet({ path, onClose }: { path: string; onClose(): void })
       return
     }
     if (ctx.state === 'suspended') await ctx.resume()
-    eng.play()
     const m = stateRef.current.metronome
+    if (m.on && bpm && m.count_in > 0 && metro.current) {
+      eng.play(metro.current.countIn(m.count_in, bpm, stateRef.current.rate, m.meter, m.volume))
+    } else {
+      eng.play()
+    }
     if (m.on && bpm) metro.current?.start(m, analysis?.beats ?? null, bpm)
     setPlaying(true)
   }, [analysis, bpm])
@@ -210,6 +238,31 @@ export function MixerSheet({ path, onClose }: { path: string; onClose(): void })
       }
       return { ...s, metronome: { ...s.metronome, on } }
     })
+
+  const setMetro = (patch: Partial<MixState['metronome']>) =>
+    update((s) => {
+      const metronome = { ...s.metronome, ...patch }
+      if (metronome.on && engine.current?.playing && bpm) metro.current?.start(metronome, analysis?.beats ?? null, bpm)
+      return { ...s, metronome }
+    })
+
+  const exportMix = async (range: 'full' | 'loop') => {
+    try {
+      const r = await client.mixExport(path, stateRef.current, range, format)
+      setExportId(r.job.id)
+    } catch (e: any) {
+      toast(e.message, 'error')
+    }
+  }
+
+  const zip = async () => {
+    try {
+      const r = await client.zipStems(path)
+      window.oneforall.showInFolder(r.zip)
+    } catch (e: any) {
+      toast(e.message, 'error')
+    }
+  }
 
   const title = `Mezclador · ${baseName(path)}`
 
@@ -336,12 +389,102 @@ export function MixerSheet({ path, onClose }: { path: string; onClose(): void })
               onDoubleClick={() => update((s) => ({ ...s, master: 1 }))}
             />
           </div>
-          <div className="mixer-control">
+        </section>
+
+        <section className="mixer-row">
+          <div className="mixer-control mixer-metronome">
             <span className="ds-label">Metrónomo</span>
-            <button className="btn btn-sm" aria-label="Metrónomo" aria-pressed={state.metronome.on} disabled={!bpm} onClick={toggleMetronome}>
-              {state.metronome.on ? 'Activado' : 'Desactivado'}
-            </button>
-            {!bpm && <span className="ds-sub">Sin BPM</span>}
+            <div className="mixer-inline">
+              <button className="btn btn-sm" aria-label="Metrónomo" aria-pressed={state.metronome.on} disabled={!bpm} onClick={toggleMetronome}>
+                {state.metronome.on ? 'Activado' : 'Desactivado'}
+              </button>
+              {!bpm && <span className="ds-sub">Sin BPM</span>}
+              <label className="mixer-field">
+                <span>Compás</span>
+                <select className="field" aria-label="Compás" value={state.metronome.meter} onChange={(e) => setMetro({ meter: e.target.value as Meter })}>
+                  {METERS.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="mixer-field">
+                <span>Cuenta atrás</span>
+                <select
+                  className="field"
+                  aria-label="Cuenta atrás"
+                  value={state.metronome.count_in}
+                  onChange={(e) => setMetro({ count_in: Number(e.target.value) as 0 | 1 | 2 })}
+                >
+                  <option value={0}>Sin cuenta</option>
+                  <option value={1}>1 compás</option>
+                  <option value={2}>2 compases</option>
+                </select>
+              </label>
+              <div className="mixer-stepper" title="Desplaza el primer tiempo del compás">
+                <button className="btn btn-sm" aria-label="Mover el 1 a la izquierda" disabled={state.metronome.offset <= -7} onClick={() => setMetro({ offset: state.metronome.offset - 1 })}>
+                  ←
+                </button>
+                <span className="tabular">1</span>
+                <button className="btn btn-sm" aria-label="Mover el 1 a la derecha" disabled={state.metronome.offset >= 7} onClick={() => setMetro({ offset: state.metronome.offset + 1 })}>
+                  →
+                </button>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={Math.round(state.metronome.volume * 100)}
+                aria-label="Volumen del metrónomo"
+                onChange={(e) => setMetro({ volume: Number(e.target.value) / 100 })}
+              />
+            </div>
+          </div>
+          <div className="mixer-control mixer-export">
+            <span className="ds-label">Exportar</span>
+            <div className="mixer-inline">
+              <select className="field" aria-label="Formato" value={format} onChange={(e) => setFormat(e.target.value)}>
+                {FORMATS.map((f) => (
+                  <option key={f.v} value={f.v}>
+                    {f.label}
+                  </option>
+                ))}
+              </select>
+              <button className="btn btn-sm btn-primary" onClick={() => void exportMix('full')}>
+                <Download size={14} />
+                Mezcla completa
+              </button>
+              <button className="btn btn-sm" disabled={!state.loop} onClick={() => void exportMix('loop')}>
+                Solo el bucle
+              </button>
+              <button className="btn btn-sm" onClick={() => void zip()}>
+                <Package size={14} />
+                Stems (zip)
+              </button>
+            </div>
+            {exportJob && !['done', 'failed', 'cancelled'].includes(exportJob.status) && (
+              <span className="ds-sub tabular">{`Exportando ${Math.round(exportJob.pct)} %`}</span>
+            )}
+            {exportJob?.status === 'failed' && <span className="ds-sub mixer-failed">{exportJob.error?.message ?? 'No se pudo exportar'}</span>}
+            {exportedFile && (
+              <div
+                className="mixer-result"
+                draggable
+                onDragStart={(e) => {
+                  e.preventDefault()
+                  window.oneforall.startDrag(exportedFile)
+                }}
+                title="Arrastra a tu DAW o a una carpeta"
+              >
+                <GripVertical size={15} aria-hidden />
+                <span>{baseFile(exportedFile)}</span>
+                <button className="btn btn-sm btn-ghost" onClick={() => window.oneforall.showInFolder(exportedFile)}>
+                  <FolderOpen size={14} />
+                  Mostrar en carpeta
+                </button>
+              </div>
+            )}
           </div>
         </section>
 

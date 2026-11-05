@@ -4,6 +4,8 @@ import { MixerSheet } from './MixerSheet'
 import { EngineTestProvider } from '../lib/engine'
 import { EngineError } from '../lib/engineClient'
 import { useUiStore } from '../stores/uiStore'
+import { useJobsStore } from '../stores/jobsStore'
+import { Metronome } from '../mixer/metronome'
 
 const h = vi.hoisted(() => ({ engines: [] as any[], gate: null as null | Promise<void>, decodeError: null as null | Error }))
 
@@ -46,6 +48,8 @@ function client(over: Record<string, unknown> = {}) {
     getMixerState: vi.fn(async () => ({ state: null })),
     putMixerState: vi.fn(async () => ({ ok: true })),
     mixExport: vi.fn(async () => ({ job: { id: 'm1' } })),
+    getSettings: vi.fn(async () => ({ stems_format: 'wav16' })),
+    zipStems: vi.fn(async () => ({ zip: 'C:/m/Stems/A/A (stems).zip' })),
     audioUrl: (p: string) => `http://x/audio?path=${p}`,
     ...over
   } as any
@@ -172,5 +176,50 @@ describe('MixerSheet', () => {
     input.remove()
     fireEvent.keyDown(document.body, { code: 'KeyL', key: 'l' })
     expect(lastApplied().loop_on).toBe(true)
+  })
+
+  it('count-in plays the clicks first, then starts the audio at the returned time', async () => {
+    const spy = vi.spyOn(Metronome.prototype, 'countIn').mockReturnValue(7.5)
+    open(client({ getMixerState: vi.fn(async () => ({ state: { metronome: { on: true, count_in: 1 } } })) }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Reproducir' }))
+    await waitFor(() => expect(eng().play).toHaveBeenCalledWith(7.5))
+    expect(spy).toHaveBeenCalledWith(1, 128, 1, '4/4', 0.6)
+    spy.mockRestore()
+  })
+
+  it('meter, count-in and downbeat offset are part of the state', async () => {
+    open()
+    await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'Compás' }), '3/4')
+    expect(lastApplied().metronome.meter).toBe('3/4')
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Cuenta atrás' }), '2')
+    expect(lastApplied().metronome.count_in).toBe(2)
+    await userEvent.click(screen.getByRole('button', { name: 'Mover el 1 a la derecha' }))
+    expect(lastApplied().metronome.offset).toBe(1)
+  })
+
+  it('loop export is disabled without a loop', async () => {
+    open()
+    expect(await screen.findByRole('button', { name: 'Solo el bucle' })).toBeDisabled()
+  })
+
+  it('exports the full mix with the default format and shows progress, then the draggable result', async () => {
+    useJobsStore.getState().reset()
+    const c = open()
+    await userEvent.click(await screen.findByRole('button', { name: 'Mezcla completa' }))
+    expect(c.mixExport).toHaveBeenCalledWith(PATH, expect.objectContaining({ rate: 1 }), 'full', 'wav16')
+    const job = { id: 'm1', type: 'mix_export', title: 't', status: 'running', stage: 'rendering', pct: 40, parent_id: null, error: null, result: null, created_at: '' }
+    act(() => useJobsStore.getState().setAll([job as any]))
+    expect(await screen.findByText('Exportando 40 %')).toBeInTheDocument()
+    act(() => useJobsStore.getState().setAll([{ ...job, status: 'done', pct: 100, result: { file: 'C:/m/Stems/A/mix.wav' } } as any]))
+    expect(await screen.findByText('mix.wav')).toBeInTheDocument()
+    expect(window.oneforall.allowDrag).toHaveBeenCalledWith(['C:/m/Stems/A/mix.wav'])
+    await userEvent.click(screen.getByRole('button', { name: 'Mostrar en carpeta' }))
+    expect(window.oneforall.showInFolder).toHaveBeenCalledWith('C:/m/Stems/A/mix.wav')
+  })
+
+  it('stems zip is available from the export menu', async () => {
+    const c = open()
+    await userEvent.click(await screen.findByRole('button', { name: 'Stems (zip)' }))
+    expect(c.zipStems).toHaveBeenCalledWith(PATH)
   })
 })
