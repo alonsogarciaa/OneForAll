@@ -1,7 +1,7 @@
 # OneForAll — Fase 3b: Mezclador de práctica — Especificación
 
 - Fecha: 2026-11-05
-- Estado: borrador para revisión
+- Estado: aprobada (2026-11-05)
 - Base: `docs/diseno/specs/2026-11-01-dj-app-design.md` (§8, hoja de ruta) y la Fase 3a (stems, en `main`)
 - Referencia: [stemdeck](https://github.com/stemdeckapp/stemdeck) (Apache-2.0), mezclador de práctica sobre stems.
 
