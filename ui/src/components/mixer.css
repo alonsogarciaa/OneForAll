@@ -24,7 +24,7 @@
 }
 .mixer-globals {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 .mixer-control {
@@ -80,6 +80,7 @@
   min-width: 34px;
   justify-content: center;
 }
+.mixer .btn[aria-pressed='true'],
 .strip-btn[aria-pressed='true'] {
   background: var(--accent);
   color: var(--accent-text);
