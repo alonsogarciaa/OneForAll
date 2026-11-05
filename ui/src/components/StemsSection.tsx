@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { FolderOpen, GripVertical, Package, Pause, Play, Scissors, X } from 'lucide-react'
+import { FolderOpen, GripVertical, Package, Pause, Play, Scissors, SlidersHorizontal, X } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import { useClient } from '../lib/engine'
 import { STEM_LABEL } from '../lib/stems'
@@ -33,6 +33,7 @@ export function StemsSection({ path, durationS }: { path: string; durationS: num
   const client = useClient()
   const toast = useUiStore((s) => s.toast)
   const openStems = useUiStore((s) => s.openStems)
+  const openMixer = useUiStore((s) => s.openMixer)
   const [stems, setStems] = useState<StemFile[] | null>(null)
   const [folder, setFolder] = useState<string | null>(null)
   const [playing, setPlaying] = useState<string | null>(null)
@@ -127,6 +128,12 @@ export function StemsSection({ path, durationS }: { path: string; durationS: num
               <FolderOpen size={14} />
               Mostrar carpeta
             </button>
+            {stems.length >= 2 && (
+              <button className="btn btn-sm btn-primary" onClick={() => openMixer(path)}>
+                <SlidersHorizontal size={14} />
+                Mezclador
+              </button>
+            )}
             <button className="btn btn-sm" onClick={zip}>
               <Package size={14} />
               Exportar zip

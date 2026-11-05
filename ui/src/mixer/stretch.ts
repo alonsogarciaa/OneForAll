@@ -1,5 +1,5 @@
 // Real-time tempo/pitch per stem: Signalsmith Stretch (MIT), a WASM AudioWorklet node.
-import SignalsmithStretch from 'signalsmith-stretch/SignalsmithStretch.mjs'
+import SignalsmithStretch from 'signalsmith-stretch'
 
 export interface StretchSchedule {
   output?: number

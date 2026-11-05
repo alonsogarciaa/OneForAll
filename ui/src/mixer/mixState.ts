@@ -15,6 +15,9 @@ export interface MixState {
   metronome: MetronomeState
 }
 
+/** Longest track the mixer opens (all stems live in memory). */
+export const MIXER_MAX_SECONDS = 12 * 60
+
 export const MIXER_ORDER = ['vocals', 'lead_vocals', 'backing_vocals', 'drums', 'bass', 'guitar', 'piano', 'other']
 export const METERS: Meter[] = ['2/4', '3/4', '4/4', '6/8']
 const DEFAULT_STEM: StemState = { gain: 1, mute: false, solo: false, semis: 0 }

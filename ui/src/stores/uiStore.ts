@@ -27,6 +27,10 @@ interface UiState {
   stemsFor: { paths: string[]; durationS: number | null } | null
   openStems(paths: string[], durationS?: number | null): void
   closeStems(): void
+  /** Track open in the practice mixer (it replaces the data sheet, which comes back on close). */
+  mixerFor: string | null
+  openMixer(path: string): void
+  closeMixer(): void
   navigate(r: Route): void
   toast(text: string, kind?: ToastKind): void
   dismissToast(id: number): void
@@ -62,6 +66,9 @@ export const useUiStore = create<UiState>((set, get) => ({
   stemsFor: null,
   openStems: (paths, durationS = null) => set({ stemsFor: { paths, durationS } }),
   closeStems: () => set({ stemsFor: null }),
+  mixerFor: null,
+  openMixer: (path) => set({ mixerFor: path, dataSheet: null }),
+  closeMixer: () => set((s) => ({ mixerFor: null, dataSheet: s.mixerFor })),
   navigate: (route) => set({ route }),
   toast(text, kind = 'info') {
     const id = nextId++

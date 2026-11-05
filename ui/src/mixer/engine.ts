@@ -165,3 +165,15 @@ export class MixerEngine {
     }
   }
 }
+
+/** The real audio context (tests replace this module). */
+export function createAudioContext(): AudioContext {
+  return new AudioContext({ sampleRate: 44100, latencyHint: 'interactive' })
+}
+
+/** Decoded stereo channels of one stem file (mono is duplicated). */
+export async function decodeStem(ctx: BaseAudioContext, data: ArrayBuffer): Promise<Float32Array[]> {
+  const b = await ctx.decodeAudioData(data)
+  const left = b.getChannelData(0)
+  return [left, b.numberOfChannels > 1 ? b.getChannelData(1) : left]
+}

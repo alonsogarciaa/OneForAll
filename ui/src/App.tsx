@@ -8,6 +8,7 @@ import { HistoryScreen } from './screens/HistoryScreen'
 import { ConverterScreen } from './screens/ConverterScreen'
 import { SettingsScreen } from './screens/SettingsScreen'
 import { HarmonyScreen } from './screens/HarmonyScreen'
+import { MixerSheet } from './components/MixerSheet'
 import { PlaylistSummaryHost } from './components/PlaylistSummarySheet'
 import { DataSheet } from './components/DataSheet'
 import { StemsSheet } from './components/StemsSheet'
@@ -33,6 +34,12 @@ function StemsSheetHost() {
   const stemsFor = useUiStore((s) => s.stemsFor)
   const close = useUiStore((s) => s.closeStems)
   return stemsFor ? <StemsSheet paths={stemsFor.paths} durationS={stemsFor.durationS} onClose={close} /> : null
+}
+
+function MixerSheetHost() {
+  const path = useUiStore((s) => s.mixerFor)
+  const close = useUiStore((s) => s.closeMixer)
+  return path ? <MixerSheet key={path} path={path} onClose={close} /> : null
 }
 
 function Body() {
@@ -62,6 +69,7 @@ function Body() {
       <Screen />
       <DataSheetHost />
       <StemsSheetHost />
+      <MixerSheetHost />
     </>
   )
 }
