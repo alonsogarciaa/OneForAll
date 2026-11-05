@@ -191,3 +191,22 @@ def test_children_die_with_engine():
     while psutil.pid_exists(child) and time.time() < deadline:
         time.sleep(0.1)
     assert not psutil.pid_exists(child)
+
+
+def test_manual_bpm_rebuilds_beat_grid(tmp_path):
+    from djengine.analysis.store import AnalysisStore
+
+    st = AnalysisStore(tmp_path / "db", tmp_path / "side")
+    song = tmp_path / "s.wav"
+    song.write_bytes(b"x" * 10)
+    from djengine.analysis.store import AnalysisRecord, file_stamp, now_iso
+
+    size, mtime = file_stamp(song)
+    st.save(AnalysisRecord(path=str(song), size=size, mtime=mtime, bpm=128.0, bpm_confidence=0.9, bpm_source="auto",
+                           tonic="A", mode="minor", camelot="8A", key_confidence=0.9, lufs=-9.0, peak_db=-1.0,
+                           version=1, created_at=now_iso()),
+            {"beats": [0.25, 0.72, 1.19], "waveform": {}, "duration": 10.0})
+    st.set_manual_bpm(song, 120)
+    st.set_beats_from_bpm(song, 120)
+    beats = st.get_sidecar(song)["beats"]
+    assert beats[0] == 0.25 and abs(beats[1] - beats[0] - 0.5) < 1e-6 and beats[-1] <= 10.0 and len(beats) == 20

@@ -2,7 +2,7 @@ import { join, extname, resolve } from 'node:path'
 import { existsSync, statSync } from 'node:fs'
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, shell } from 'electron'
 import { EngineProcess, type EngineInfo, type EngineState } from './engineProcess'
-import { isDraggableStem, normPath } from './drag'
+import { confirmStems, isDraggableStem, normPath } from './drag'
 
 const AUDIO_EXT = new Set(['.mp3', '.m4a', '.aac', '.wav', '.aif', '.aiff', '.flac', '.ogg', '.opus', '.webm'])
 const ROOT = resolve(__dirname, '../..')
@@ -126,7 +126,13 @@ function registerIpc(): void {
   })
   const dragAllowed = new Set<string>()
   ipcMain.on('drag:allow', (_e, files: unknown) => {
-    if (Array.isArray(files)) for (const f of files) if (typeof f === 'string') dragAllowed.add(normPath(f))
+    if (!Array.isArray(files)) return
+    const asked = files.filter((f): f is string => typeof f === 'string')
+    void engine
+      .current()
+      .then((info) => confirmStems(asked, info))
+      .then((ok) => ok.forEach((f) => dragAllowed.add(normPath(f))))
+      .catch(() => undefined)
   })
   ipcMain.on('drag:start', (e, file: unknown) => {
     if (typeof file !== 'string' || !isDraggableStem(file, dragAllowed)) return

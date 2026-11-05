@@ -323,6 +323,7 @@ def create_app(services: Services, token: str) -> FastAPI:
         if svc.analysis.get(p) is None:  # file changed since: re-blessing the old record would be wrong
             raise HTTPException(status_code=409, detail={"code": "stale", "message": "El archivo ha cambiado: reanalízalo primero"})
         rec = svc.analysis.set_manual_bpm(p, body.bpm)
+        svc.analysis.set_beats_from_bpm(p, rec.bpm)
         before = file_stamp(p)
         if write_analysis_tags(p, rec.bpm, None):  # BPM only; key and other tags untouched
             svc.analysis.restamp(p)
@@ -331,6 +332,14 @@ def create_app(services: Services, token: str) -> FastAPI:
         if track:
             svc.library.set_track_analysis(str(p), rec.bpm, track.musical_key, track.camelot, track.lufs)
         return asdict(svc.analysis.get_any(p))
+
+    class StemCheck(BaseModel):
+        files: list[str] = Field(max_length=64)
+
+    @api.post("/stems/check")
+    def check_stems(body: StemCheck):
+        """Which of these files are stems we produced (the app only lets those be dragged out)."""
+        return {"stems": [f for f in body.files if svc.stems.is_stem_file(f)]}
 
     @api.get("/stems/backend")
     def stems_backend():

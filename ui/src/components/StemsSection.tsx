@@ -16,6 +16,19 @@ interface StemFile {
 const ORDER = ['vocals', 'lead_vocals', 'backing_vocals', 'drums', 'bass', 'guitar', 'piano', 'other']
 const mb = (b: number) => `${(b / 1_048_576).toLocaleString('es-ES', { maximumFractionDigits: 1 })} MB`
 
+const STEMS_STAGE: Record<string, string> = {
+  queued: 'En cola',
+  loading_model: 'Cargando modelo…',
+  karaoke: 'Separando voz principal y coros…',
+  encoding: 'Guardando archivos…',
+  saving: 'Guardando archivos…'
+}
+
+export function stemsStageLabel(stage: string, pct: number): string {
+  if (stage === 'separating') return `Separando ${Math.round(pct)} %`
+  return STEMS_STAGE[stage] ?? 'Preparando…'
+}
+
 export function StemsSection({ path, durationS }: { path: string; durationS: number | null }) {
   const client = useClient()
   const toast = useUiStore((s) => s.toast)
@@ -70,7 +83,7 @@ export function StemsSection({ path, durationS }: { path: string; durationS: num
       <h3 className="ds-section-title">Stems</h3>
       {job && (
         <div className="ds-progress">
-          <span>{job.stage === 'separating' ? `Separando ${Math.round(job.pct)} %` : 'Preparando…'}</span>
+          <span>{stemsStageLabel(job.stage, job.pct)}</span>
           <div className="progress"><div className="is-animating" style={{ width: `${job.pct}%` }} /></div>
           <button className="btn btn-sm" onClick={() => client.cancelJob(job.id)}>
             <X size={14} />

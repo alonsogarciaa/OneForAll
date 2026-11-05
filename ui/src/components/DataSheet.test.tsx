@@ -68,4 +68,22 @@ describe('DataSheet', () => {
     render(<EngineTestProvider client={c}><DataSheet path="C:/m/new.mp3" onClose={() => undefined} /></EngineTestProvider>)
     expect(await screen.findByText('Voz')).toBeInTheDocument()
   })
+
+  it('ignores held Space and typing in text fields', async () => {
+    render(<EngineTestProvider client={client()}><DataSheet path="C:/m/a.mp3" onClose={() => undefined} /></EngineTestProvider>)
+    await screen.findByText('128.0')
+    const area = document.createElement('textarea')
+    document.body.appendChild(area)
+    fireEvent.keyDown(area, { code: 'Space' })
+    fireEvent.keyDown(document.body, { code: 'Space', repeat: true })
+    expect(screen.getByText('—', { selector: '.tap-bpm' })).toBeInTheDocument()
+    area.remove()
+  })
+
+  it('offers to go back to the automatic BPM', async () => {
+    const c = client({ getAnalysis: vi.fn(async () => ({ record: { ...record, bpm_source: 'manual' }, sidecar, info })) })
+    render(<EngineTestProvider client={c}><DataSheet path="C:/m/a.mp3" onClose={() => undefined} /></EngineTestProvider>)
+    await userEvent.click(await screen.findByRole('button', { name: 'Volver al automático' }))
+    expect(c.analyze).toHaveBeenCalledWith(['C:/m/a.mp3'], { reset_bpm: true })
+  })
 })

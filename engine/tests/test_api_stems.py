@@ -122,3 +122,14 @@ def test_cancelled_stems_keeps_download_done(env, monkeypatch):
     js = wait(c, lambda js: final(js, "stems"))
     assert final(js, "stems")[0]["status"] == "cancelled"
     assert next(j for j in js if j["type"] == "download")["status"] == "done"
+
+
+def test_stems_check_only_confirms_our_stems(env):
+    c, svc, tmp = env
+    stem = tmp / "vocals.wav"
+    stem.write_bytes(b"x")
+    src = tmp / "song.wav"
+    src.write_bytes(b"y")
+    svc.stems.add(src, "vocals", stem, "m")
+    r = c.post("/stems/check", json={"files": [str(stem), str(src), "C:/Windows/win.ini"]}, headers=H).json()
+    assert r == {"stems": [str(stem)]}
