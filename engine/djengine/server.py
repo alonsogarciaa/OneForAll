@@ -18,6 +18,7 @@ from .convert import ConvertOptions
 from .download import download_audio, ytdlp_cmd
 from .jobs import JobManager
 from .library import Library
+from .mixer.state import MixState
 from .pipelines import (DownloadRequest, make_convert_runner, make_download_runner, start_playlist, submit_analysis,
                         submit_stems)
 from .search import SearchService
@@ -52,6 +53,7 @@ class Services:
     hub: EventHub = field(default_factory=EventHub)
     analysis: Any = None
     stems: Any = None
+    mixer: Any = None
     allowed_paths: set = field(default_factory=set)  # files the user picked this session (/audio)
     shutdown: Callable[[], None] | None = None
 
@@ -89,11 +91,12 @@ def build_services(paths: AppPaths, fake: bool) -> Services:
         search, downloader = SearchService(), download_audio
     from .analysis.store import AnalysisStore
 
+    from .mixer.state import MixerStore
     from .stems.store import StemsStore
 
     analysis = AnalysisStore(paths.db_path, paths.root / "analysis")
     return Services(paths, settings, library, jobs, search, downloader, fake, hub, analysis=analysis,
-                    stems=StemsStore(paths.db_path))
+                    stems=StemsStore(paths.db_path), mixer=MixerStore(paths.db_path))
 
 
 # --- request bodies -----------------------------------------------------------
@@ -143,6 +146,11 @@ class StemsJobBody(BaseModel):
 
 class ZipBody(BaseModel):
     path: str
+
+
+class MixerStateBody(BaseModel):
+    path: str
+    state: MixState
 
 
 class ManualBpm(BaseModel):
@@ -340,6 +348,16 @@ def create_app(services: Services, token: str) -> FastAPI:
     def check_stems(body: StemCheck):
         """Which of these files are stems we produced (the app only lets those be dragged out)."""
         return {"stems": [f for f in body.files if svc.stems.is_stem_file(f)]}
+
+    @api.get("/mixer/state")
+    def get_mixer_state(path: str):
+        st = svc.mixer.get(path)
+        return {"state": st.model_dump() if st else None}
+
+    @api.put("/mixer/state")
+    def put_mixer_state(body: MixerStateBody):
+        svc.mixer.put(body.path, body.state)
+        return {"ok": True}
 
     @api.get("/stems/backend")
     def stems_backend():
