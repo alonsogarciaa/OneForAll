@@ -100,6 +100,9 @@ def build_services(paths: AppPaths, fake: bool) -> Services:
 class DownloadJobBody(BaseModel):
     type: Literal["download"]
     request: DownloadRequest
+    dest_dir: str | None = None  # retry of a playlist track: back into its playlist folder
+    playlist_id: int | None = None
+    position: int | None = None
 
 
 class PlaylistJobBody(BaseModel):
@@ -253,8 +256,20 @@ def create_app(services: Services, token: str) -> FastAPI:
                 dup = svc.library.find_duplicate(t.id, t.artist, t.title)
                 if dup is not None:
                     return JSONResponse(status_code=409, content={"duplicate": asdict(dup)})
-            runner = make_download_runner(svc, body.request, Path(svc.settings.music_dir))
-            payload = {"request": body.request.model_dump()}
+            dest = Path(svc.settings.music_dir)
+            if body.dest_dir:
+                music = os.path.normcase(os.path.realpath(svc.settings.music_dir))
+                want = os.path.normcase(os.path.realpath(body.dest_dir))
+                try:
+                    inside = os.path.commonpath([music, want]) == music
+                except ValueError:  # other drive
+                    inside = False
+                if not inside:
+                    raise HTTPException(status_code=422, detail={"code": "bad_request", "message": "Carpeta de destino no válida"})
+                dest = Path(body.dest_dir)
+            runner = make_download_runner(svc, body.request, dest, body.playlist_id, body.position)
+            payload = {"request": body.request.model_dump(), "dest_dir": body.dest_dir,
+                       "playlist_id": body.playlist_id, "position": body.position}
             return {"job": svc.jobs.submit("download", t.title, runner, payload=payload).to_dict()}
         if isinstance(body, PlaylistJobBody):
             try:

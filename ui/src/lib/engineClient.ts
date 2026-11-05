@@ -19,6 +19,9 @@ interface ClientOptions {
 
 export type EngineClient = ReturnType<typeof createClient>
 
+/** Where a retried playlist track goes back to (its playlist folder and position). */
+export type DownloadDest = { dest_dir?: string | null; playlist_id?: number | null; position?: number | null }
+
 export function createClient(
   { baseUrl, token }: { baseUrl: string; token: string },
   fetchImpl: FetchLike = (u, i) => fetch(u, i),
@@ -57,8 +60,8 @@ export function createClient(
     info: () => json<{ logs_dir: string; data_dir: string }>('/info'),
     search: (q: string, kind: SearchKind) => json<SearchResult[]>(`/search?${new URLSearchParams({ q, kind })}`),
     getPlaylist: (id: string) => json<PlaylistInfo>(`/playlist/${encodeURIComponent(id)}`),
-    async download(req: DownloadRequest): Promise<{ job: Job } | { duplicate: TrackRecord }> {
-      const r = await send('/jobs', post('/jobs', { type: 'download', request: req }))
+    async download(req: DownloadRequest, dest?: DownloadDest): Promise<{ job: Job } | { duplicate: TrackRecord }> {
+      const r = await send('/jobs', post('/jobs', { type: 'download', request: req, ...(dest ?? {}) }))
       const body = await r.json().catch(() => null)
       if (r.status === 409) return { duplicate: body.duplicate }
       if (!r.ok) throw new EngineError(r.status, body?.detail?.code ?? 'internal', body?.detail?.message ?? 'Error inesperado')

@@ -41,7 +41,7 @@ function useRetry() {
     const p = j.payload
     if (!p) return
     try {
-      if (p.request) await client.download({ ...p.request, force: true })
+      if (p.request) await client.download({ ...p.request, force: true }, { dest_dir: p.dest_dir, playlist_id: p.playlist_id, position: p.position })
       else if (p.paths) await client.convert(p.paths, p.options)
       else if (p.type === 'playlist') await client.downloadPlaylist(p.id, p.options)
       toast(`Reintentando «${j.title}»`, 'info')

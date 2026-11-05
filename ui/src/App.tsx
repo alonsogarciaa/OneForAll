@@ -60,7 +60,6 @@ function Body() {
   return (
     <>
       <Screen />
-      <PlaylistSummaryHost />
       <DataSheetHost />
       <StemsSheetHost />
     </>
@@ -72,6 +71,7 @@ export function App() {
     <EngineProvider>
       <AppShell>
         <Body />
+        <PlaylistSummaryHost />
       </AppShell>
     </EngineProvider>
   )

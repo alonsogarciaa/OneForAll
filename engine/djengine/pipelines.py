@@ -166,6 +166,8 @@ def make_download_runner(svc, req: DownloadRequest, dest_dir: Path, playlist_id:
 
 async def start_playlist(svc, playlist_id: str, options: ConvertOptions) -> Job:
     info = await asyncio.to_thread(svc.search.get_playlist, playlist_id)
+    seen: set[str] = set()
+    info.tracks = [t for t in info.tracks if not (t.id in seen or seen.add(t.id))]  # same video twice: one download
     folder = Path(svc.settings.music_dir) / (sanitize_filename(info.title) or "Playlist")
 
     async def parent(ctx: JobContext) -> dict:
@@ -176,7 +178,8 @@ async def start_playlist(svc, playlist_id: str, options: ConvertOptions) -> Job:
             req = DownloadRequest(target=t, options=options, skip_existing=True)
             kids.append(svc.jobs.submit(
                 "download", t.title, make_download_runner(svc, req, folder, pl_db, i),
-                parent_id=ctx.job.id, payload={"request": req.model_dump()},
+                parent_id=ctx.job.id,
+                payload={"request": req.model_dump(), "dest_dir": str(folder), "playlist_id": pl_db, "position": i},
             ))
         total = len(kids) or 1
         while True:
@@ -186,14 +189,15 @@ async def start_playlist(svc, playlist_id: str, options: ConvertOptions) -> Job:
                 break
             await asyncio.sleep(0.2)
         result = {"done": 0, "skipped": 0, "failed": [], "cancelled": 0, "options": options.model_dump()}
-        for k, track in zip(kids, info.tracks):
+        for i, (k, track) in enumerate(zip(kids, info.tracks)):
             j = svc.jobs.get(k.id)
             if j.status == "done" and (j.result or {}).get("skipped"):
                 result["skipped"] += 1
             elif j.status == "done":
                 result["done"] += 1
             elif j.status == "failed":
-                result["failed"].append({"title": j.title, "child_id": j.id, "target": track.model_dump(), **(j.error or {})})
+                result["failed"].append({"title": j.title, "child_id": j.id, "target": track.model_dump(),
+                                         "dest_dir": str(folder), "playlist_id": pl_db, "position": i, **(j.error or {})})
             else:
                 result["cancelled"] += 1
         return result
