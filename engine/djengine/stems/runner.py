@@ -72,14 +72,18 @@ def _encode(y: np.ndarray, dst: Path, fmt: str) -> None:
         sf.write(dst, data, SR, subtype=_SUBTYPE[fmt], format="FLAC" if fmt == "flac" else "WAV")
 
 
-def _work(svc, ctx, path: Path, todo: list[str], karaoke: bool, fmt: str) -> dict[str, Path]:
+def _work(svc, ctx, path: Path, todo: list[str], karaoke: bool, fmt: str, cached: dict) -> dict[str, Path]:
     """Blocking part (runs in a thread): decode, separate, optional karaoke, encode into tmp."""
     ctx.report("loading_model", 0)
     separator = get_separator(svc)
-    audio = decode(path, sr=SR, mono=False)
-    ctx.check_cancelled()
-    ctx.report("separating", 5)
-    stems = separator.separate(audio, SR, lambda f: ctx.report("separating", 5 + 75 * f), lambda: ctx.cancelled)
+    if all(s in KARAOKE for s in todo) and "vocals" in cached:
+        # only the lead/backing split is missing: reuse the cached vocals, skip Demucs
+        stems = {"vocals": decode(cached["vocals"], sr=SR, mono=False)}
+    else:
+        audio = decode(path, sr=SR, mono=False)
+        ctx.check_cancelled()
+        ctx.report("separating", 5)
+        stems = separator.separate(audio, SR, lambda f: ctx.report("separating", 5 + 75 * f), lambda: ctx.cancelled)
     ctx.check_cancelled()
     if karaoke:
         from .karaoke import get_karaoke  # Task 4
@@ -120,7 +124,7 @@ def make_stems_runner(svc, path: Path, wanted: list[str], karaoke: bool = False)
             raise UserError("too_long", f"La separación admite pistas de hasta {MAX_SECONDS // 60} minutos")
 
         fmt = svc.settings.stems_format
-        work = asyncio.ensure_future(asyncio.to_thread(_work, svc, ctx, path, todo, karaoke, fmt))
+        work = asyncio.ensure_future(asyncio.to_thread(_work, svc, ctx, path, todo, karaoke, fmt, cached))
         try:
             produced = await asyncio.shield(work)
         except asyncio.CancelledError:
@@ -142,7 +146,10 @@ def make_stems_runner(svc, path: Path, wanted: list[str], karaoke: bool = False)
 
         for stem, tmp_file in produced.items():
             final = folder / tmp_file.name
-            _commit(tmp_file, final)  # atomic; cross-drive copies go through a .part file
+            await asyncio.to_thread(_commit, tmp_file, final)  # atomic; cross-drive copies go through a .part file
+            for old in folder.glob(f"{stem}.*"):  # same stem left over in another format
+                if old.suffix != final.suffix and old.suffix in (".wav", ".flac", ".mp3"):
+                    old.unlink(missing_ok=True)
             svc.stems.add(path, stem, final, model)
             result[stem] = str(final)
         return {"path": str(path), "folder": str(folder), "stems": result}

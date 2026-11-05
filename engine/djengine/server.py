@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import threading
 import secrets
 from contextlib import asynccontextmanager
 from dataclasses import asdict, dataclass, field
@@ -55,11 +56,25 @@ class Services:
     shutdown: Callable[[], None] | None = None
 
 
+def _tools_on_path() -> None:
+    """Some libraries (audio-separator) run "ffmpeg" by name: expose the bundled tools dir once, at startup."""
+    from .errors import UserError as _UE
+    from .tools import find_tool
+
+    try:
+        tools = str(Path(find_tool("ffmpeg")).parent)
+    except _UE:
+        return
+    if tools not in os.environ.get("PATH", "").split(os.pathsep):
+        os.environ["PATH"] = tools + os.pathsep + os.environ.get("PATH", "")
+
+
 def build_services(paths: AppPaths, fake: bool) -> Services:
     settings = load_settings(paths.settings_path)
     hub = EventHub()
     jobs = JobManager(paths.tmp_dir, hub.broadcast, {"download": settings.download_concurrency, "convert": CONVERT_CONCURRENCY, "analysis": ANALYSIS_CONCURRENCY, "stems": 1})
     jobs.purge_orphans()
+    _tools_on_path()
     library = Library(paths.db_path)
     library.refresh_missing()
     if fake:
@@ -286,6 +301,8 @@ def create_app(services: Services, token: str) -> FastAPI:
         p = Path(body.path)
         if svc.analysis.get_any(p) is None:
             raise HTTPException(status_code=404, detail={"code": "not_analyzed", "message": "Sin analizar"})
+        if svc.analysis.get(p) is None:  # file changed since: re-blessing the old record would be wrong
+            raise HTTPException(status_code=409, detail={"code": "stale", "message": "El archivo ha cambiado: reanalízalo primero"})
         rec = svc.analysis.set_manual_bpm(p, body.bpm)
         before = file_stamp(p)
         if write_analysis_tags(p, rec.bpm, None):  # BPM only; key and other tags untouched
@@ -310,6 +327,8 @@ def create_app(services: Services, token: str) -> FastAPI:
             "stems": [{"stem": k, "file": str(v), "size_bytes": v.stat().st_size} for k, v in got.items()],
         }
 
+    zip_lock = threading.Lock()
+
     @api.post("/stems/zip")
     def zip_stems(body: ZipBody):
         import zipfile
@@ -318,12 +337,15 @@ def create_app(services: Services, token: str) -> FastAPI:
         if not got:
             raise HTTPException(status_code=404, detail={"code": "no_stems", "message": "Esta canción no tiene stems"})
         folder = next(iter(got.values())).parent
+        import uuid
+
         dst = folder / f"{folder.name} (stems).zip"
-        tmp = dst.with_suffix(".zip.part")
-        with zipfile.ZipFile(tmp, "w", zipfile.ZIP_STORED) as z:
-            for f in got.values():
-                z.write(f, arcname=f.name)
-        os.replace(tmp, dst)
+        tmp = folder / f"~oneforall-{uuid.uuid4().hex}.part"
+        with zip_lock:  # Windows refuses os.replace onto a file another request is replacing
+            with zipfile.ZipFile(tmp, "w", zipfile.ZIP_STORED) as z:
+                for f in got.values():
+                    z.write(f, arcname=f.name)
+            os.replace(tmp, dst)
         return {"zip": str(dst)}
 
     @api.get("/harmonic")
@@ -339,6 +361,11 @@ def create_app(services: Services, token: str) -> FastAPI:
             bpm, camelot = ref.bpm, ref.camelot
         if not bpm or not camelot:
             raise HTTPException(status_code=422, detail={"code": "bad_request", "message": "Indica una pista o BPM y tonalidad"})
+        from .analysis.camelot import _FROM
+
+        if camelot.upper() not in _FROM:
+            raise HTTPException(status_code=422, detail={"code": "bad_request", "message": "Tonalidad Camelot no válida"})
+        camelot = camelot.upper()
         out = []
         for t in tracks:
             if t.id == ref_track:
@@ -355,8 +382,10 @@ def create_app(services: Services, token: str) -> FastAPI:
     @api.get("/library")
     def library(q: str = ""):
         svc.library.refresh_missing()
+        from .stems.store import key as stem_key
+
         with_stems = svc.stems.sources_with_stems()
-        return [{**asdict(t), "has_stems": t.path in with_stems and bool(svc.stems.get(Path(t.path)))}
+        return [{**asdict(t), "has_stems": stem_key(t.path) in with_stems and bool(svc.stems.get(Path(t.path)))}
                 for t in svc.library.list_tracks(q)]
 
     @api.get("/library/duplicate")
@@ -405,7 +434,10 @@ def create_app(services: Services, token: str) -> FastAPI:
         real = _norm(path)
         if Path(real).suffix.lower() not in AUDIO_EXT or not Path(real).is_file():
             raise HTTPException(status_code=403, detail="forbidden")
-        allowed = real in svc.allowed_paths or svc.stems.is_stem_file(real) or real in {_norm(p) for p in svc.analysis.paths()}             or real in {_norm(t.path) for t in svc.library.list_tracks()}
+        cands = {path, os.path.realpath(path), str(Path(path)), str(Path(os.path.realpath(path)))}
+        allowed = (real in svc.allowed_paths or svc.stems.is_stem_file(real)
+                   or any(svc.analysis.get_any(Path(c)) for c in cands)
+                   or any(svc.library.track_by_path(c) for c in cands))
         if not allowed:
             raise HTTPException(status_code=403, detail="forbidden")
         return FileResponse(real)

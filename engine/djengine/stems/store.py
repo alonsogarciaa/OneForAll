@@ -24,6 +24,11 @@ def _norm(p) -> str:
     return os.path.normcase(os.path.realpath(str(p)))
 
 
+def key(p) -> str:
+    """Stable identity of a path on this machine (case-insensitive on Windows)."""
+    return os.path.normcase(os.path.abspath(str(p)))
+
+
 class StemsStore:
     """Which stem files exist for which source file; rows go stale when the source or the stem changes."""
 
@@ -32,18 +37,22 @@ class StemsStore:
         self._conn = sqlite3.connect(db_path, check_same_thread=False)
         with self._lock:
             self._conn.executescript(_SCHEMA)
+            cols = {r[1] for r in self._conn.execute("PRAGMA table_info(stems)")}
+            if "file_key" not in cols:
+                self._conn.execute("ALTER TABLE stems ADD COLUMN file_key TEXT")
+            self._conn.execute("CREATE INDEX IF NOT EXISTS idx_stems_file_key ON stems(file_key)")
             self._conn.commit()
 
     def _rows(self, path) -> list[tuple]:
         with self._lock:
-            return self._conn.execute("SELECT stem, file, size, mtime FROM stems WHERE path=?", (str(Path(path)),)).fetchall()
+            return self._conn.execute("SELECT stem, file, size, mtime FROM stems WHERE path=?", (key(path),)).fetchall()
 
     def _delete(self, path, stem=None) -> None:
         with self._lock:
             if stem is None:
-                self._conn.execute("DELETE FROM stems WHERE path=?", (str(Path(path)),))
+                self._conn.execute("DELETE FROM stems WHERE path=?", (key(path),))
             else:
-                self._conn.execute("DELETE FROM stems WHERE path=? AND stem=?", (str(Path(path)), stem))
+                self._conn.execute("DELETE FROM stems WHERE path=? AND stem=?", (key(path), stem))
             self._conn.commit()
 
     def get(self, path) -> dict[str, Path]:
@@ -70,8 +79,9 @@ class StemsStore:
         size, mtime = file_stamp(path)
         with self._lock:
             self._conn.execute(
-                "INSERT OR REPLACE INTO stems (path, stem, file, model, size, mtime, created_at) VALUES (?,?,?,?,?,?,?)",
-                (str(Path(path)), stem, str(Path(file)), model, size, mtime, datetime.now(timezone.utc).isoformat(timespec="seconds")),
+                "INSERT OR REPLACE INTO stems (path, stem, file, model, size, mtime, created_at, file_key) VALUES (?,?,?,?,?,?,?,?)",
+                (key(path), stem, str(Path(file)), model, size, mtime, datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                 key(file)),
             )
             self._conn.commit()
 
@@ -81,12 +91,8 @@ class StemsStore:
 
     def is_stem_file(self, file) -> bool:
         with self._lock:
-            rows = self._conn.execute("SELECT path, file FROM stems").fetchall()
-        target = _norm(file)
-        for src, f in rows:
-            if _norm(f) == target:
-                return Path(f) in self.get(src).values()
-        return False
+            row = self._conn.execute("SELECT path FROM stems WHERE file_key=?", (key(file),)).fetchone()
+        return bool(row) and any(key(f) == key(file) for f in self.get(row[0]).values())
 
     def restamp(self, path, before: tuple[int, float]) -> None:
         """After we rewrote the source's tags ourselves: keep rows that matched the old stamp valid."""
@@ -94,16 +100,16 @@ class StemsStore:
         with self._lock:
             self._conn.execute(
                 "UPDATE stems SET size=?, mtime=? WHERE path=? AND size=? AND abs(mtime - ?) < 0.001",
-                (size, mtime, str(Path(path)), before[0], before[1]),
+                (size, mtime, key(path), before[0], before[1]),
             )
             self._conn.commit()
 
     def sources_in_folder(self, folder) -> set[str]:
         """Source files that own stems stored in this folder."""
-        target = _norm(folder)
+        target = key(folder)
         with self._lock:
             rows = self._conn.execute("SELECT path, file FROM stems").fetchall()
-        return {src for src, f in rows if _norm(Path(f).parent) == target}
+        return {src for src, f in rows if key(Path(f).parent) == target}
 
     def sources_with_stems(self) -> set[str]:
         with self._lock:
