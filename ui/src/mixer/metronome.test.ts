@@ -53,4 +53,15 @@ describe('Metronome', () => {
     vi.advanceTimersByTime(100)
     expect(ctx.oscs).toHaveLength(3)
   })
+
+  it('changing settings while running does not schedule the same clicks twice', () => {
+    vi.useFakeTimers()
+    const ctx = new FakeCtx()
+    const clock = { rate: 1, segments: (c0: number, c1: number) => [{ song0: c0, song1: c1, ctx0: c0 }] }
+    const m = new Metronome(ctx as unknown as BaseAudioContext, clock)
+    m.start({ meter: '4/4', offset: 0, volume: 0.6 }, null, 1200)
+    m.start({ meter: '4/4', offset: 0, volume: 0.3 }, null, 1200)
+    expect(ctx.oscs.map((o) => o.startedAt)).toEqual([0, 0.05])
+    m.stop()
+  })
 })

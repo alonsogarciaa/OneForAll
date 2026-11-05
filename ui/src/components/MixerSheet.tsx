@@ -44,28 +44,38 @@ const comma = (n: number, d = 1) => n.toFixed(d).replace('.', ',')
 const baseFile = (p: string) => p.split(/[\\/]/).pop() ?? p
 const baseName = (p: string) => p.split(/[\\/]/).pop()?.replace(/\.[^.]+$/, '') ?? p
 
-/** Waveform for tracks never analysed: peaks of the summed stems (all bands equal). */
-function peaksFrom(stems: { channels: Float32Array[] }[], n = 2000): AnalysisSidecar['waveform'] {
-  const len = Math.min(...stems.map((s) => s.channels[0].length))
-  const size = Math.max(1, Math.ceil(len / n))
-  const peaks: number[] = []
-  for (let b = 0; b < n && b * size < len; b++) {
-    let max = 0
-    for (let i = b * size; i < Math.min(len, (b + 1) * size); i++) {
-      let sum = 0
-      for (const s of stems) sum += s.channels[0][i]
-      max = Math.max(max, Math.abs(sum))
+/** Waveform for tracks never analysed: per-bucket peaks added up stem by stem (all bands equal). */
+class PeakAccumulator {
+  private acc = new Float32Array(2000)
+  add(ch: Float32Array) {
+    const n = this.acc.length
+    const size = Math.max(1, Math.ceil(ch.length / n))
+    for (let b = 0; b < n; b++) {
+      let max = 0
+      const end = Math.min(ch.length, (b + 1) * size)
+      for (let i = b * size; i < end; i++) {
+        const v = Math.abs(ch[i])
+        if (v > max) max = v
+      }
+      this.acc[b] += max
     }
-    peaks.push(max)
   }
-  const top = Math.max(...peaks, 1e-9)
-  const norm = peaks.map((p) => p / top)
-  return { peaks: norm, low: norm, mid: norm, high: norm }
+  waveform(): AnalysisSidecar['waveform'] {
+    let top = 1e-9
+    for (const v of this.acc) top = Math.max(top, v)
+    const norm = Array.from(this.acc, (v) => v / top)
+    return { peaks: norm, low: norm, mid: norm, high: norm }
+  }
 }
 
+const TEXT_INPUTS = ['text', 'search', 'number', 'email', 'url', 'password']
+
+/** Space and L go to the mixer unless the user is typing (every mixer control is a button or a slider). */
 function typing(el: EventTarget | null): boolean {
   const e = el as HTMLElement | null
-  return e != null && (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(e.tagName) || e.isContentEditable)
+  if (!e) return false
+  if (e.tagName === 'INPUT') return TEXT_INPUTS.includes((e as HTMLInputElement).type)
+  return e.tagName === 'TEXTAREA' || e.tagName === 'SELECT' || e.isContentEditable
 }
 
 export function MixerSheet({ path, onClose }: { path: string; onClose(): void }) {
@@ -111,7 +121,7 @@ export function MixerSheet({ path, onClose }: { path: string; onClose(): void })
           return
         }
         setPhase({ kind: 'loading', done: 0, total: list.length })
-        const decoded: { stem: string; channels: Float32Array[] }[] = []
+        const peaks = an ? null : new PeakAccumulator()
         for (const [i, s] of list.entries()) {
           const r = await fetch(client.audioUrl(s.file))
           if (!r.ok) throw new MissingStem()
@@ -121,13 +131,13 @@ export function MixerSheet({ path, onClose }: { path: string; onClose(): void })
             setPhase({ kind: 'error', message: TOO_LONG })
             return
           }
-          decoded.push({ stem: s.stem, channels })
+          peaks?.add(channels[0])
+          // hand it to its node now, so only one decoded stem is in memory at a time
+          await eng.load([{ stem: s.stem, channels }])
+          if (cancelled) return
           setPhase({ kind: 'loading', done: i + 1, total: list.length })
         }
-        const wf = an ? an.sidecar.waveform : peaksFrom(decoded)
-        await eng.load(decoded)
-        decoded.length = 0 // the nodes hold their own copy: let the decoded audio go
-        if (cancelled) return
+        const wf = an ? an.sidecar.waveform : peaks!.waveform()
         const init = parseState(saved.state)
         stateRef.current = init
         eng.apply(init)
@@ -147,7 +157,12 @@ export function MixerSheet({ path, onClose }: { path: string; onClose(): void })
     return () => {
       cancelled = true
       metro.current?.stop()
-      if (saveTimer.current) clearTimeout(saveTimer.current)
+      if (saveTimer.current) {
+        // closing within the debounce: save the last change now instead of dropping it
+        clearTimeout(saveTimer.current)
+        saveTimer.current = null
+        void client.putMixerState(path, stateRef.current).catch(() => undefined)
+      }
       void eng.dispose()
     }
   }, [client, path])
@@ -171,7 +186,10 @@ export function MixerSheet({ path, onClose }: { path: string; onClose(): void })
       setState(next)
       engine.current?.apply(next)
       if (saveTimer.current) clearTimeout(saveTimer.current)
-      saveTimer.current = setTimeout(() => void client.putMixerState(path, next).catch(() => undefined), SAVE_MS)
+      saveTimer.current = setTimeout(() => {
+        saveTimer.current = null
+        void client.putMixerState(path, next).catch(() => undefined)
+      }, SAVE_MS)
     },
     [client, path]
   )
@@ -205,7 +223,22 @@ export function MixerSheet({ path, onClose }: { path: string; onClose(): void })
   // position readout while playing
   useEffect(() => {
     if (!playing) return
-    const t = setInterval(() => setPos(engine.current?.position() ?? 0), 50)
+    const t = setInterval(() => {
+      const eng = engine.current
+      if (!eng) return
+      const p = eng.position()
+      const s = stateRef.current
+      if (!(s.loop_on && s.loop) && eng.duration > 0 && p >= eng.duration - 0.02) {
+        // the song is over: stop, and the next play starts from the top
+        eng.pause()
+        metro.current?.stop()
+        eng.seek(0)
+        setPos(0)
+        setPlaying(false)
+        return
+      }
+      setPos(p)
+    }, 50)
     return () => clearInterval(t)
   }, [playing])
 

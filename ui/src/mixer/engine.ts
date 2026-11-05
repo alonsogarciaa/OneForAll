@@ -38,7 +38,7 @@ export class MixerEngine {
   }
 
   async load(stems: { stem: string; channels: Float32Array[] }[], onProgress?: (n: number) => void): Promise<void> {
-    let shortest = Infinity
+    let shortest = this.strips.length ? this.duration : Infinity // stems may arrive one call at a time
     for (const [i, s] of stems.entries()) {
       const node = await this.createStretch(this.ctx)
       const gain = this.ctx.createGain()
@@ -65,15 +65,13 @@ export class MixerEngine {
       prev.rate !== next.rate ||
       this.strips.some((s) => effectiveSemis(prev, s.stem) !== effectiveSemis(next, s.stem)) ||
       JSON.stringify(this.loopRange(prev)) !== JSON.stringify(this.loopRange(next))
-    if (moved) this.reschedule(input, now + LEAD)
+    if (moved) this.reschedule(this.intoLoop(input), now + LEAD)
   }
 
   /** Start now (plus the scheduling lead), or at a given context time (after a metronome count-in). */
   play(at?: number): void {
     if (this.playing) return
-    const loop = this.loopRange(this.state)
-    let input = this.pausedAt
-    if (loop && (input < loop[0] || input >= loop[1])) input = loop[0]
+    const input = this.intoLoop(this.pausedAt)
     this.playing = true
     this.reschedule(input, at ?? this.ctx.currentTime + LEAD, true)
   }
@@ -92,7 +90,7 @@ export class MixerEngine {
       this.pausedAt = to
       return
     }
-    this.reschedule(to, this.ctx.currentTime + LEAD)
+    this.reschedule(this.intoLoop(to), this.ctx.currentTime + LEAD)
   }
 
   position(): number {
@@ -108,6 +106,7 @@ export class MixerEngine {
     let c = Math.max(c0, this.ctxT0)
     let s = this.songAt(c)
     while (c < c1) {
+      if (!loop && s >= this.duration) break // the song is over: nothing more to click on
       if (loop && s < loop[1]) {
         const wrapAt = c + (loop[1] - s) / rate
         if (wrapAt < c1) {
@@ -117,7 +116,7 @@ export class MixerEngine {
           continue
         }
       }
-      out.push({ song0: s, song1: s + (c1 - c) * rate, ctx0: c })
+      out.push({ song0: s, song1: loop ? s + (c1 - c) * rate : Math.min(this.duration, s + (c1 - c) * rate), ctx0: c })
       break
     }
     return out
@@ -133,6 +132,12 @@ export class MixerEngine {
     this.strips = []
     this.master.disconnect()
     await (this.ctx as AudioContext).close?.()
+  }
+
+  /** With an active loop, a start point outside it goes to the loop start (what the node itself would do). */
+  private intoLoop(t: number): number {
+    const loop = this.loopRange(this.state)
+    return loop && (t < loop[0] || t >= loop[1]) ? loop[0] : t
   }
 
   private loopRange(st: MixState): [number, number] | null {

@@ -49,11 +49,13 @@ export class Metronome {
   constructor(private ctx: BaseAudioContext, private clock: Clock, private out: AudioNode = ctx.destination) {}
 
   start(opts: { meter: Meter; offset: number; volume: number }, beats: number[] | null, bpm: number | null): void {
+    const running = this.timer !== null
     this.stop()
     this.opts = opts
     this.beats = beats
     this.bpm = bpm
-    this.scheduledTo = this.ctx.currentTime
+    // a settings change while running keeps what is already scheduled (no doubled clicks)
+    this.scheduledTo = running ? Math.max(this.scheduledTo, this.ctx.currentTime) : this.ctx.currentTime
     this.tick()
     this.timer = setInterval(() => this.tick(), TICK_MS)
   }

@@ -222,4 +222,39 @@ describe('MixerSheet', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Stems (zip)' }))
     expect(c.zipStems).toHaveBeenCalledWith(PATH)
   })
+
+  it('closing within 500 ms of a change still saves it', async () => {
+    const c = client()
+    const { unmount } = render(<EngineTestProvider client={c}><MixerSheet path={PATH} onClose={() => undefined} /></EngineTestProvider>)
+    await userEvent.click(await screen.findByRole('button', { name: '0,5×' }))
+    unmount()
+    expect(c.putMixerState).toHaveBeenCalledTimes(1)
+    expect(c.putMixerState.mock.calls[0][1].rate).toBe(0.5)
+  })
+
+  it('reaching the end of the song stops and rewinds', async () => {
+    open()
+    await userEvent.click(await screen.findByRole('button', { name: 'Reproducir' }))
+    eng().position.mockReturnValue(200)
+    await waitFor(() => expect(eng().pause).toHaveBeenCalled())
+    expect(eng().seek).toHaveBeenCalledWith(0)
+    expect(await screen.findByRole('button', { name: 'Reproducir' })).toBeInTheDocument()
+  })
+
+  it('hands each stem to the engine as soon as it is decoded', async () => {
+    open()
+    await screen.findByRole('button', { name: 'Solo Voz' })
+    expect(eng().load).toHaveBeenCalledTimes(3)
+    expect(eng().load.mock.calls.every((c: any[]) => c[0].length === 1)).toBe(true)
+  })
+
+  it('Space plays even when a mixer button has focus, without pressing it', async () => {
+    open()
+    const mute = await screen.findByRole('button', { name: 'Silenciar Voz' })
+    mute.focus()
+    const ev = fireEvent.keyDown(mute, { code: 'Space' })
+    expect(ev).toBe(false) // default prevented: the button is not pressed again
+    await waitFor(() => expect(eng().play).toHaveBeenCalledTimes(1))
+    expect(mute).toHaveAttribute('aria-pressed', 'false')
+  })
 })

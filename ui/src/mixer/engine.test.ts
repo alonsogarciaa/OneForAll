@@ -113,4 +113,41 @@ describe('MixerEngine', () => {
     expect(nodes.every((n) => n.stopped && n.disconnected)).toBe(true)
     expect(ctx.closed).toBe(true)
   })
+
+  it('setting a loop while playing past it jumps audio and playhead to the loop start', async () => {
+    const { ctx, nodes, eng } = await setup()
+    eng.play()
+    ctx.currentTime = 6.05
+    eng.apply(withState({ loop: { start: 1, end: 3 }, loop_on: true }))
+    for (const n of nodes) expect(last(n)).toMatchObject({ input: 1, loopStart: 1, loopEnd: 3 })
+    ctx.currentTime = 6.6
+    expect(eng.position()).toBeCloseTo(1.5, 5)
+  })
+
+  it('seek outside the active loop goes to the loop start', async () => {
+    const { nodes, eng } = await setup()
+    eng.apply(withState({ loop: { start: 2, end: 4 }, loop_on: true }))
+    eng.play()
+    eng.seek(7)
+    for (const n of nodes) expect(last(n)).toMatchObject({ input: 2 })
+  })
+
+  it('segments stop at the end of the song', async () => {
+    const { eng } = await setup()
+    eng.play()
+    const segs = eng.segments(9.5, 11)
+    expect(segs.every((s) => s.song1 <= eng.duration + 1e-9)).toBe(true)
+  })
+
+  it('stems can be loaded one at a time', async () => {
+    const ctx = new FakeCtx()
+    const nodes: RecorderNode[] = []
+    const eng = new MixerEngine(ctx as unknown as BaseAudioContext, recorderFactory(nodes))
+    await eng.load([{ stem: 'vocals', channels: seconds(10) }])
+    await eng.load([{ stem: 'drums', channels: seconds(9) }])
+    expect(nodes).toHaveLength(2)
+    expect(eng.duration).toBeCloseTo(9, 3)
+    eng.play()
+    expect(nodes.every((n) => n.schedules.length === 1)).toBe(true)
+  })
 })
