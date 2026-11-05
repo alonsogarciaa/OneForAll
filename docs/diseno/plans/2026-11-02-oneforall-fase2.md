@@ -1,6 +1,5 @@
 # OneForAll — Fase 2 (Análisis DJ) Implementation Plan
 
-
 **Goal:** Add BPM, key (Camelot), loudness, waveform and beat grid analysis to OneForAll, with a data sheet (waveform + player + tap tempo), a harmonic-mixing screen, auto-analysis after downloads, and a GiantSteps benchmark that picks the methods.
 
 **Architecture:** A new `djengine/analysis/` package holds pure, separately testable estimators behind one interface each (tempo, key, loudness, waveform, camelot). An `analysis` job type runs them through the existing JobManager, caches results in a new `analyses` table plus a JSON sidecar, and writes tags. The benchmark (`engine/bench/`) runs every candidate on GiantSteps and fixes the defaults in `analysis/config.py`. The UI adds columns, a data sheet and an "Armonía" screen.

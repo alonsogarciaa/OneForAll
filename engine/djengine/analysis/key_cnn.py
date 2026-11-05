@@ -3,6 +3,7 @@
 Runs madmom's own pure-Python code (vendored in djengine/vendor, BSD) with the original
 model weights (CC BY-NC-SA 4.0: personal, non-commercial use only).
 """
+import logging
 import sys
 import threading
 from pathlib import Path
@@ -13,6 +14,7 @@ import numpy as np
 from .camelot import to_camelot
 from .key import KEY_METHODS, NO_KEY, KeyResult
 
+log = logging.getLogger(__name__)
 _VENDOR = str(Path(__file__).resolve().parents[1] / "vendor")
 _FLAT_TO_SHARP = {"Db": "C#", "Eb": "D#", "Gb": "F#", "Ab": "G#", "Bb": "A#"}
 _lock = threading.Lock()
@@ -21,12 +23,23 @@ _labels: list[str] = []
 MODEL_SR = 44100
 
 
+def _use_vendored_madmom() -> None:
+    """Make "import madmom" resolve to our vendored copy, even if a pip madmom was imported first."""
+    mod = sys.modules.get("madmom")
+    if mod is not None and not str(getattr(mod, "__file__", "") or "").startswith(_VENDOR):
+        log.warning("a different madmom was already imported (%s): switching to the vendored one", mod.__file__)
+        for name in [n for n in sys.modules if n == "madmom" or n.startswith("madmom.")]:
+            del sys.modules[name]
+    if _VENDOR in sys.path:
+        sys.path.remove(_VENDOR)
+    sys.path.insert(0, _VENDOR)
+
+
 def _processor():
     global _proc, _labels
     with _lock:
         if _proc is None:
-            if _VENDOR not in sys.path:
-                sys.path.insert(0, _VENDOR)
+            _use_vendored_madmom()
             from madmom.features.key import KEY_LABELS, CNNKeyRecognitionProcessor
 
             _proc = CNNKeyRecognitionProcessor()

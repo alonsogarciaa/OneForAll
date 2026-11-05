@@ -210,3 +210,19 @@ def test_manual_bpm_rebuilds_beat_grid(tmp_path):
     st.set_beats_from_bpm(song, 120)
     beats = st.get_sidecar(song)["beats"]
     assert beats[0] == 0.25 and abs(beats[1] - beats[0] - 0.5) < 1e-6 and beats[-1] <= 10.0 and len(beats) == 20
+
+
+def test_vendored_madmom_wins_over_a_foreign_import(monkeypatch):
+    import types
+
+    from djengine.analysis import key_cnn
+
+    for n in [n for n in sys.modules if n == "madmom" or n.startswith("madmom.")]:
+        monkeypatch.delitem(sys.modules, n)
+    fake = types.ModuleType("madmom")
+    fake.__file__ = "C:/elsewhere/site-packages/madmom/__init__.py"
+    monkeypatch.setitem(sys.modules, "madmom", fake)
+    key_cnn._use_vendored_madmom()
+    import madmom
+
+    assert madmom.__file__.startswith(key_cnn._VENDOR)

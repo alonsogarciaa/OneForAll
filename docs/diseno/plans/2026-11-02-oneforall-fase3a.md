@@ -1,6 +1,5 @@
 # OneForAll — Fase 3a (Stems) Implementation Plan
 
-
 **Goal:** Separate any library track or own file into the stems the DJ picks (Demucs htdemucs_6s + optional UVR Karaoke 2 lead/backing split), store them in a configurable folder, play, drag to a DAW, zip, and request stems straight from search.
 
 **Architecture:** A `djengine/stems/` package with a `Separator` protocol (real Demucs, fake for tests/`--fake`), a `stems` job type (concurrency 1) whose runner writes into `tmp/<job>` and moves files on finalize, a `stems` cache table, and API routes. Electron adds a validated `startDrag` IPC. The UI adds a "Separar stems" sheet, a stems block in the download menu, a Stems section in the data sheet and settings. A gated task tries ONNX + DirectML.
