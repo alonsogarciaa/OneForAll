@@ -22,6 +22,14 @@ describe('engineClient', () => {
     expect(JSON.parse(init.body as string)).toEqual({ type: 'download', request: req })
   })
 
+  it('sends the playlist destination on retries', async () => {
+    const fetch = mockFetch(200, { job: { id: 'j1' } })
+    const c = createClient({ baseUrl: 'http://x', token: 't' }, fetch)
+    await c.download(req, { dest_dir: 'C:/M/PL', playlist_id: 3, position: 1 })
+    const [, init] = fetch.mock.calls[0] as unknown as [string, RequestInit]
+    expect(JSON.parse(init.body as string)).toEqual({ type: 'download', request: req, dest_dir: 'C:/M/PL', playlist_id: 3, position: 1 })
+  })
+
   it('returns the job on success', async () => {
     const c = createClient({ baseUrl: 'http://x', token: 't' }, mockFetch(200, { job: { id: 'j1' } }))
     expect(await c.download(req)).toEqual({ job: { id: 'j1' } })

@@ -18,7 +18,11 @@ const STAGE_LABEL: Record<string, string> = {
   key: 'Analizando: tonalidad',
   loudness: 'Analizando: volumen',
   waveform: 'Analizando: forma de onda',
-  saving: 'Analizando: guardando'
+  saving: 'Guardando',
+  loading_model: 'Cargando modelo',
+  separating: 'Separando',
+  karaoke: 'Separando voces',
+  encoding: 'Codificando'
 }
 
 export function statusLabel(j: Job): string {
@@ -26,6 +30,7 @@ export function statusLabel(j: Job): string {
   if (j.status === 'failed') return 'Error'
   if (j.status === 'cancelled') return 'Cancelado'
   if (j.status === 'queued') return 'En cola'
+  if (j.stage === 'separating') return `Separando ${Math.round(j.pct)} %`
   return STAGE_LABEL[j.stage] ?? 'En curso'
 }
 
@@ -36,7 +41,7 @@ function useRetry() {
     const p = j.payload
     if (!p) return
     try {
-      if (p.request) await client.download({ ...p.request, force: true })
+      if (p.request) await client.download({ ...p.request, force: true }, { dest_dir: p.dest_dir, playlist_id: p.playlist_id, position: p.position })
       else if (p.paths) await client.convert(p.paths, p.options)
       else if (p.type === 'playlist') await client.downloadPlaylist(p.id, p.options)
       toast(`Reintentando «${j.title}»`, 'info')

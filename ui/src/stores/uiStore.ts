@@ -23,6 +23,10 @@ interface UiState {
   dataSheet: string | null
   openData(path: string): void
   closeData(): void
+  /** Files waiting for the "Separar stems" sheet, with their total duration. */
+  stemsFor: { paths: string[]; durationS: number | null } | null
+  openStems(paths: string[], durationS?: number | null): void
+  closeStems(): void
   navigate(r: Route): void
   toast(text: string, kind?: ToastKind): void
   dismissToast(id: number): void
@@ -55,6 +59,9 @@ export const useUiStore = create<UiState>((set, get) => ({
   dataSheet: null,
   openData: (dataSheet) => set({ dataSheet }),
   closeData: () => set({ dataSheet: null }),
+  stemsFor: null,
+  openStems: (paths, durationS = null) => set({ stemsFor: { paths, durationS } }),
+  closeStems: () => set({ stemsFor: null }),
   navigate: (route) => set({ route }),
   toast(text, kind = 'info') {
     const id = nextId++

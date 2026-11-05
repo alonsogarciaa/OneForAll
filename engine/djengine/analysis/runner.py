@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import logging
 from pathlib import Path
 
@@ -72,7 +73,15 @@ def make_analysis_runner(svc, path: Path, force: bool = False, reset_bpm: bool =
             return result_dict(cached)
         previous = store.get_any(path)
         s = svc.settings
-        tempo, key, lufs, peak, wf, duration = await asyncio.to_thread(_analyse, path, ctx, s.bpm_min, s.bpm_max)
+        work = asyncio.ensure_future(asyncio.to_thread(_analyse, path, ctx, s.bpm_min, s.bpm_max))
+        try:
+            tempo, key, lufs, peak, wf, duration = await asyncio.shield(work)
+        except asyncio.CancelledError:
+            # the thread cannot be killed: wait until it notices (or finishes) before tmp/ is removed
+            ctx.cancelled = True
+            with contextlib.suppress(BaseException):
+                await work
+            raise
 
         ctx.begin_finalize()
         ctx.report("saving", 95)
@@ -88,8 +97,11 @@ def make_analysis_runner(svc, path: Path, force: bool = False, reset_bpm: bool =
         )
         store.save(rec, {"beats": tempo.beats, "waveform": wf, "duration": round(duration, 3)})
         has_key = bool(key.tonic and key.mode)  # silence: no key is stored or written
+        before = file_stamp(path)
         if write_analysis_tags(path, rec.bpm, tag_key(key.tonic, key.mode, s.key_notation) if has_key else None):
-            store.restamp(path)  # our own tag write must not invalidate the cache
+            store.restamp(path)  # our own tag write must not invalidate the caches
+            if getattr(svc, "stems", None) is not None:
+                svc.stems.restamp(path, before)
         musical = tag_key(key.tonic, key.mode, "musical") if has_key else None
         svc.library.set_track_analysis(str(path), rec.bpm, musical, rec.camelot, rec.lufs)
         return result_dict(rec)

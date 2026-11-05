@@ -41,10 +41,17 @@ export function HarmonyScreen() {
       setRows(null)
       return
     }
+    let stale = false // a slower earlier answer must not overwrite the current one
     const t = setTimeout(() => {
-      client.harmonic(params).then(setRows).catch((e) => toast(e.message, 'error'))
+      client
+        .harmonic(params)
+        .then((r) => !stale && setRows(r))
+        .catch((e) => !stale && toast(e.message, 'error'))
     }, 150)
-    return () => clearTimeout(t)
+    return () => {
+      stale = true
+      clearTimeout(t)
+    }
   }, [client, mode, ref, bpm, camelot, tol, toast])
 
   if (tracks && analysed.length === 0) {

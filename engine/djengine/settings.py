@@ -24,6 +24,9 @@ class Settings(BaseModel):
     key_notation: Literal["camelot", "musical"] = "camelot"
     bpm_min: int = Field(default=70, ge=40, le=250)
     bpm_max: int = Field(default=180, ge=40, le=250)
+    stems_dir: str | None = None  # None: <music_dir>/Stems
+    stems_format: Literal["wav16", "wav24", "flac", "mp3"] = "wav16"
+    stems_backend: Literal["auto", "cpu"] = "auto"
 
     @model_validator(mode="after")
     def _bpm_range(self):

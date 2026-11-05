@@ -88,4 +88,14 @@ describe('SearchScreen', () => {
     expect(screen.queryByText('Vieja 2')).toBeNull()
     expect(document.querySelectorAll('[data-row]')).toHaveLength(2)
   })
+
+  it('downloads then separates the vocals from the stems block', async () => {
+    const download = vi.fn(async () => ({ job: { id: 'j' } }))
+    setup(makeClient({ download }))
+    useUiStore.getState().submitQuery('la graciosa')
+    const row = (await screen.findByText('LA GRACIOSA')).closest('[data-row]') as HTMLElement
+    await userEvent.click(within(row).getByRole('button', { name: 'Elegir formato' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Solo voz' }))
+    expect(download).toHaveBeenCalledWith(expect.objectContaining({ then_stems: { stems: ['vocals'], karaoke: false } }))
+  })
 })

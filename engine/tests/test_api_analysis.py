@@ -141,3 +141,22 @@ def test_history_includes_bpm_and_key(env):
     wait(c, lambda js: final(js, "analysis"))
     h = c.get("/history", headers=H).json()[0]
     assert h["camelot"] and "bpm" in h and h["path"].endswith(".mp3")
+
+
+def test_same_file_is_not_analysed_twice_at_once(env, tmp_path, click_track_file, monkeypatch):
+    c, svc, _ = env
+    import djengine.analysis.runner as r
+
+    real = r._analyse
+
+    def slow(*a, **k):
+        time.sleep(1.0)
+        return real(*a, **k)
+
+    monkeypatch.setattr(r, "_analyse", slow)
+    p = click_track_file(tmp_path / "dup.wav")
+    a = c.post("/jobs", json={"type": "analysis", "paths": [str(p)]}, headers=H).json()["jobs"][0]
+    b = c.post("/jobs", json={"type": "analysis", "paths": [str(p)]}, headers=H).json()["jobs"][0]
+    assert a["id"] == b["id"]
+    wait(c, lambda js: final(js, "analysis"))
+    assert c.get("/analysis", params={"path": str(p)}, headers=H).status_code == 200

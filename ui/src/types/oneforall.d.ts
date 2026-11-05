@@ -9,6 +9,8 @@ export interface OneForAllBridge {
   showInFolder(path: string): void
   openPath(path: string): void
   setTitleBarTheme(dark: boolean): void
+  allowDrag(files: string[]): void
+  startDrag(file: string): void
 }
 
 declare global {

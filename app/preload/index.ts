@@ -14,5 +14,7 @@ contextBridge.exposeInMainWorld('oneforall', {
   pickFolder: (): Promise<string | null> => ipcRenderer.invoke('dialog:pickFolder'),
   showInFolder: (path: string): void => ipcRenderer.send('shell:showInFolder', path),
   openPath: (path: string): void => ipcRenderer.send('shell:openPath', path),
-  setTitleBarTheme: (dark: boolean): void => ipcRenderer.send('titlebar:theme', dark)
+  setTitleBarTheme: (dark: boolean): void => ipcRenderer.send('titlebar:theme', dark),
+  allowDrag: (files: string[]): void => ipcRenderer.send('drag:allow', files),
+  startDrag: (file: string): void => ipcRenderer.send('drag:start', file)
 })

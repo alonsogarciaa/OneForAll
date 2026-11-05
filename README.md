@@ -24,6 +24,9 @@ Accuracy benchmark (local only, downloads GiantSteps from Zenodo): `cd engine &&
 | madmom (code, vendored in `engine/djengine/vendor/madmom`) | BSD-2-Clause | Compiled extensions replaced by stubs; only the key CNN path is used |
 | madmom key model (`models/key/2018/key_cnn.pkl`) | CC BY-NC-SA 4.0 | **Non-commercial use only.** Replace before selling or distributing commercially |
 | DeepRhythm (tempo CNN) | AGPL-3.0 | Fine for personal use; distributing the app requires offering its source under AGPL |
+| Demucs (code and `htdemucs_6s` weights) | MIT | Stem separation (Meta / Défossez et al.) |
+| audio-separator | MIT | Runs the UVR karaoke model |
+| UVR-MDX-NET Karaoke 2 model | Author's terms (UVR community model) | Lead / backing vocal split; personal use |
 | yt-dlp | Unlicense | |
 | FFmpeg (gyan.dev essentials build) | GPL-3.0 | Shipped as a separate executable |
 | librosa, numpy, scipy, pyloudnorm, mutagen, FastAPI | ISC / BSD / MIT | |

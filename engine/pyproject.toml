@@ -22,7 +22,11 @@ dependencies = [
 
 [project.optional-dependencies]
 nn = [
+    "audio-separator>=0.48.0",
+    "audioread>=3.1.0",
     "deeprhythm>=0.0.13",
+    "demucs>=4.0.1",
+    "onnxruntime>=1.31.1",
 ]
 
 [dependency-groups]
@@ -39,5 +43,5 @@ packages = ["djengine"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
-markers = ["online: hits real YouTube"]
-addopts = "-m 'not online'"
+markers = ["online: hits real YouTube", "slow: real models, minutes", "bench: accuracy benchmarks"]
+addopts = "-m 'not online and not slow and not bench'"

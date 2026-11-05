@@ -36,6 +36,7 @@ export function SettingsScreen() {
   const [s, setS] = useState<Settings | null>(null)
   const [ytdlp, setYtdlp] = useState<{ busy: boolean; text: string | null }>({ busy: false, text: null })
   const [range, setRange] = useState<{ min: string; max: string } | null>(null)
+  const [backend, setBackend] = useState<'cpu' | 'directml' | null>(null)
 
   useEffect(() => {
     client
@@ -45,6 +46,7 @@ export function SettingsScreen() {
         setRange({ min: String(v.bpm_min), max: String(v.bpm_max) })
       })
       .catch((e) => ui.toast(e.message, 'error'))
+    client.stemsBackend().then((b) => setBackend(b.backend)).catch(() => undefined)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [client])
 
@@ -191,6 +193,41 @@ export function SettingsScreen() {
             value={range?.max ?? ''}
             onChange={(e) => changeRange({ min: range?.min ?? '', max: e.target.value })}
           />
+        </Row>
+      </div>
+
+      <h2 className="settings-group">Stems</h2>
+      <div className="settings-card">
+        <Row label="Carpeta de stems" hint={s.stems_dir ?? `${s.music_dir}${s.music_dir.includes('/') ? '/' : '\\'}Stems`}>
+          <button
+            className="btn btn-sm"
+            aria-label="Cambiar carpeta de stems"
+            onClick={async () => {
+              const dir = await window.oneforall.pickFolder()
+              if (dir) save({ stems_dir: dir })
+            }}
+          >
+            Cambiar…
+          </button>
+        </Row>
+        <Row label="Formato de los stems">
+          <select
+            className="field"
+            aria-label="Formato de los stems"
+            value={s.stems_format}
+            onChange={(e) => save({ stems_format: e.target.value as Settings['stems_format'] })}
+          >
+            <option value="wav16">WAV 16 bits</option>
+            <option value="wav24">WAV 24 bits</option>
+            <option value="flac">FLAC</option>
+            <option value="mp3">MP3 320</option>
+          </select>
+        </Row>
+        <Row label="Cálculo" hint={backend ? (backend === 'directml' ? 'Usando: GPU (DirectML)' : 'Usando: CPU') : undefined}>
+          <div className="segmented" role="group" aria-label="Cálculo de stems">
+            <button aria-pressed={s.stems_backend === 'auto'} onClick={() => save({ stems_backend: 'auto' })}>Automático</button>
+            <button aria-pressed={s.stems_backend === 'cpu'} onClick={() => save({ stems_backend: 'cpu' })}>Solo CPU</button>
+          </div>
         </Row>
       </div>
 

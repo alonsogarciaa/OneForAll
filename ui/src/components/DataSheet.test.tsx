@@ -17,12 +17,13 @@ function client(over: Record<string, unknown> = {}) {
     analyze: vi.fn(async () => ({ jobs: [{ id: 'j1' }] })),
     setManualBpm: vi.fn(async () => ({ ...record, bpm: 120, bpm_source: 'manual' })),
     audioUrl: () => 'http://x/audio',
+    getStems: vi.fn(async () => ({ folder: null, stems: [] })),
     ...over
   } as any
 }
 
 beforeEach(() => {
-  window.oneforall = { showInFolder: vi.fn() } as any
+  window.oneforall = { showInFolder: vi.fn(), allowDrag: vi.fn(), startDrag: vi.fn() } as any
 })
 
 describe('DataSheet', () => {
@@ -57,5 +58,32 @@ describe('DataSheet', () => {
     await waitFor(() => expect(c.analyze).toHaveBeenCalledTimes(1))
     expect(c.analyze).toHaveBeenCalledWith(['C:/m/new.mp3'])
     expect(await screen.findByText(/Analizando/)).toBeInTheDocument()
+  })
+
+  it('shows stems even while the analysis is not available yet', async () => {
+    const c = client({
+      getAnalysis: vi.fn(async () => { throw new EngineError(404, 'not_analyzed', 'Sin analizar') }),
+      getStems: vi.fn(async () => ({ folder: 'C:/s', stems: [{ stem: 'vocals', file: 'C:/s/vocals.wav', size_bytes: 10 }] }))
+    })
+    render(<EngineTestProvider client={c}><DataSheet path="C:/m/new.mp3" onClose={() => undefined} /></EngineTestProvider>)
+    expect(await screen.findByText('Voz')).toBeInTheDocument()
+  })
+
+  it('ignores held Space and typing in text fields', async () => {
+    render(<EngineTestProvider client={client()}><DataSheet path="C:/m/a.mp3" onClose={() => undefined} /></EngineTestProvider>)
+    await screen.findByText('128.0')
+    const area = document.createElement('textarea')
+    document.body.appendChild(area)
+    fireEvent.keyDown(area, { code: 'Space' })
+    fireEvent.keyDown(document.body, { code: 'Space', repeat: true })
+    expect(screen.getByText('—', { selector: '.tap-bpm' })).toBeInTheDocument()
+    area.remove()
+  })
+
+  it('offers to go back to the automatic BPM', async () => {
+    const c = client({ getAnalysis: vi.fn(async () => ({ record: { ...record, bpm_source: 'manual' }, sidecar, info })) })
+    render(<EngineTestProvider client={c}><DataSheet path="C:/m/a.mp3" onClose={() => undefined} /></EngineTestProvider>)
+    await userEvent.click(await screen.findByRole('button', { name: 'Volver al automático' }))
+    expect(c.analyze).toHaveBeenCalledWith(['C:/m/a.mp3'], { reset_bpm: true })
   })
 })

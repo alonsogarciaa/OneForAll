@@ -10,6 +10,7 @@ import { SettingsScreen } from './screens/SettingsScreen'
 import { HarmonyScreen } from './screens/HarmonyScreen'
 import { PlaylistSummaryHost } from './components/PlaylistSummarySheet'
 import { DataSheet } from './components/DataSheet'
+import { StemsSheet } from './components/StemsSheet'
 
 function Screen() {
   const route = useUiStore((s) => s.route)
@@ -26,6 +27,12 @@ function DataSheetHost() {
   const path = useUiStore((s) => s.dataSheet)
   const close = useUiStore((s) => s.closeData)
   return path ? <DataSheet key={path} path={path} onClose={close} /> : null
+}
+
+function StemsSheetHost() {
+  const stemsFor = useUiStore((s) => s.stemsFor)
+  const close = useUiStore((s) => s.closeStems)
+  return stemsFor ? <StemsSheet paths={stemsFor.paths} durationS={stemsFor.durationS} onClose={close} /> : null
 }
 
 function Body() {
@@ -53,8 +60,8 @@ function Body() {
   return (
     <>
       <Screen />
-      <PlaylistSummaryHost />
       <DataSheetHost />
+      <StemsSheetHost />
     </>
   )
 }
@@ -64,6 +71,7 @@ export function App() {
     <EngineProvider>
       <AppShell>
         <Body />
+        <PlaylistSummaryHost />
       </AppShell>
     </EngineProvider>
   )

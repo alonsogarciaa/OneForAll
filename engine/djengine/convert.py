@@ -5,7 +5,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, model_validator
 
-from .errors import UserError
+from .errors import UserError, user_error
 from .tools import find_tool
 
 log = logging.getLogger(__name__)
@@ -91,6 +91,12 @@ def build_ffmpeg_args(src: Path, dst: Path, opts: ConvertOptions) -> list[str]:
     return args + ["-y", "-progress", "pipe:1", "-nostats", str(dst)]
 
 
+def ffmpeg_error(stderr: str) -> UserError:
+    if "No space left" in stderr or "There is not enough space" in stderr:
+        return user_error("disk")
+    return UserError("internal", "No se pudo convertir el archivo")
+
+
 async def convert_file(ctx, src: Path, dst: Path, opts: ConvertOptions, duration_s: float | None) -> Path:
     proc = await asyncio.create_subprocess_exec(
         find_tool("ffmpeg"),
@@ -115,6 +121,6 @@ async def convert_file(ctx, src: Path, dst: Path, opts: ConvertOptions, duration
     if proc.returncode != 0:
         log.warning("ffmpeg failed (%s): %s", proc.returncode, stderr[-2000:])
         Path(dst).unlink(missing_ok=True)
-        raise UserError("internal", "No se pudo convertir el archivo")
+        raise ffmpeg_error(stderr)
     ctx.report("converting", 100)
     return Path(dst)

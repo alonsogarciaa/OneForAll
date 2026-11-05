@@ -19,6 +19,9 @@ interface ClientOptions {
 
 export type EngineClient = ReturnType<typeof createClient>
 
+/** Where a retried playlist track goes back to (its playlist folder and position). */
+export type DownloadDest = { dest_dir?: string | null; playlist_id?: number | null; position?: number | null }
+
 export function createClient(
   { baseUrl, token }: { baseUrl: string; token: string },
   fetchImpl: FetchLike = (u, i) => fetch(u, i),
@@ -57,8 +60,8 @@ export function createClient(
     info: () => json<{ logs_dir: string; data_dir: string }>('/info'),
     search: (q: string, kind: SearchKind) => json<SearchResult[]>(`/search?${new URLSearchParams({ q, kind })}`),
     getPlaylist: (id: string) => json<PlaylistInfo>(`/playlist/${encodeURIComponent(id)}`),
-    async download(req: DownloadRequest): Promise<{ job: Job } | { duplicate: TrackRecord }> {
-      const r = await send('/jobs', post('/jobs', { type: 'download', request: req }))
+    async download(req: DownloadRequest, dest?: DownloadDest): Promise<{ job: Job } | { duplicate: TrackRecord }> {
+      const r = await send('/jobs', post('/jobs', { type: 'download', request: req, ...(dest ?? {}) }))
       const body = await r.json().catch(() => null)
       if (r.status === 409) return { duplicate: body.duplicate }
       if (!r.ok) throw new EngineError(r.status, body?.detail?.code ?? 'internal', body?.detail?.message ?? 'Error inesperado')
@@ -82,6 +85,12 @@ export function createClient(
     harmonic: (params: { ref_track?: number; bpm?: number; camelot?: string; bpm_tolerance?: number }) =>
       json<HarmonicRow[]>(`/harmonic?${new URLSearchParams(Object.entries(params).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)]))}`),
     audioUrl: (path: string) => `${baseUrl}/audio?${new URLSearchParams({ path, token })}`,
+    separate: (paths: string[], stems: string[], karaoke = false) =>
+      json<{ jobs: Job[] }>('/jobs', post('/jobs', { type: 'stems', paths, stems, karaoke })),
+    getStems: (path: string) =>
+      json<{ folder: string | null; stems: { stem: string; file: string; size_bytes: number }[] }>(`/stems?${new URLSearchParams({ path })}`),
+    zipStems: (path: string) => json<{ zip: string }>('/stems/zip', post('/stems/zip', { path })),
+    stemsBackend: () => json<{ backend: 'cpu' | 'directml' }>('/stems/backend'),
     updateYtdlp: () => json<{ ok: boolean; output: string }>('/tools/ytdlp/update', { method: 'POST' }),
 
     connectEvents(onEvent: (e: EngineEvent) => void): () => void {

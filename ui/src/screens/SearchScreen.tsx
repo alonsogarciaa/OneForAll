@@ -3,6 +3,7 @@ import { SearchX, Search } from 'lucide-react'
 import { ResultRow } from '../components/ResultRow'
 import { TrackDetailSheet } from '../components/TrackDetailSheet'
 import { DuplicateSheet } from '../components/DuplicateSheet'
+import { StemsSheet } from '../components/StemsSheet'
 import { useClient } from '../lib/engine'
 import { useUiStore } from '../stores/uiStore'
 import type { ConvertOptions, DownloadRequest, SearchKind, SearchResult, TrackRecord } from '../lib/types'
@@ -39,6 +40,7 @@ export function SearchScreen() {
   const [options, setOptions] = useState<ConvertOptions>({ format: 'mp3', quality: '320' })
   const [detail, setDetail] = useState<SearchResult | null>(null)
   const [duplicate, setDuplicate] = useState<{ track: TrackRecord; req: DownloadRequest } | null>(null)
+  const [stemsPick, setStemsPick] = useState<SearchResult | null>(null)
   const seq = useRef(0)
 
   useEffect(() => {
@@ -76,6 +78,12 @@ export function SearchScreen() {
       try {
         const r = await client.download(req)
         if ('duplicate' in r) {
+          if (req.then_stems) {
+            // already in the library: separate the existing file instead of downloading it again
+            await client.separate([r.duplicate.path], req.then_stems.stems, req.then_stems.karaoke)
+            toast(`«${req.target.title}» ya está en tu biblioteca: separando sus stems`, 'success')
+            return
+          }
           setDuplicate({ track: r.duplicate, req })
           return
         }
@@ -90,6 +98,13 @@ export function SearchScreen() {
   )
 
   const download = (item: SearchResult) => startDownload({ target: item, options, force: false })
+  const downloadStems = (item: SearchResult, stems: string[] | null, karaoke = false) => {
+    if (stems === null) {
+      setStemsPick(item)
+      return
+    }
+    startDownload({ target: item, options, force: false, then_stems: { stems, karaoke } })
+  }
 
   const downloadPlaylist = async (id: string, count: number) => {
     try {
@@ -129,7 +144,15 @@ export function SearchScreen() {
       {term && results && results.length > 0 && (
         <div className="results" aria-busy={loading}>
           {results.map((r) => (
-            <ResultRow key={`${r.kind}-${r.id}`} item={r} options={options} onOptions={setOptions} onDownload={download} onOpen={setDetail} />
+            <ResultRow
+              key={`${r.kind}-${r.id}`}
+              item={r}
+              options={options}
+              onOptions={setOptions}
+              onDownload={download}
+              onOpen={setDetail}
+              onStems={downloadStems}
+            />
           ))}
         </div>
       )}
@@ -143,6 +166,14 @@ export function SearchScreen() {
           onDownload={(i) => (setDetail(null), download(i))}
           onDownloadPlaylist={downloadPlaylist}
           onClose={() => setDetail(null)}
+        />
+      )}
+      {stemsPick && (
+        <StemsSheet
+          paths={[]}
+          durationS={stemsPick.duration_s}
+          onClose={() => setStemsPick(null)}
+          onChoose={(stems, karaoke) => downloadStems(stemsPick, stems, karaoke)}
         />
       )}
       {duplicate && (

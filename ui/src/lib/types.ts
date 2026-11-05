@@ -42,6 +42,7 @@ export interface TrackRecord {
   missing: boolean
   lufs?: number | null
   analyzed_at?: string | null
+  has_stems?: boolean
 }
 
 export interface HistoryEntry {
@@ -62,7 +63,7 @@ export type JobStatus = 'queued' | 'running' | 'done' | 'failed' | 'cancelled'
 
 export interface Job {
   id: string
-  type: 'download' | 'convert' | 'playlist' | 'analysis'
+  type: 'download' | 'convert' | 'playlist' | 'analysis' | 'stems'
   title: string
   status: JobStatus
   stage: string
@@ -88,6 +89,7 @@ export interface DownloadRequest {
   target: SearchResult
   options: ConvertOptions
   force?: boolean
+  then_stems?: { stems: string[]; karaoke: boolean } | null
 }
 
 export interface Settings {
@@ -101,6 +103,9 @@ export interface Settings {
   key_notation: 'camelot' | 'musical'
   bpm_min: number
   bpm_max: number
+  stems_dir: string | null
+  stems_format: 'wav16' | 'wav24' | 'flac' | 'mp3'
+  stems_backend: 'auto' | 'cpu'
 }
 
 export interface AnalysisRecord {

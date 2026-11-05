@@ -1,0 +1,105 @@
+.stem-picks {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.stem-pick {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--surface-raised);
+  cursor: pointer;
+}
+.stem-pick input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+.stem-karaoke {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--surface-raised);
+}
+.stem-karaoke small {
+  display: block;
+  font-size: 13px;
+  color: var(--lg-text-secondary);
+}
+.stem-estimate {
+  margin-top: 12px;
+}
+
+.ds-stems {
+  margin-top: 16px;
+}
+.ds-section-title {
+  font-size: 15px;
+  margin-bottom: 8px;
+}
+.stems-empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--surface-raised);
+  color: var(--lg-text-secondary);
+}
+.stem-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.stem-list li {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: var(--surface-raised);
+  cursor: grab;
+}
+.stem-list li:hover {
+  background: var(--surface-hover);
+}
+.stem-grip {
+  color: var(--lg-text-tertiary);
+}
+.stem-name {
+  font-weight: 500;
+}
+.stem-size {
+  font-size: 13px;
+  color: var(--lg-text-secondary);
+}
+.stem-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.format-stems {
+  border-top: 1px solid var(--hairline);
+  padding-top: 10px;
+  display: grid;
+  gap: 6px;
+}
+.format-stems > span {
+  font-size: 13px;
+  color: var(--lg-text-secondary);
+}
+.format-stems .stem-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}

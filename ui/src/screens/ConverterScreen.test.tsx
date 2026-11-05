@@ -43,7 +43,8 @@ describe('ConverterScreen', () => {
 const settings = {
   music_dir: 'C:/Users/me/Music/OneForAll', default_format: 'mp3', default_quality: '320',
   name_template: '{artist} - {title}', download_concurrency: 3, tinted: false,
-  analyze_on_download: true, key_notation: 'camelot', bpm_min: 70, bpm_max: 180
+  analyze_on_download: true, key_notation: 'camelot', bpm_min: 70, bpm_max: 180,
+  stems_dir: null, stems_format: 'wav16', stems_backend: 'auto'
 }
 
 describe('SettingsScreen', () => {
@@ -52,7 +53,8 @@ describe('SettingsScreen', () => {
       getSettings: vi.fn(async () => settings),
       putSettings: vi.fn(async (s: any) => s),
       updateYtdlp: vi.fn(async () => ({ ok: true, output: 'yt-dlp is up to date' })),
-      info: vi.fn(async () => ({ logs_dir: 'C:/data/logs', data_dir: 'C:/data' }))
+      info: vi.fn(async () => ({ logs_dir: 'C:/data/logs', data_dir: 'C:/data' })),
+      stemsBackend: vi.fn(async () => ({ backend: 'cpu' }))
     } as any
     render(<EngineTestProvider client={c}><SettingsScreen /></EngineTestProvider>)
     return c
@@ -96,5 +98,14 @@ describe('SettingsScreen', () => {
     await userEvent.type(min, '190')
     expect(screen.getByText('El mínimo debe ser menor que el máximo')).toBeInTheDocument()
     expect(c.putSettings.mock.calls.slice(calls).some((a: any[]) => a[0].bpm_min >= a[0].bpm_max)).toBe(false)
+  })
+
+  it('saves stems format and backend', async () => {
+    const c = setup()
+    await userEvent.selectOptions(await screen.findByLabelText('Formato de los stems'), 'flac')
+    expect(c.putSettings).toHaveBeenLastCalledWith(expect.objectContaining({ stems_format: 'flac' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Solo CPU' }))
+    expect(c.putSettings).toHaveBeenLastCalledWith(expect.objectContaining({ stems_backend: 'cpu' }))
+    expect(await screen.findByText('Usando: CPU')).toBeInTheDocument()
   })
 })

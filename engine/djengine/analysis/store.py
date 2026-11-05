@@ -117,6 +117,21 @@ class AnalysisStore:
             self._conn.commit()
         return self.get_any(path)
 
+    def set_beats_from_bpm(self, path: Path, bpm: float) -> None:
+        """Manual BPM: rebuild an even grid from the first detected beat so the grid matches the new tempo."""
+        sp = self._sidecar_path(Path(path))
+        if not sp.exists():
+            return
+        side = json.loads(sp.read_text(encoding="utf-8"))
+        old = side.get("beats") or []
+        anchor = float(old[0]) if old else 0.0
+        step, end = 60.0 / bpm, float(side.get("duration") or 0)
+        n = int((end - anchor) / step) + 1 if end > anchor else 0
+        side["beats"] = [round(anchor + i * step, 4) for i in range(n)]
+        tmp = sp.with_suffix(".tmp")
+        tmp.write_text(json.dumps(side, allow_nan=False), encoding="utf-8")
+        os.replace(tmp, sp)
+
     def restamp(self, path: Path) -> None:
         """Record the file's current size/mtime (after we rewrote its tags ourselves)."""
         size, mtime = file_stamp(path)

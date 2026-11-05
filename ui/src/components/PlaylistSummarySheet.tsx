@@ -9,13 +9,13 @@ export function PlaylistSummarySheet({ job, onClose }: { job: Job; onClose(): vo
   const client = useClient()
   const toast = useUiStore((s) => s.toast)
   const r = job.result ?? {}
-  const failed: { title: string; message: string; target: any }[] = r.failed ?? []
+  const failed: { title: string; message: string; target: any; dest_dir?: string; playlist_id?: number; position?: number }[] = r.failed ?? []
 
   const retryFailed = async () => {
     onClose()
     for (const f of failed) {
       try {
-        await client.download({ target: f.target, options: r.options, force: true })
+        await client.download({ target: f.target, options: r.options, force: true }, { dest_dir: f.dest_dir, playlist_id: f.playlist_id, position: f.position })
       } catch (e: any) {
         toast(e.message, 'error')
       }

@@ -55,7 +55,7 @@ describe('DownloadsScreen', () => {
     const c = setup()
     expect(within(rowOf('Canción A')).getByText('Sin conexión')).toBeInTheDocument()
     await userEvent.click(within(rowOf('Canción A')).getByRole('button', { name: 'Reintentar' }))
-    expect(c.download).toHaveBeenCalledWith({ ...request, force: true })
+    expect(c.download).toHaveBeenCalledWith({ ...request, force: true }, expect.anything())
   })
 
   it('opens the playlist summary when a playlist finishes', () => {

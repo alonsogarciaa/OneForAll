@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { FolderOpen, Pause, Play, RefreshCw, X } from 'lucide-react'
 import { GlassSheet } from './GlassSheet'
 import { Waveform } from './Waveform'
+import { StemsSection } from './StemsSection'
 import { useClient } from '../lib/engine'
 import { displayKey } from '../lib/camelot'
 import { formatDuration } from '../lib/format'
@@ -32,6 +33,10 @@ function infoLine(i?: Loaded['info']): string | null {
   return parts.join(' · ')
 }
 
+/** The engine accepts a manual BPM strictly between these. */
+const MIN_BPM = 20
+const MAX_BPM = 400
+
 export function DataSheet({ path, onClose }: { path: string; onClose(): void }) {
   const client = useClient()
   const toast = useUiStore((s) => s.toast)
@@ -56,8 +61,8 @@ export function DataSheet({ path, onClose }: { path: string; onClose(): void }) 
           started.current = true
           const r = await client.analyze([path])
           setJobId(r.jobs[0]?.id ?? null)
-        } else if (e?.status !== 404) {
-          setError(e.message)
+        } else if (e?.status !== 404 || !analyzeIfMissing) {
+          setError(e?.status === 404 ? 'No se pudo obtener el análisis de este archivo' : e.message)
         }
       }
     },
@@ -78,16 +83,22 @@ export function DataSheet({ path, onClose }: { path: string; onClose(): void }) 
       setError(job.error?.message ?? 'No se pudo analizar')
       setJobId(null)
     } else if (job.status === 'cancelled') {
-      onClose()
+      setJobId(null)
+      if (!data) onClose() // nothing to show yet; a cancelled re-analysis keeps the current data on screen
     }
-  }, [job, load, onClose])
+  }, [job, load, onClose, data])
 
   const tap = useCallback(() => setTapBpm(tapper.current.tap()), [])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement)?.tagName
-      if (e.code === 'Space' && tag !== 'INPUT' && tag !== 'BUTTON') {
+      const el = e.target as HTMLElement | null
+      const typing = el != null && (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(el.tagName) || el.isContentEditable)
+      if (e.code === 'Space' && !typing) {
+        if (e.repeat) {
+          e.preventDefault() // a held key is not a tap
+          return
+        }
         e.preventDefault()
         tap()
       }
@@ -97,13 +108,24 @@ export function DataSheet({ path, onClose }: { path: string; onClose(): void }) 
   }, [tap])
 
   const applyTap = async () => {
-    if (tapBpm == null) return
+    if (tapBpm == null || !(tapBpm > MIN_BPM && tapBpm < MAX_BPM)) return
     try {
       await client.setManualBpm(path, tapBpm)
       tapper.current.reset()
       setTapBpm(null)
       await load(false)
       toast(`BPM fijado en ${tapBpm.toFixed(1)}`, 'success')
+    } catch (e: any) {
+      toast(e.message, 'error')
+    }
+  }
+
+  const tapValid = tapBpm != null && tapBpm > MIN_BPM && tapBpm < MAX_BPM
+
+  const resetBpm = async () => {
+    try {
+      const r = await client.analyze([path], { reset_bpm: true })
+      setJobId(r.jobs[0]?.id ?? null)
     } catch (e: any) {
       toast(e.message, 'error')
     }
@@ -191,6 +213,11 @@ export function DataSheet({ path, onClose }: { path: string; onClose(): void }) 
               <span className="ds-value tabular">{r.bpm != null ? r.bpm.toFixed(1) : '—'}</span>
               <span className="ds-badges">
                 {r.bpm_source === 'manual' && <span className="badge badge-muted">manual</span>}
+                {r.bpm_source === 'manual' && (
+                  <button className="btn btn-sm" onClick={resetBpm} disabled={analyzing}>
+                    Volver al automático
+                  </button>
+                )}
                 {r.bpm_source === 'auto' && r.bpm_confidence != null && r.bpm_confidence < 0.5 && (
                   <span className="badge badge-warn">confianza baja</span>
                 )}
@@ -215,13 +242,14 @@ export function DataSheet({ path, onClose }: { path: string; onClose(): void }) 
               <span className="tap-bpm tabular">{tapBpm != null ? tapBpm.toFixed(1) : '—'}</span>
               <div className="ds-tap-actions">
                 <button className="btn" onClick={tap}>Tap</button>
-                <button className="btn btn-primary" disabled={tapBpm == null} onClick={applyTap}>Aplicar</button>
+                <button className="btn btn-primary" disabled={!tapValid || analyzing} onClick={applyTap}>Aplicar</button>
               </div>
               <span className="ds-sub">Pulsa Tap o la barra espaciadora al ritmo</span>
             </div>
           </div>
         </>
       )}
+      <StemsSection path={path} durationS={data?.sidecar.duration ?? null} />
     </GlassSheet>
   )
 }
