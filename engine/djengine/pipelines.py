@@ -1,4 +1,6 @@
 import asyncio
+import contextlib
+import uuid
 import errno
 import logging
 import os
@@ -51,6 +53,23 @@ def _ensure_dir(d: Path) -> None:
         raise user_error("disk")
 
 
+PART_PREFIX = "~oneforall-"
+
+
+def sweep_parts(dirs) -> int:
+    """Remove copies left half-written by a crash (only our own prefixed .part files)."""
+    n = 0
+    for d in dirs:
+        d = Path(d)
+        if not d.is_dir():
+            continue
+        for f in d.rglob(f"{PART_PREFIX}*.part"):
+            with contextlib.suppress(OSError):
+                f.unlink()
+                n += 1
+    return n
+
+
 def _commit(tmp_file: Path, final: Path) -> None:
     """Move a finished file into place. Never leaves a partial file under its final name."""
     try:
@@ -61,7 +80,7 @@ def _commit(tmp_file: Path, final: Path) -> None:
         if not cross_device:
             log.warning("cannot move into %s: %s", final, e)
             raise user_error("disk")
-    part = final.with_name(f".{final.name}.part")
+    part = final.with_name(f"{PART_PREFIX}{uuid.uuid4().hex}.part")  # swept at startup if we crash mid-copy
     try:
         shutil.copy2(tmp_file, part)
         os.replace(part, final)
@@ -121,7 +140,7 @@ def make_download_runner(svc, req: DownloadRequest, dest_dir: Path, playlist_id:
             ctx.begin_finalize()
             name = render_name(svc.settings.name_template, {"artist": t.artist, "title": t.title, "album": t.album})
             final = unique_path(dest_dir, name, ext)
-            _commit(out, final)
+            await asyncio.to_thread(_commit, out, final)
         except (JobCancelled, asyncio.CancelledError):
             raise
         except UserError as e:
@@ -213,6 +232,7 @@ def make_convert_runner(svc, src: Path, options: ConvertOptions) -> Runner:
 
     async def run(ctx: JobContext) -> dict:
         if not src.is_file():
+            svc.library.add_history(None, src.stem, "", "convert", "failed")
             raise UserError("internal", "No se encuentra el archivo")
         ext = output_ext(options, src)
         tmp_out = ctx.tmp_dir / f"out.{ext}"
@@ -226,7 +246,7 @@ def make_convert_runner(svc, src: Path, options: ConvertOptions) -> Runner:
             ctx.report("finalizing", 0)
             ctx.begin_finalize()
             final = unique_path(src.parent, src.stem, ext)
-            _commit(tmp_out, final)
+            await asyncio.to_thread(_commit, tmp_out, final)
         except (JobCancelled, asyncio.CancelledError):
             raise
         except UserError:

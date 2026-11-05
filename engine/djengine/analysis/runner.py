@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import logging
 from pathlib import Path
 
@@ -72,7 +73,15 @@ def make_analysis_runner(svc, path: Path, force: bool = False, reset_bpm: bool =
             return result_dict(cached)
         previous = store.get_any(path)
         s = svc.settings
-        tempo, key, lufs, peak, wf, duration = await asyncio.to_thread(_analyse, path, ctx, s.bpm_min, s.bpm_max)
+        work = asyncio.ensure_future(asyncio.to_thread(_analyse, path, ctx, s.bpm_min, s.bpm_max))
+        try:
+            tempo, key, lufs, peak, wf, duration = await asyncio.shield(work)
+        except asyncio.CancelledError:
+            # the thread cannot be killed: wait until it notices (or finishes) before tmp/ is removed
+            ctx.cancelled = True
+            with contextlib.suppress(BaseException):
+                await work
+            raise
 
         ctx.begin_finalize()
         ctx.report("saving", 95)

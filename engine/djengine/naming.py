@@ -25,8 +25,14 @@ def render_name(template: str, meta: dict[str, str]) -> str:
     return out or "Sin título"
 
 
+MAX_PATH_LEN = 250  # Windows MAX_PATH is 260; keep room for " (n)"
+
+
 def unique_path(directory: Path, stem: str, ext: str) -> Path:
     directory = Path(directory)
+    room = MAX_PATH_LEN - len(str(directory)) - 1 - len(ext) - 1 - 5
+    if room < len(stem):
+        stem = stem[:max(room, 1)].rstrip(". ") or "_"
     candidate = directory / f"{stem}.{ext}"
     n = 1
     while candidate.exists():

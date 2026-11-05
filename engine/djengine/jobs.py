@@ -1,4 +1,6 @@
 import asyncio
+import contextlib
+import collections
 import logging
 import shutil
 import time
@@ -85,7 +87,8 @@ class JobManager:
         self.tmp_root = Path(tmp_root)
         self.tmp_root.mkdir(parents=True, exist_ok=True)
         self._emit_fn = emit
-        self._sems: dict[str, asyncio.Semaphore] = {}
+        self._running: dict[str, int] = {}
+        self._waiters: dict[str, collections.deque] = {}
         self._limits = dict(concurrency)
         self._jobs: dict[str, Job] = {}
         self._tasks: dict[str, asyncio.Task] = {}
@@ -151,9 +154,11 @@ class JobManager:
         return n
 
     def set_concurrency(self, type: str, n: int) -> None:
-        # Applies to jobs submitted from now on; running jobs keep their slot.
+        # Running jobs keep their slot; waiting jobs start as soon as the new limit allows.
         self._limits[type] = n
-        self._sems.pop(type, None)
+        loop = getattr(self, "_loop", None)
+        if loop is not None and not loop.is_closed():
+            loop.call_soon_threadsafe(self._grant, type)
 
     async def cancel_all(self) -> None:
         for j in list(self._jobs.values()):
@@ -164,20 +169,46 @@ class JobManager:
             await asyncio.wait(pending, timeout=10)
 
     # --- internals --------------------------------------------------------
-    def _sem(self, type: str) -> asyncio.Semaphore | None:
-        if type in PARENT_TYPES or type not in self._limits:
-            return None
-        if type not in self._sems:
-            self._sems[type] = asyncio.Semaphore(self._limits[type])
-        return self._sems[type]
+    def _limited(self, type: str) -> bool:
+        return type not in PARENT_TYPES and type in self._limits
+
+    async def _acquire(self, type: str) -> None:
+        q = self._waiters.setdefault(type, collections.deque())
+        if not q and self._running.get(type, 0) < self._limits[type]:
+            self._running[type] = self._running.get(type, 0) + 1
+            return
+        fut = asyncio.get_running_loop().create_future()
+        q.append(fut)
+        try:
+            await fut  # resolved by _grant, which already counted the slot
+        except asyncio.CancelledError:
+            if fut.done() and not fut.cancelled():
+                self._release(type)  # granted and cancelled in the same tick: give it back
+            else:
+                with contextlib.suppress(ValueError):
+                    q.remove(fut)
+            raise
+
+    def _release(self, type: str) -> None:
+        self._running[type] -= 1
+        self._grant(type)
+
+    def _grant(self, type: str) -> None:
+        q = self._waiters.get(type)
+        while q and self._running.get(type, 0) < self._limits.get(type, 0):
+            fut = q.popleft()
+            if fut.done():
+                continue
+            self._running[type] = self._running.get(type, 0) + 1
+            fut.set_result(None)
 
     async def _run(self, job: Job, runner: Runner) -> None:
         tmp_dir = self.tmp_root / job.id
         outcome: tuple[str, str] = ("failed", "job.failed")
         try:
-            sem = self._sem(job.type)
-            if sem is not None:
-                await sem.acquire()
+            limited = self._limited(job.type)
+            if limited:
+                await self._acquire(job.type)
             try:
                 ctx = JobContext(self, job, tmp_dir)
                 self._ctxs[job.id] = ctx
@@ -190,8 +221,8 @@ class JobManager:
                 job.pct = 100.0
                 outcome = ("done", "job.done")
             finally:
-                if sem is not None:
-                    sem.release()
+                if limited:
+                    self._release(job.type)
         except (asyncio.CancelledError, JobCancelled):
             job.stage = "cancelled"
             job.pct = 0.0

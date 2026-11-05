@@ -75,6 +75,10 @@ def build_services(paths: AppPaths, fake: bool) -> Services:
     jobs = JobManager(paths.tmp_dir, hub.broadcast, {"download": settings.download_concurrency, "convert": CONVERT_CONCURRENCY, "analysis": ANALYSIS_CONCURRENCY, "stems": 1})
     jobs.purge_orphans()
     _tools_on_path()
+    from .pipelines import sweep_parts
+
+    threading.Thread(target=sweep_parts, args=([settings.music_dir, getattr(settings, "stems_dir", None) or settings.music_dir],),
+                     name="sweep-parts", daemon=True).start()
     library = Library(paths.db_path)
     library.refresh_missing()
     if fake:
