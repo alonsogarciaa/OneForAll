@@ -115,9 +115,8 @@ def detect_sections(y: np.ndarray, sr: int, grid: Grid, duration: float) -> list
     if not cands:
         return [Section(0.0, round(duration, 3), "Verso")]
     vals = np.array([nov[i] for i in cands])
-    thr = float(vals.mean() + 0.5 * vals.std())
     # a cut is a phrase boundary whose change stands out from the song's typical change
-    peaks = [c for c in cands if nov[c] > 0 and nov[c] >= max(thr, 0.5 * float(vals.max()))]
+    peaks = [c for c in cands if nov[c] > 0 and nov[c] >= max(float(vals.mean()), 0.35 * float(vals.max()))]
     cuts = sorted(sorted(peaks, key=lambda i: -nov[i])[: MAX_SECTIONS - 1])
     edges = [0] + cuts + [n_bars]
     energies = [float(bar_energy[a:b].mean()) for a, b in zip(edges[:-1], edges[1:])]
