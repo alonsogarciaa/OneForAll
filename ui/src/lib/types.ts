@@ -123,10 +123,31 @@ export interface AnalysisRecord {
   created_at: string
 }
 
+export interface Grid {
+  anchor: number
+  bpm: number
+  source: 'auto' | 'manual'
+  meter: number
+}
+
+export type GridOp = { anchor?: number; bpm?: number; shift_ms?: number; shift_beats?: number; scale?: 0.5 | 2; reset?: boolean }
+
+export type SectionLabel = 'Intro' | 'Verso' | 'Subida' | 'Estribillo/Drop' | 'Bajón' | 'Outro'
+
+export interface Section {
+  start: number
+  end: number
+  label: SectionLabel
+  source?: 'auto' | 'manual'
+}
+
 export interface AnalysisSidecar {
   beats: number[]
   waveform: { peaks: number[]; low: number[]; mid: number[]; high: number[] }
   duration: number
+  grid?: Grid
+  sections?: Section[]
+  needs_reanalysis?: boolean
 }
 
 export interface HarmonicRow {

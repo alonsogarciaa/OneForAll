@@ -3,6 +3,7 @@ import { FolderOpen, Pause, Play, RefreshCw, X } from 'lucide-react'
 import { GlassSheet } from './GlassSheet'
 import { Waveform } from './Waveform'
 import { StemsSection } from './StemsSection'
+import { GridControls } from './GridControls'
 import { useClient } from '../lib/engine'
 import { displayKey } from '../lib/camelot'
 import { formatDuration } from '../lib/format'
@@ -50,6 +51,7 @@ export function DataSheet({ path, onClose }: { path: string; onClose(): void }) 
   const tapper = useRef(new TapTempo())
   const [tapBpm, setTapBpm] = useState<number | null>(null)
   const started = useRef(false)
+  const [gridMode, setGridMode] = useState(false)
 
   const load = useCallback(
     async (analyzeIfMissing: boolean) => {
@@ -198,6 +200,9 @@ export function DataSheet({ path, onClose }: { path: string; onClose(): void }) 
             <span className="ds-time tabular">
               {formatDuration(position)} / {formatDuration(data.sidecar.duration)}
             </span>
+            <button className="btn btn-sm" aria-pressed={gridMode} onClick={() => setGridMode((v) => !v)}>
+              Rejilla
+            </button>
             <audio
               ref={audio}
               src={client.audioUrl(path)}
@@ -207,6 +212,16 @@ export function DataSheet({ path, onClose }: { path: string; onClose(): void }) 
               onTimeUpdate={(e) => setPosition(e.currentTarget.currentTime)}
             />
           </div>
+          {data.sidecar.needs_reanalysis && <p className="ds-sub ds-notice">Reanaliza para detectar secciones</p>}
+          {gridMode && (
+            <GridControls
+              path={path}
+              grid={data.sidecar.grid ?? { anchor: data.sidecar.beats[0] ?? 0, bpm: r.bpm ?? 0, source: 'auto', meter: 4 }}
+              position={position}
+              audio={audio.current}
+              onChange={() => void load(false)}
+            />
+          )}
           <div className="ds-grid">
             <div className="ds-fact ds-big">
               <span className="ds-label">BPM</span>

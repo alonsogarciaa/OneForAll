@@ -95,3 +95,27 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+.ds-gridctl {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--surface-raised);
+}
+.ds-gridctl-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ds-gridctl .btn[aria-pressed='true'],
+.ds-wave .btn[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+.ds-notice {
+  margin-top: 8px;
+  color: var(--lg-text-secondary);
+}
