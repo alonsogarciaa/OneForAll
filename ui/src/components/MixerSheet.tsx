@@ -11,6 +11,7 @@ import { useJobsStore } from '../stores/jobsStore'
 import { createAudioContext, decodeStem, MixerEngine } from '../mixer/engine'
 import { Metronome } from '../mixer/metronome'
 import { createStretch } from '../mixer/stretch'
+import { PeakAccumulator } from '../mixer/peaks'
 import { defaultState, mixerStems, parseState, stemState, METERS, MIXER_MAX_SECONDS, type Meter, type MixState, type StemState } from '../mixer/mixState'
 import type { AnalysisSidecar } from '../lib/types'
 import './mixer.css'
@@ -44,29 +45,6 @@ const comma = (n: number, d = 1) => n.toFixed(d).replace('.', ',')
 const baseFile = (p: string) => p.split(/[\\/]/).pop() ?? p
 const baseName = (p: string) => p.split(/[\\/]/).pop()?.replace(/\.[^.]+$/, '') ?? p
 
-/** Waveform for tracks never analysed: per-bucket peaks added up stem by stem (all bands equal). */
-class PeakAccumulator {
-  private acc = new Float32Array(2000)
-  add(ch: Float32Array) {
-    const n = this.acc.length
-    const size = Math.max(1, Math.ceil(ch.length / n))
-    for (let b = 0; b < n; b++) {
-      let max = 0
-      const end = Math.min(ch.length, (b + 1) * size)
-      for (let i = b * size; i < end; i++) {
-        const v = Math.abs(ch[i])
-        if (v > max) max = v
-      }
-      this.acc[b] += max
-    }
-  }
-  waveform(): AnalysisSidecar['waveform'] {
-    let top = 1e-9
-    for (const v of this.acc) top = Math.max(top, v)
-    const norm = Array.from(this.acc, (v) => v / top)
-    return { peaks: norm, low: norm, mid: norm, high: norm }
-  }
-}
 
 const TEXT_INPUTS = ['text', 'search', 'number', 'email', 'url', 'password']
 
@@ -131,7 +109,8 @@ export function MixerSheet({ path, onClose }: { path: string; onClose(): void })
             setPhase({ kind: 'error', message: TOO_LONG })
             return
           }
-          peaks?.add(channels[0])
+          await peaks?.add(channels[0])
+          if (cancelled) return
           // hand it to its node now, so only one decoded stem is in memory at a time
           await eng.load([{ stem: s.stem, channels }])
           if (cancelled) return
