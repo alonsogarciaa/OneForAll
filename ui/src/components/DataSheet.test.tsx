@@ -107,4 +107,12 @@ describe('DataSheet', () => {
     expect(c.putGrid).toHaveBeenCalledWith('C:/m/a.mp3', { shift_beats: 1 })
     await waitFor(() => expect(c.getAnalysis).toHaveBeenCalledTimes(2))
   })
+
+  it('shows the sections and their editor', async () => {
+    const sections = [{ start: 0, end: 100, label: 'Intro' }, { start: 100, end: 213, label: 'Estribillo/Drop' }]
+    const grid = { anchor: 0.5, bpm: 128, source: 'auto', meter: 4 }
+    const c = client({ getAnalysis: vi.fn(async () => ({ record, sidecar: { ...sidecar, grid, sections }, info })) })
+    render(<EngineTestProvider client={c}><DataSheet path="C:/m/a.mp3" onClose={() => undefined} /></EngineTestProvider>)
+    expect(await screen.findByRole('combobox', { name: 'Etiqueta de la sección 2' })).toHaveValue('Estribillo/Drop')
+  })
 })
