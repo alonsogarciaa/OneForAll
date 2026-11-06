@@ -81,7 +81,7 @@ Hay módulos sin interfaz en `ui/src/mixer/`, que la hoja solo usa. Así se prue
   - Cuenta atrás: n compases de clics antes de que arranque el audio.
   - En bucle, los clics siguen la vuelta del bucle.
 - **`mixState.ts`**: el estado serializable (volúmenes, silencios, solos, semitonos, velocidad, bucle, ajustes del metrónomo) y su validación al cargarlo.
-- **Seguridad (CSP).** El WebAssembly necesita `'wasm-unsafe-eval'` en `script-src`, y nada más. El worklet y el `.wasm` van en el propio paquete, nunca desde una CDN.
+- **Seguridad (CSP).** `script-src` añade `'wasm-unsafe-eval'` (WebAssembly) y `blob:`: Signalsmith crea su módulo de AudioWorklet en memoria y lo carga desde una URL `blob:` (comprobado en el código del paquete, 2026-11-05). Solo el código que ya corre en la página puede crear esas URL. El worklet y el `.wasm` van en el propio paquete, nunca desde una CDN.
 
 ## 5. Motor
 
@@ -142,4 +142,4 @@ Hay módulos sin interfaz en `ui/src/mixer/`, que la hoja solo usa. Así se prue
 - **Calidad de Signalsmith a 0,5×.** Si la escucha a mano no convence, el plan de reserva es Rubber Band WASM (GPL; compatible porque la app ya incluye código AGPL), con la misma interfaz de `MixerEngine`. La primera tarea del plan es una prueba corta con la API real del paquete: sincronía de 6 nodos, bucle y consumo de CPU.
 - **CPU:** seis u ocho nodos de estiramiento en tiempo real. Si se pasan del presupuesto en el Ryzen 5 5600X, se baja la calidad en vivo del nodo; la exportación no cambia.
 - **Memoria:** mitigada con el límite de 12 minutos y soltando los `AudioBuffer` tras pasarlos al nodo.
-- **CSP:** `'wasm-unsafe-eval'` amplía `script-src` solo para WebAssembly. No permite `eval` de JavaScript.
+- **CSP:** `'wasm-unsafe-eval'` amplía `script-src` solo para WebAssembly y no permite `eval` de JavaScript. `blob:` permite módulos creados por la propia página; ninguno llega de fuera.
