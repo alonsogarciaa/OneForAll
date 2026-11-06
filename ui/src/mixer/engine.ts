@@ -65,7 +65,8 @@ export class MixerEngine {
       prev.rate !== next.rate ||
       this.strips.some((s) => effectiveSemis(prev, s.stem) !== effectiveSemis(next, s.stem)) ||
       JSON.stringify(this.loopRange(prev)) !== JSON.stringify(this.loopRange(next))
-    if (moved) this.reschedule(this.intoLoop(input), now + LEAD)
+    // during a count-in the audio start is still ahead: keep it there
+    if (moved) this.reschedule(this.intoLoop(input), Math.max(now + LEAD, this.ctxT0), true)
   }
 
   /** Start now (plus the scheduling lead), or at a given context time (after a metronome count-in). */
@@ -90,7 +91,7 @@ export class MixerEngine {
       this.pausedAt = to
       return
     }
-    this.reschedule(this.intoLoop(to), this.ctx.currentTime + LEAD)
+    this.reschedule(this.intoLoop(to), Math.max(this.ctx.currentTime + LEAD, this.ctxT0), true)
   }
 
   position(): number {

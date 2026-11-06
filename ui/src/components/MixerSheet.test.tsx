@@ -223,6 +223,19 @@ describe('MixerSheet', () => {
     expect(c.zipStems).toHaveBeenCalledWith(PATH)
   })
 
+  it('pause silences pending metronome clicks; seek while playing resyncs them', async () => {
+    const silence = vi.spyOn(Metronome.prototype, 'silence')
+    const resync = vi.spyOn(Metronome.prototype, 'resync')
+    open()
+    await userEvent.click(await screen.findByRole('button', { name: 'Reproducir' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Al inicio' }))
+    expect(resync).toHaveBeenCalled()
+    await userEvent.click(screen.getByRole('button', { name: 'Pausar' }))
+    expect(silence).toHaveBeenCalled()
+    silence.mockRestore()
+    resync.mockRestore()
+  })
+
   it('closing within 500 ms of a change still saves it', async () => {
     const c = client()
     const { unmount } = render(<EngineTestProvider client={c}><MixerSheet path={PATH} onClose={() => undefined} /></EngineTestProvider>)

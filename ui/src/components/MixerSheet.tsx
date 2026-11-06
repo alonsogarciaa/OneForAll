@@ -185,6 +185,7 @@ export function MixerSheet({ path, onClose }: { path: string; onClose(): void })
       stateRef.current = next
       setState(next)
       engine.current?.apply(next)
+      if (engine.current?.playing && ctxRef.current) metro.current?.resync(ctxRef.current.currentTime + 0.05)
       if (saveTimer.current) clearTimeout(saveTimer.current)
       saveTimer.current = setTimeout(() => {
         saveTimer.current = null
@@ -205,7 +206,7 @@ export function MixerSheet({ path, onClose }: { path: string; onClose(): void })
     if (!eng || !ctx) return
     if (eng.playing) {
       eng.pause()
-      metro.current?.stop()
+      metro.current?.silence()
       setPlaying(false)
       return
     }
@@ -231,7 +232,7 @@ export function MixerSheet({ path, onClose }: { path: string; onClose(): void })
       if (!(s.loop_on && s.loop) && eng.duration > 0 && p >= eng.duration - 0.02) {
         // the song is over: stop, and the next play starts from the top
         eng.pause()
-        metro.current?.stop()
+        metro.current?.silence()
         eng.seek(0)
         setPos(0)
         setPlaying(false)
@@ -259,6 +260,7 @@ export function MixerSheet({ path, onClose }: { path: string; onClose(): void })
 
   const seek = (t: number) => {
     engine.current?.seek(t)
+    if (engine.current?.playing && ctxRef.current) metro.current?.resync(ctxRef.current.currentTime + 0.05)
     setPos(t)
   }
 

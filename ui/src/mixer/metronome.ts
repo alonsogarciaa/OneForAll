@@ -45,6 +45,8 @@ export class Metronome {
   private opts = { meter: '4/4' as Meter, offset: 0, volume: 0.6 }
   private beats: number[] | null = null
   private bpm: number | null = null
+  /** Clicks scheduled but maybe not played yet, so a pause or a seek can take them back. */
+  private pending: { osc: OscillatorNode; t: number; countIn: boolean }[] = []
 
   constructor(private ctx: BaseAudioContext, private clock: Clock, private out: AudioNode = ctx.destination) {}
 
@@ -65,18 +67,40 @@ export class Metronome {
     this.timer = null
   }
 
+  /** Pause: no more scheduling, and every click (count-in included) not played yet is cancelled. */
+  silence(): void {
+    this.stop()
+    this.drop(this.ctx.currentTime, true)
+  }
+
+  /** The song-to-clock mapping changes at `at` (seek, speed, loop): clicks from then on are scheduled again. */
+  resync(at: number): void {
+    this.drop(at, false)
+    this.scheduledTo = at
+    if (this.timer !== null) this.tick()
+  }
+
+  private drop(from: number, countIn: boolean): void {
+    this.pending = this.pending.filter((p) => {
+      if (p.t < from || (p.countIn && !countIn)) return true
+      p.osc.stop(p.t) // stopping at its own start time: it never sounds
+      return false
+    })
+  }
+
   /** Count-in clicks before the audio starts; returns the context time the audio must start at. */
   countIn(bars: number, bpm: number, rate: number, meter: Meter, volume: number): number {
     const interval = 60 / (bpm * rate)
     const bpb = beatsPerBar(meter)
     const start = this.ctx.currentTime + 0.05
     const n = bars * bpb
-    for (let i = 0; i < n; i++) this.click(start + i * interval, i % bpb === 0, volume)
+    for (let i = 0; i < n; i++) this.click(start + i * interval, i % bpb === 0, volume, true)
     return start + n * interval
   }
 
   private tick(): void {
     const now = this.ctx.currentTime
+    this.pending = this.pending.filter((p) => p.t > now - 1) // long played: forget them
     const c0 = Math.max(this.scheduledTo, now)
     const c1 = now + WINDOW_S
     if (c1 <= c0) return
@@ -88,8 +112,9 @@ export class Metronome {
     this.scheduledTo = c1
   }
 
-  private click(t: number, accent: boolean, volume: number): void {
+  private click(t: number, accent: boolean, volume: number, countIn = false): void {
     const osc = this.ctx.createOscillator()
+    this.pending.push({ osc, t, countIn })
     const g = this.ctx.createGain()
     osc.frequency.value = accent ? 1500 : 1000
     g.gain.setValueAtTime(Math.max(volume, 0.0001), t)

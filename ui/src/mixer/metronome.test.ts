@@ -64,4 +64,32 @@ describe('Metronome', () => {
     expect(ctx.oscs.map((o) => o.startedAt)).toEqual([0, 0.05])
     m.stop()
   })
+
+  it('silence stops the count-in and every click not yet played', () => {
+    vi.useFakeTimers()
+    const ctx = new FakeCtx()
+    const m = new Metronome(ctx as unknown as BaseAudioContext, { segments: () => [], rate: 1 })
+    m.countIn(1, 120, 1, '4/4', 0.6) // clicks at 0.05, 0.55, 1.05, 1.55
+    ctx.currentTime = 0.6
+    m.silence()
+    const late = ctx.oscs.filter((o) => o.startedAt! > 0.6)
+    expect(late).toHaveLength(2)
+    expect(late.every((o) => o.stoppedAt !== null && o.stoppedAt <= o.startedAt!)).toBe(true)
+    expect(ctx.oscs[0].stoppedAt).not.toBe(0.05) // already played: left alone
+  })
+
+  it('resync drops clicks from the change on and schedules them again with the new mapping', () => {
+    vi.useFakeTimers()
+    const ctx = new FakeCtx()
+    let shift = 0
+    const clock = { rate: 1, segments: (c0: number, c1: number) => [{ song0: c0 + shift, song1: c1 + shift, ctx0: c0 }] }
+    const m = new Metronome(ctx as unknown as BaseAudioContext, clock)
+    m.start({ meter: '4/4', offset: 0, volume: 0.6 }, null, 1200) // clicks at 0, 0.05
+    shift = 0.01 // e.g. a seek: song time now runs 10 ms ahead of the old mapping
+    m.resync(0.04)
+    const old = ctx.oscs.find((o) => o.startedAt === 0.05)!
+    expect(old.stoppedAt).toBe(0.05)
+    expect(ctx.oscs.some((o) => Math.abs(o.startedAt! - 0.04) < 1e-9)).toBe(true) // song 0.05 now lands at ctx 0.04
+    m.stop()
+  })
 })

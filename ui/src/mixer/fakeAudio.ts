@@ -26,11 +26,14 @@ export class FakeGain {
 export class FakeOsc {
   frequency = new FakeParam(440)
   startedAt: number | null = null
+  stoppedAt: number | null = null
   connect() {}
   start(t: number) {
     this.startedAt = t
   }
-  stop() {}
+  stop(t = 0) {
+    this.stoppedAt = t
+  }
 }
 
 export class FakeCtx {

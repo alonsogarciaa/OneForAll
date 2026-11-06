@@ -150,4 +150,12 @@ describe('MixerEngine', () => {
     eng.play()
     expect(nodes.every((n) => n.schedules.length === 1)).toBe(true)
   })
+
+  it('a rate change during the count-in keeps the planned start', async () => {
+    const { ctx, nodes, eng } = await setup()
+    eng.play(5)
+    ctx.currentTime = 1
+    eng.apply(withState({ rate: 0.5 }))
+    for (const n of nodes) expect(last(n)).toMatchObject({ output: 5, input: 0, rate: 0.5, active: true })
+  })
 })
