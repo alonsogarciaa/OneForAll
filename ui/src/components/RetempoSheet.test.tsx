@@ -64,4 +64,17 @@ describe('RetempoSheet', () => {
     expect(await screen.findByText('Analiza primero')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Crear copia' })).toBeDisabled()
   })
+
+  it('the number field can be typed into and is clamped when leaving it', async () => {
+    render(<EngineTestProvider client={client()}><RetempoSheet path={PATH} onClose={() => undefined} /></EngineTestProvider>)
+    const num = await screen.findByRole('spinbutton', { name: 'BPM destino (número)' })
+    await userEvent.clear(num)
+    await userEvent.type(num, '124')
+    expect(num).toHaveValue(124)
+    await userEvent.tab()
+    expect(screen.getByText('Song (124 BPM)')).toBeInTheDocument()
+    await userEvent.clear(num)
+    await userEvent.type(num, '500{Enter}')
+    expect(num).toHaveValue(192)
+  })
 })

@@ -27,6 +27,7 @@ export function RetempoSheet({ path, onClose }: { path: string; onClose(): void 
   const [rec, setRec] = useState<AnalysisRecord | null>(null)
   const [missing, setMissing] = useState(false)
   const [bpm, setBpm] = useState(0)
+  const [draft, setDraft] = useState<string | null>(null) // typed text, clamped when leaving the field
   const [semis, setSemis] = useState(0)
   const [format, setFormat] = useState('')
   const [jobId, setJobId] = useState<string | null>(null)
@@ -49,6 +50,13 @@ export function RetempoSheet({ path, onClose }: { path: string; onClose(): void 
   const lo = Math.ceil(src * 0.5)
   const hi = Math.floor(src * 1.5)
   const running = job && !['done', 'failed', 'cancelled'].includes(job.status)
+
+  const commitDraft = () => {
+    if (draft === null) return
+    const v = Number(draft.replace(',', '.'))
+    setBpm(Number.isFinite(v) && draft.trim() !== '' ? Math.min(hi, Math.max(lo, Math.round(v * 10) / 10)) : bpm)
+    setDraft(null)
+  }
 
   const create = async () => {
     try {
@@ -82,7 +90,10 @@ export function RetempoSheet({ path, onClose }: { path: string; onClose(): void 
               max={hi}
               step={0.1}
               value={bpm}
-              onChange={(e) => setBpm(Number(e.target.value))}
+              onChange={(e) => {
+                setDraft(null)
+                setBpm(Number(e.target.value))
+              }}
             />
             <input
               className="field retempo-num tabular"
@@ -91,8 +102,10 @@ export function RetempoSheet({ path, onClose }: { path: string; onClose(): void 
               min={lo}
               max={hi}
               step={0.1}
-              value={bpm}
-              onChange={(e) => setBpm(Math.min(hi, Math.max(lo, Number(e.target.value) || lo)))}
+              value={draft ?? bpm}
+              onChange={(e) => setDraft(e.target.value)}
+              onBlur={commitDraft}
+              onKeyDown={(e) => e.key === 'Enter' && commitDraft()}
             />
             <span className="ds-sub tabular">{`${comma(src)} → ${comma(bpm)} BPM`}</span>
           </label>
