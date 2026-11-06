@@ -1,7 +1,7 @@
 # OneForAll — Fase 4a: Herramientas DJ — Especificación
 
 - Fecha: 2026-11-06
-- Estado: borrador para revisión
+- Estado: aprobada (2026-11-06)
 - Base: `docs/diseno/specs/2026-11-01-dj-app-design.md` (§8, hoja de ruta) y las Fases 2, 3a y 3b (en `main`).
 - La Fase 4 se divide en **4a (preparación DJ, esta spec)** y **4b (mejora de audio con IA, y exportar vídeo con la imagen original)**. Lo decidió el dueño el 2026-11-06.
 
