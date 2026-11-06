@@ -224,6 +224,7 @@
 }
 .sheet-actions {
   display: flex;
+  flex-wrap: wrap; /* narrow windows: buttons go to a second line instead of overflowing */
   justify-content: flex-end;
   gap: 8px;
   padding: 4px 20px 20px;
