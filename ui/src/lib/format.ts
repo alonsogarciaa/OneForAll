@@ -1,3 +1,4 @@
+import { camelotShift } from './camelot'
 import type { ConvertOptions, FormatId } from './types'
 
 export function formatDuration(s: number): string {
@@ -48,3 +49,22 @@ export function formatDate(iso: string): string {
   const d = new Date(iso)
   return Number.isNaN(d.getTime()) ? '—' : DATE_FMT.format(d)
 }
+
+/** Python's round() to 1 decimal (half to even), so names match the engine exactly. */
+function round1(x: number): number {
+  const v = x * 10
+  const f = Math.floor(v)
+  const d = v - f
+  const r = Math.abs(d - 0.5) < 1e-9 ? (f % 2 === 0 ? f : f + 1) : Math.round(v)
+  return r / 10
+}
+
+/** «Song (124 BPM, 9A)», same rule as djengine/prep/retempo.py: unchanged parts are left out. */
+export function retempoName(stem: string, srcBpm: number, bpm: number, srcCamelot: string | null, semis: number): string {
+  const tags: string[] = []
+  if (round1(bpm) !== round1(srcBpm)) tags.push(`${round1(bpm)} BPM`)
+  if (semis && srcCamelot) tags.push(camelotShift(srcCamelot, semis))
+  else if (semis) tags.push(`${semis > 0 ? '+' : ''}${semis}`)
+  return tags.length ? `${stem} (${tags.join(', ')})` : `${stem} (copia)`
+}
+

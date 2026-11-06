@@ -31,6 +31,14 @@ interface UiState {
   mixerFor: string | null
   openMixer(path: string): void
   closeMixer(): void
+  /** File open in the "Cambiar BPM y tono" sheet. */
+  retempoFor: string | null
+  openRetempo(path: string): void
+  closeRetempo(): void
+  /** "Exportar a…" sheet: selected track ids, or null for the whole library. */
+  djExport: { trackIds: number[] | null } | null
+  openDjExport(trackIds: number[] | null): void
+  closeDjExport(): void
   navigate(r: Route): void
   toast(text: string, kind?: ToastKind): void
   dismissToast(id: number): void
@@ -69,6 +77,12 @@ export const useUiStore = create<UiState>((set, get) => ({
   mixerFor: null,
   openMixer: (path) => set({ mixerFor: path, dataSheet: null }),
   closeMixer: () => set((s) => ({ mixerFor: null, dataSheet: s.mixerFor })),
+  retempoFor: null,
+  openRetempo: (path) => set({ retempoFor: path }),
+  closeRetempo: () => set({ retempoFor: null }),
+  djExport: null,
+  openDjExport: (trackIds) => set({ djExport: { trackIds } }),
+  closeDjExport: () => set({ djExport: null }),
   navigate: (route) => set({ route }),
   toast(text, kind = 'info') {
     const id = nextId++

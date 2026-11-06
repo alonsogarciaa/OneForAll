@@ -56,6 +56,7 @@ export function LibraryScreen() {
   const fileInput = useRef<HTMLInputElement>(null)
   const openData = useUiStore((s) => s.openData)
   const openStems = useUiStore((s) => s.openStems)
+  const openRetempo = useUiStore((s) => s.openRetempo)
 
   const load = useCallback(() => {
     client.library(q).then(setRows).catch((e) => toast(e.message, 'error'))
@@ -98,6 +99,16 @@ export function LibraryScreen() {
           >
             <Scissors size={14} />
             Separar stems ({selected.size})
+          </button>
+          <button
+            className="btn btn-sm"
+            disabled={selected.size !== 1}
+            onClick={() => {
+              const t = (rows ?? []).find((x) => selected.has(x.id) && !x.missing)
+              if (t) openRetempo(t.path)
+            }}
+          >
+            Cambiar BPM y tono…
           </button>
           <button className="btn btn-sm" onClick={() => fileInput.current?.click()}>
             <FileAudio size={14} />

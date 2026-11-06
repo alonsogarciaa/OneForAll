@@ -63,6 +63,7 @@ export function DataSheet({ path, onClose }: { path: string; onClose(): void }) 
   const [tapBpm, setTapBpm] = useState<number | null>(null)
   const started = useRef(false)
   const [gridMode, setGridMode] = useState(false)
+  const openRetempo = useUiStore((s) => s.openRetempo)
 
   const load = useCallback(
     async (analyzeIfMissing: boolean) => {
@@ -173,6 +174,9 @@ export function DataSheet({ path, onClose }: { path: string; onClose(): void }) 
           <button className="btn" onClick={() => window.oneforall.showInFolder(path)}>
             <FolderOpen size={15} />
             Mostrar en carpeta
+          </button>
+          <button className="btn" onClick={() => openRetempo(path)} disabled={analyzing || !data?.record.bpm}>
+            Cambiar BPM y tono…
           </button>
           <button className="btn" onClick={reanalyze} disabled={analyzing}>
             <RefreshCw size={15} />

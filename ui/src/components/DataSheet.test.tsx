@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { DataSheet } from './DataSheet'
 import { EngineTestProvider } from '../lib/engine'
 import { EngineError } from '../lib/engineClient'
+import { useUiStore } from '../stores/uiStore'
 
 const record = {
   path: 'C:/m/a.mp3', bpm: 128, bpm_confidence: 0.8, bpm_source: 'auto', tonic: 'A', mode: 'minor', camelot: '8A',
@@ -114,5 +115,11 @@ describe('DataSheet', () => {
     const c = client({ getAnalysis: vi.fn(async () => ({ record, sidecar: { ...sidecar, grid, sections }, info })) })
     render(<EngineTestProvider client={c}><DataSheet path="C:/m/a.mp3" onClose={() => undefined} /></EngineTestProvider>)
     expect(await screen.findByRole('combobox', { name: 'Etiqueta de la sección 2' })).toHaveValue('Estribillo/Drop')
+  })
+
+  it('opens the change BPM and key sheet', async () => {
+    render(<EngineTestProvider client={client()}><DataSheet path="C:/m/a.mp3" onClose={() => undefined} /></EngineTestProvider>)
+    await userEvent.click(await screen.findByRole('button', { name: /Cambiar BPM y tono/ }))
+    expect(useUiStore.getState().retempoFor).toBe('C:/m/a.mp3')
   })
 })
