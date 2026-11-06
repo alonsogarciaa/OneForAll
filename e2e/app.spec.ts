@@ -154,3 +154,53 @@ test('separate stems from the library → data sheet lists them → zip', async 
   await expect.poll(() => (existsSync(folder) ? readdirSync(folder) : []), { timeout: 10_000 }).toContain('Fake Artist - La Graciosa (stems).zip')
   expect(readdirSync(folder).filter((f) => f.endsWith('.wav')).sort()).toEqual(['bass.wav', 'drums.wav', 'guitar.wav', 'vocals.wav'])
 })
+
+test('mixer: open from the data sheet, play, speed, loop export, state restored', async () => {
+  await launch()
+  await search('graciosa')
+  await downloadFirstSong()
+  await nav('Biblioteca')
+  const row = page.locator('.stable-row:not(.stable-head)').first()
+  await expect(row).toBeVisible({ timeout: 30_000 })
+  await row.getByRole('checkbox').check()
+  await page.getByRole('button', { name: /Separar stems \(1\)/ }).click()
+  await page.getByRole('button', { name: 'Separar', exact: true }).click()
+  await expect(row.getByLabel('Tiene stems')).toBeVisible({ timeout: 60_000 })
+  await row.dblclick()
+  await page.getByRole('button', { name: 'Mezclador' }).click()
+  await expect(page.getByTestId('strip-name')).toHaveCount(4, { timeout: 30_000 })
+
+  // real playback through the stretch worklet (production CSP): the clock moves
+  await page.getByRole('button', { name: 'Reproducir' }).click()
+  await expect(page.locator('.mixer-time')).not.toHaveText(/^0:00 \//, { timeout: 10_000 })
+  await page.getByRole('button', { name: 'Pausar' }).click()
+
+  await page.getByRole('button', { name: '0,75×' }).click()
+  const wave = page.locator('.mixer .waveform')
+  const box = (await wave.boundingBox())!
+  await page.mouse.move(box.x + box.width * 0.2, box.y + box.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(box.x + box.width * 0.4, box.y + box.height / 2)
+  await page.mouse.up()
+  await expect(page.getByRole('button', { name: 'Bucle', exact: true })).toHaveAttribute('aria-pressed', 'true')
+
+  // layout: desktop and phone width, no horizontal scroll inside the sheet
+  await page.screenshot({ path: 'test-results/mixer-desktop.png' })
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: 'test-results/mixer-375.png' })
+  const overflow = await page.locator('.sheet').evaluate((el) => el.scrollWidth - el.clientWidth)
+  expect(overflow).toBeLessThanOrEqual(1)
+  await page.setViewportSize({ width: 1280, height: 800 })
+
+  await page.getByRole('button', { name: 'Solo el bucle' }).click()
+  const folder = join(musicDir, 'Stems', 'Fake Artist - La Graciosa')
+  await expect
+    .poll(() => (existsSync(folder) ? readdirSync(folder).filter((f) => f.startsWith('loop ')) : []), { timeout: 30_000 })
+    .toHaveLength(1)
+  await expect(page.locator('.mixer-result')).toBeVisible()
+
+  await page.keyboard.press('Escape')
+  await page.getByRole('button', { name: 'Mezclador' }).click()
+  await expect(page.getByLabel('Velocidad', { exact: true })).toHaveValue('0.75', { timeout: 30_000 })
+})

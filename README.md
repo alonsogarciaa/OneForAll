@@ -26,6 +26,7 @@ Accuracy benchmark (local only, downloads GiantSteps from Zenodo): `cd engine &&
 | DeepRhythm (tempo CNN) | AGPL-3.0 | Fine for personal use; distributing the app requires offering its source under AGPL |
 | Demucs (code and `htdemucs_6s` weights) | MIT | Stem separation (Meta / Défossez et al.) |
 | audio-separator | MIT | Runs the UVR karaoke model |
+| Signalsmith Stretch (`signalsmith-stretch`) | MIT | Real-time tempo and pitch in the practice mixer (WASM AudioWorklet) |
 | UVR-MDX-NET Karaoke 2 model | Author's terms (UVR community model) | Lead / backing vocal split; personal use |
 | yt-dlp | Unlicense | |
 | FFmpeg (gyan.dev essentials build) | GPL-3.0 | Shipped as a separate executable |

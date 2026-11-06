@@ -49,3 +49,11 @@ export function contrastRatio(a: string, b: string): number {
   const [x, y] = [luminance(a), luminance(b)].sort((p, q) => q - p)
   return (x + 0.05) / (y + 0.05)
 }
+
+/** Key after transposing by `semis` semitones: each semitone is 7 steps on the wheel, same letter. */
+export function camelotShift(code: string, semis: number): string {
+  const n = parseInt(code, 10)
+  const letter = code.slice(-1)
+  const shifted = ((((n - 1 + 7 * semis) % 12) + 12) % 12) + 1
+  return `${shifted}${letter}`
+}

@@ -7,11 +7,13 @@ interface Props {
   children: ReactNode
   actions?: ReactNode
   wide?: boolean
+  /** Large workspace sheet (the mixer). */
+  full?: boolean
 }
 
 const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])'
 
-export function GlassSheet({ title, onClose, children, actions, wide }: Props) {
+export function GlassSheet({ title, onClose, children, actions, wide, full }: Props) {
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -48,7 +50,7 @@ export function GlassSheet({ title, onClose, children, actions, wide }: Props) {
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        style={wide ? { width: 'min(720px, calc(100vw - 48px))' } : undefined}
+        style={full ? { width: 'min(1100px, calc(100vw - 32px))' } : wide ? { width: 'min(720px, calc(100vw - 48px))' } : undefined}
       >
         <div className="sheet-header">
           <h2>{title}</h2>

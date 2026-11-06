@@ -76,7 +76,9 @@ async def test_cancel_waits_for_the_worker_thread(svc, song, monkeypatch):  # no
 
     monkeypatch.setattr(sep_mod.FakeSeparator, "separate", stubborn)
     job = svc.jobs.submit("stems", "t", make_stems_runner(svc, song, ["vocals"]))
-    await asyncio.sleep(0.5)
+    while svc.jobs.get(job.id).stage != "separating":  # cancel while the stubborn step runs, however slow decoding is
+        await asyncio.sleep(0.02)
+    await asyncio.sleep(0.2)
     assert await svc.jobs.cancel(job.id)
     while svc.jobs.get(job.id).status not in ("done", "failed", "cancelled"):
         await asyncio.sleep(0.05)

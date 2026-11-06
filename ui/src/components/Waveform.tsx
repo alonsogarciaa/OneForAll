@@ -7,6 +7,19 @@ interface Props {
   duration: number
   position: number
   onSeek(seconds: number): void
+  /** Mixer only: loop region drawn on the wave, set by dragging (a drag under MIN_LOOP_S is a seek). */
+  loop?: { start: number; end: number } | null
+  onLoop?(start: number, end: number): void
+  /** Beat times the loop edges snap to (Alt held: no snapping). */
+  snap?: number[]
+}
+
+const MIN_LOOP_S = 0.25
+const EDGE_PX = 6
+
+function nearest(t: number, snap: number[] | undefined): number {
+  if (!snap || snap.length === 0) return t
+  return snap.reduce((best, b) => (Math.abs(b - t) < Math.abs(best - t) ? b : best), snap[0])
 }
 
 // Band colours (Rekordbox-like): bass red, mids green, highs blue, blended by energy.
@@ -20,8 +33,29 @@ function mix(l: number, m: number, h: number): string {
   return `rgb(${c[0]},${c[1]},${c[2]})`
 }
 
-export function Waveform({ data, beats, duration, position, onSeek }: Props) {
+export function Waveform({ data, beats, duration, position, onSeek, loop = null, onLoop, snap }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null)
+  const drag = useRef<{ t0: number; anchor: number | null } | null>(null)
+
+  const finishDrag = (e: MouseEvent) => {
+    const d = drag.current
+    drag.current = null
+    const el = canvas.current
+    if (!d || !el || !onLoop) return
+    const r = el.getBoundingClientRect()
+    const t1 = Math.max(0, Math.min(duration, ((e.clientX - r.left) / r.width) * duration))
+    const ms = (x: number) => Math.round(x * 1000) / 1000
+    if (Math.abs(t1 - d.t0) < MIN_LOOP_S) {
+      onSeek(ms(t1)) // a click (also next to a loop edge)
+      return
+    }
+    const from = d.anchor ?? d.t0
+    const s = e.altKey ? undefined : snap
+    const a = ms(nearest(Math.min(from, t1), s))
+    const b = ms(nearest(Math.max(from, t1), s))
+    if (b - a >= MIN_LOOP_S) onLoop(a, b)
+    else onSeek(ms(t1)) // both edges snapped to the same beat: treat it as a click
+  }
 
   useEffect(() => {
     const el = canvas.current
@@ -47,6 +81,15 @@ export function Waveform({ data, beats, duration, position, onSeek }: Props) {
         ctx.fillRect(x, mid - amp, 1, Math.max(1, amp * 2))
       }
       ctx.globalAlpha = 1
+      if (duration > 0 && loop) {
+        const x0 = (loop.start / duration) * w
+        const x1 = (loop.end / duration) * w
+        ctx.fillStyle = 'rgba(10,132,255,0.18)'
+        ctx.fillRect(x0, 0, x1 - x0, h)
+        ctx.fillStyle = 'rgba(10,132,255,0.9)'
+        ctx.fillRect(x0 - 1, 0, 2, h)
+        ctx.fillRect(x1 - 1, 0, 2, h)
+      }
       if (duration > 0) {
         // Bar lines (every 4th beat) faint and full height; single beats only as short ticks when there is room.
         const spacing = beats.length > 1 ? ((beats[1] - beats[0]) / duration) * w : 0
@@ -75,7 +118,7 @@ export function Waveform({ data, beats, duration, position, onSeek }: Props) {
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(draw) : null
     ro?.observe(el)
     return () => ro?.disconnect()
-  }, [data, beats, duration, position])
+  }, [data, beats, duration, position, loop])
 
   return (
     <canvas
@@ -87,10 +130,29 @@ export function Waveform({ data, beats, duration, position, onSeek }: Props) {
       aria-valuemax={Math.round(duration)}
       aria-valuenow={Math.round(position)}
       tabIndex={0}
-      onClick={(e) => {
-        const r = e.currentTarget.getBoundingClientRect()
-        onSeek(((e.clientX - r.left) / r.width) * duration)
-      }}
+      onClick={
+        onLoop
+          ? undefined
+          : (e) => {
+              const r = e.currentTarget.getBoundingClientRect()
+              onSeek(((e.clientX - r.left) / r.width) * duration)
+            }
+      }
+      onMouseDown={
+        onLoop &&
+        ((e) => {
+          const r = e.currentTarget.getBoundingClientRect()
+          const t = ((e.clientX - r.left) / r.width) * duration
+          const px = (x: number) => (x / duration) * r.width
+          // grabbing an edge of the current loop moves that edge; the other one stays put
+          let anchor: number | null = null
+          if (loop && Math.abs(px(t) - px(loop.start)) <= EDGE_PX) anchor = loop.end
+          else if (loop && Math.abs(px(t) - px(loop.end)) <= EDGE_PX) anchor = loop.start
+          drag.current = { t0: t, anchor }
+          // listen on the window: releasing the mouse outside the wave still ends the drag
+          window.addEventListener('mouseup', finishDrag, { once: true })
+        })
+      }
       onKeyDown={(e) => {
         if (e.key === 'ArrowRight') onSeek(Math.min(duration, position + 5))
         if (e.key === 'ArrowLeft') onSeek(Math.max(0, position - 5))

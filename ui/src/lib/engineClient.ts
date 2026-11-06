@@ -89,6 +89,11 @@ export function createClient(
       json<{ jobs: Job[] }>('/jobs', post('/jobs', { type: 'stems', paths, stems, karaoke })),
     getStems: (path: string) =>
       json<{ folder: string | null; stems: { stem: string; file: string; size_bytes: number }[] }>(`/stems?${new URLSearchParams({ path })}`),
+    getMixerState: (path: string) => json<{ state: unknown }>(`/mixer/state?${new URLSearchParams({ path })}`),
+    putMixerState: (path: string, state: unknown) =>
+      json<{ ok: boolean }>('/mixer/state', { method: 'PUT', body: JSON.stringify({ path, state }) }),
+    mixExport: (path: string, state: unknown, range: 'full' | 'loop', format?: string) =>
+      json<{ job: Job }>('/jobs', post('/jobs', { type: 'mix_export', path, state, range, ...(format ? { format } : {}) })),
     zipStems: (path: string) => json<{ zip: string }>('/stems/zip', post('/stems/zip', { path })),
     stemsBackend: () => json<{ backend: 'cpu' | 'directml' }>('/stems/backend'),
     updateYtdlp: () => json<{ ok: boolean; output: string }>('/tools/ytdlp/update', { method: 'POST' }),
