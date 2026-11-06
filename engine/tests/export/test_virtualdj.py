@@ -33,7 +33,7 @@ def test_merge_into_empty():
 
 def test_merge_keeps_foreign_songs_and_attributes():
     existing = ('<?xml version="1.0" encoding="UTF-8"?>\n<VirtualDJ_Database Version="8.5">\n'
-                ' <Song FilePath="D:\other.mp3" FileSize="9"><Tags Author="X" Title="Y" /></Song>\n'
+                ' <Song FilePath="D:/other.mp3" FileSize="9"><Tags Author="X" Title="Y" /></Song>\n'
                 f' <Song FilePath="{track().path.replace("&", "&amp;").replace(chr(34), "&quot;")}" FileSize="5">'
                 '<Tags Author="Old" Title="Old" Stars="5" /><Scan Version="801" Bpm="0.5" Volume="1.2" />'
                 '<Poi Pos="9" Type="beatgrid" /><Poi Name="Mine" Pos="3" Num="1" Type="cue" /><Comment>hi</Comment></Song>\n'
@@ -42,7 +42,7 @@ def test_merge_keeps_foreign_songs_and_attributes():
     root = ET.fromstring(out.encode("utf-8"))
     assert root.get("Version") == "8.5"
     ss = root.findall("Song")
-    assert len(ss) == 2 and ss[0].get("FilePath") == "D:\other.mp3" and ss[0].find("Tags").get("Title") == "Y"
+    assert len(ss) == 2 and ss[0].get("FilePath") == "D:/other.mp3" and ss[0].find("Tags").get("Title") == "Y"
     ours = ss[1]
     assert ours.find("Tags").get("Stars") == "5" and ours.find("Tags").get("Title") == 'Señor & "Co"'
     assert ours.find("Scan").get("Volume") == "1.2" and ours.find("Scan").get("Bpm") == "0.468750"
