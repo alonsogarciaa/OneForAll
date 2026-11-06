@@ -156,6 +156,19 @@ class AnalysisStore:
         side["beats"] = beats(grid, float(side.get("duration") or 0))
         self._write_sidecar(path, side)
 
+    def get_sections(self, path: Path) -> list:
+        from ..prep.sections import Section
+
+        side = self.read_sidecar(path) or {}
+        return [Section.from_dict(d) for d in side.get("sections") or []]
+
+    def save_sections(self, path: Path, sections: list) -> None:
+        side = self.read_sidecar(path)
+        if side is None:
+            return
+        side["sections"] = [x.to_dict() for x in sections]
+        self._write_sidecar(path, side)
+
     def restamp(self, path: Path) -> None:
         """Record the file's current size/mtime (after we rewrote its tags ourselves)."""
         size, mtime = file_stamp(path)

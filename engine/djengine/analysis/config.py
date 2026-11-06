@@ -4,4 +4,4 @@
 DEFAULT_TEMPO_METHOD = "deeprhythm"
 # Key: madmom CNN, MIREX 0.797 / exact 73.0 % (N=566); best template (edma) 0.637
 DEFAULT_KEY_METHOD = "cnn"
-ANALYSIS_VERSION = 1
+ANALYSIS_VERSION = 2  # 2: fixed grid and sections

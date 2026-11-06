@@ -81,7 +81,7 @@ async def test_cancelled_analysis_waits_for_its_thread(tmp_path, monkeypatch):
 
     finished = []
 
-    def slow(path, ctx, lo, hi):
+    def slow(path, ctx, lo, hi, *rest):
         time.sleep(0.3)  # a blocking step that cannot notice the cancel
         finished.append(1)
         ctx.check_cancelled()
@@ -109,6 +109,9 @@ class _NoStore:
         return None
 
     def get_any(self, p):
+        return None
+
+    def read_sidecar(self, p):
         return None
 
 

@@ -23,4 +23,4 @@ def test_defaults_are_the_benchmark_winners():
 
 
 def test_version():
-    assert config.ANALYSIS_VERSION == 1
+    assert config.ANALYSIS_VERSION == 2

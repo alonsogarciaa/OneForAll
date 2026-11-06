@@ -18,6 +18,7 @@ from .convert import ConvertOptions
 from .download import download_audio, ytdlp_cmd
 from .jobs import JobManager
 from .library import Library
+from .analysis.config import ANALYSIS_VERSION as ANALYSIS_VERSION_NOW
 from .mixer.state import MixState
 from .pipelines import (DownloadRequest, make_convert_runner, make_download_runner, start_playlist, submit_analysis,
                         submit_stems)
@@ -151,6 +152,18 @@ class ZipBody(BaseModel):
 class MixerStateBody(BaseModel):
     path: str
     state: MixState
+
+
+class SectionIn(BaseModel):
+    start: float = Field(ge=0)
+    end: float
+    label: str
+
+
+class SectionsEdit(BaseModel):
+    path: str
+    sections: list[SectionIn] | None = Field(default=None, max_length=64)
+    reset: bool = False
 
 
 class GridEdit(BaseModel):
@@ -344,7 +357,11 @@ def create_app(services: Services, token: str) -> FastAPI:
         rec = svc.analysis.get(Path(path))
         if rec is None:
             raise HTTPException(status_code=404, detail={"code": "not_analyzed", "message": "Sin analizar"})
-        return {"record": asdict(rec), "sidecar": svc.analysis.get_sidecar(Path(path)), "info": _audio_info(Path(path))}
+        side = dict(svc.analysis.get_sidecar(Path(path)) or {})
+        side["grid"] = svc.analysis.get_grid(Path(path)).to_dict()
+        side.setdefault("sections", [])
+        side["needs_reanalysis"] = rec.version < ANALYSIS_VERSION_NOW
+        return {"record": asdict(rec), "sidecar": side, "info": _audio_info(Path(path))}
 
     @api.put("/analysis/bpm")
     def manual_bpm(body: ManualBpm):
@@ -380,6 +397,32 @@ def create_app(services: Services, token: str) -> FastAPI:
         track = svc.library.track_by_path(str(p))
         if track:
             svc.library.set_track_analysis(str(p), bpm, track.musical_key, track.camelot, track.lufs)
+
+    @api.put("/analysis/sections")
+    def put_sections(body: SectionsEdit):
+        from .prep.sections import LABELS, Section
+
+        p = Path(body.path)
+        if svc.analysis.get_any(p) is None:
+            raise HTTPException(status_code=404, detail={"code": "not_analyzed", "message": "Sin analizar"})
+        if svc.analysis.get(p) is None:
+            raise HTTPException(status_code=409, detail={"code": "stale", "message": "El archivo ha cambiado: reanalízalo primero"})
+        side = svc.analysis.read_sidecar(p) or {}
+        if body.reset:
+            out = [Section.from_dict(d) for d in side.get("sections_auto") or []]
+        else:
+            duration = float(side.get("duration") or 0)
+            items = body.sections or []
+            prev_end = 0.0
+            for it in items:
+                bad = (it.label not in LABELS or it.end <= it.start or it.start < prev_end - 1e-6
+                       or it.end > duration + 1e-3)
+                if bad:
+                    raise HTTPException(status_code=422, detail={"code": "bad_request", "message": "Secciones no válidas"})
+                prev_end = it.end
+            out = [Section(round(it.start, 3), round(it.end, 3), it.label, "manual") for it in items]
+        svc.analysis.save_sections(p, out)
+        return {"sections": [x.to_dict() for x in out]}
 
     @api.put("/analysis/grid")
     def put_grid(body: GridEdit):
