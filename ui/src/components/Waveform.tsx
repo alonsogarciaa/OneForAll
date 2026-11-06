@@ -37,6 +37,26 @@ export function Waveform({ data, beats, duration, position, onSeek, loop = null,
   const canvas = useRef<HTMLCanvasElement>(null)
   const drag = useRef<{ t0: number; anchor: number | null } | null>(null)
 
+  const finishDrag = (e: MouseEvent) => {
+    const d = drag.current
+    drag.current = null
+    const el = canvas.current
+    if (!d || !el || !onLoop) return
+    const r = el.getBoundingClientRect()
+    const t1 = Math.max(0, Math.min(duration, ((e.clientX - r.left) / r.width) * duration))
+    const ms = (x: number) => Math.round(x * 1000) / 1000
+    if (Math.abs(t1 - d.t0) < MIN_LOOP_S) {
+      onSeek(ms(t1)) // a click (also next to a loop edge)
+      return
+    }
+    const from = d.anchor ?? d.t0
+    const s = e.altKey ? undefined : snap
+    const a = ms(nearest(Math.min(from, t1), s))
+    const b = ms(nearest(Math.max(from, t1), s))
+    if (b - a >= MIN_LOOP_S) onLoop(a, b)
+    else onSeek(ms(t1)) // both edges snapped to the same beat: treat it as a click
+  }
+
   useEffect(() => {
     const el = canvas.current
     if (!el) return
@@ -129,26 +149,8 @@ export function Waveform({ data, beats, duration, position, onSeek, loop = null,
           if (loop && Math.abs(px(t) - px(loop.start)) <= EDGE_PX) anchor = loop.end
           else if (loop && Math.abs(px(t) - px(loop.end)) <= EDGE_PX) anchor = loop.start
           drag.current = { t0: t, anchor }
-        })
-      }
-      onMouseUp={
-        onLoop &&
-        ((e) => {
-          const d = drag.current
-          drag.current = null
-          if (!d) return
-          const r = e.currentTarget.getBoundingClientRect()
-          const t1 = Math.max(0, Math.min(duration, ((e.clientX - r.left) / r.width) * duration))
-          const from = d.anchor ?? d.t0
-          if (d.anchor === null && Math.abs(t1 - d.t0) < MIN_LOOP_S) {
-            onSeek(Math.round(t1 * 1000) / 1000)
-            return
-          }
-          const s = e.altKey ? undefined : snap
-          const ms = (x: number) => Math.round(x * 1000) / 1000
-          const a = ms(nearest(Math.min(from, t1), s))
-          const b = ms(nearest(Math.max(from, t1), s))
-          if (b - a >= MIN_LOOP_S) onLoop(a, b)
+          // listen on the window: releasing the mouse outside the wave still ends the drag
+          window.addEventListener('mouseup', finishDrag, { once: true })
         })
       }
       onKeyDown={(e) => {
