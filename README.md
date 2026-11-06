@@ -2,6 +2,16 @@
 
 Windows desktop app for DJs: search YouTube Music, download tracks and playlists, convert formats, keep a tagged library, and analyse BPM, key (Camelot), loudness and waveform. Electron + React UI with a local Python engine.
 
+## DJ software export
+
+Biblioteca → "Exportar a…" sends BPM, key, the beat grid and the detected sections (as cues) to:
+
+- **Rekordbox:** writes `rekordbox.xml`. Import it from Preferences → Advanced → rekordbox xml.
+- **VirtualDJ:** merges into `database.xml` (a dated backup is written first). VirtualDJ must be closed.
+- **Serato:** writes Serato's own tags inside MP3, FLAC and M4A files. Serato reads them when it loads the track. WAV files are skipped.
+
+The Serato and VirtualDJ formats follow community documentation, not an official spec.
+
 ## Development
 
 ```bash

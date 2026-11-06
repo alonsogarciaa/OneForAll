@@ -106,8 +106,10 @@ def detect_sections(y: np.ndarray, sr: int, grid: Grid, duration: float) -> list
     f, bar_energy = _bar_features(y, sr, bars)
     nov = _novelty(f)
     # candidate cuts: bars that start an 8-bar phrase counted from the anchor
+    phrase = PHRASE_BARS * bar
     cands = [i for i in range(1, n_bars) if round((bars[i] - grid.anchor) / bar) % PHRASE_BARS == 0
-             and abs((bars[i] - grid.anchor) / bar - round((bars[i] - grid.anchor) / bar)) < 1e-6]
+             and abs((bars[i] - grid.anchor) / bar - round((bars[i] - grid.anchor) / bar)) < 1e-6
+             and bars[i] >= phrase - 1e-6 and duration - bars[i] >= phrase - 1e-6]  # no section under 8 bars
     if not cands:
         return [Section(0.0, round(duration, 3), "Verso")]
     top = max(nov[i] for i in cands)

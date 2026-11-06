@@ -85,3 +85,13 @@ def test_at_most_16_sections():
 def test_section_dict_round_trip():
     s = Section(1.5, 9.0, "Verso", "manual")
     assert Section.from_dict(s.to_dict()) == s
+
+
+def test_no_section_shorter_than_8_bars_when_the_anchor_is_late():
+    rng = np.random.default_rng(3)
+    lead = np.zeros(int(1.1 * SR), dtype=np.float32)  # the first "1" falls 1.1 s in, as in real tracks
+    y = np.concatenate([lead, _song()])
+    secs = detect_sections(y, SR, Grid(1.1, BPM), len(y) / SR)
+    assert secs and all(s.end - s.start >= 8 * BAR - 1e-6 for s in secs[1:-1])
+    assert secs[0].end - secs[0].start >= 8 * BAR - 1e-6
+    assert rng is not None
