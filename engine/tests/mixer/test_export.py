@@ -124,3 +124,15 @@ def test_export_history_and_drag(svc, song):
         assert any(e["action"] == "export" and e["status"] == "done" for e in h)
         bad = {"type": "mix_export", "path": str(song), "state": {}, "range": "loop"}
         assert c.post("/jobs", json=bad, headers=H).status_code == 422
+
+
+async def test_export_length_check_uses_the_longest_stem(svc, song, monkeypatch):
+    monkeypatch.setattr(export_mod, "_duration", lambda p: 13 * 60 if p.name == "vocals.wav" else 3.0)
+    j = await _run(svc, song, MixState())
+    assert j.status == "failed" and j.error["code"] == "too_long"
+
+
+async def test_export_loop_starting_after_the_end_is_refused(svc, song):
+    j = await _run(svc, song, MixState(loop={"start": 5, "end": 6}), "loop")
+    assert j.status == "failed" and j.error["code"] == "bad_request"
+    assert j.error["message"] == "El bucle empieza después del final de la canción"

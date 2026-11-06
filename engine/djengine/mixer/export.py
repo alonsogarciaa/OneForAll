@@ -52,9 +52,12 @@ def make_mix_export_runner(svc, path: Path, state: MixState, rng: Range, fmt: st
         stems = mixer_stems(svc.stems.get(path))
         if not stems or not all(p.is_file() for p in stems.values()):
             raise UserError("no_stems", "Faltan stems de esta canción")
-        seconds = _duration(next(iter(stems.values())))
+        lengths = [d for d in (_duration(p) for p in stems.values()) if d is not None]
+        seconds = max(lengths) if lengths else None  # the export lasts as long as the longest stem
         if seconds is not None and seconds > MIXER_MAX_SECONDS:
             raise UserError("too_long", "Pista demasiado larga para el mezclador")
+        if rng == "loop" and state.loop and seconds is not None and state.loop.start >= seconds:
+            raise UserError("bad_request", "El bucle empieza después del final de la canción")
         inputs, fc = build_mix_graph(stems, state, rng)
         f = fmt or svc.settings.stems_format
         ext = ext_for(f)

@@ -34,7 +34,11 @@ def build_mix_graph(stems: dict[str, Path], state: MixState, rng: Range) -> tupl
 
 
 def output_seconds(state: MixState, duration: float, rng: Range) -> float:
-    span = (state.loop.end - state.loop.start) if rng == "loop" and state.loop else duration
+    if rng == "loop" and state.loop:
+        end = min(state.loop.end, duration) if duration else state.loop.end  # ffmpeg stops at the end of the audio
+        span = max(0.0, end - state.loop.start)
+    else:
+        span = duration
     return span / state.rate
 
 

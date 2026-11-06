@@ -66,3 +66,7 @@ def test_export_names():
 def test_output_seconds():
     assert output_seconds(MixState(rate=0.5, loop={"start": 10, "end": 14}), 200.0, "loop") == 8.0
     assert output_seconds(MixState(rate=0.5), 200.0, "full") == 400.0
+
+
+def test_output_seconds_loop_past_the_end_is_clamped():
+    assert output_seconds(MixState(loop={"start": 190, "end": 210}), 200.0, "loop") == 10.0
