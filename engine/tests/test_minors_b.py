@@ -206,8 +206,10 @@ def test_manual_bpm_rebuilds_beat_grid(tmp_path):
                            tonic="A", mode="minor", camelot="8A", key_confidence=0.9, lufs=-9.0, peak_db=-1.0,
                            version=1, created_at=now_iso()),
             {"beats": [0.25, 0.72, 1.19], "waveform": {}, "duration": 10.0})
+    from djengine.prep.grid import edit_grid
+
     st.set_manual_bpm(song, 120)
-    st.set_beats_from_bpm(song, 120)
+    st.save_grid(song, edit_grid(st.get_grid(song), bpm=120))
     beats = st.get_sidecar(song)["beats"]
     assert beats[0] == 0.25 and abs(beats[1] - beats[0] - 0.5) < 1e-6 and beats[-1] <= 10.0 and len(beats) == 20
 

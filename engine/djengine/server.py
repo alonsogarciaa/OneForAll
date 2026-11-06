@@ -153,6 +153,16 @@ class MixerStateBody(BaseModel):
     state: MixState
 
 
+class GridEdit(BaseModel):
+    path: str
+    anchor: float | None = Field(default=None, ge=0)
+    bpm: float | None = Field(default=None, gt=20, lt=400)
+    shift_ms: float | None = Field(default=None, ge=-2000, le=2000)
+    shift_beats: int | None = Field(default=None, ge=-64, le=64)
+    scale: Literal[0.5, 2] | None = None
+    reset: bool = False
+
+
 class ManualBpm(BaseModel):
     path: str
     bpm: float = Field(gt=20, lt=400)
@@ -346,8 +356,10 @@ def create_app(services: Services, token: str) -> FastAPI:
             raise HTTPException(status_code=404, detail={"code": "not_analyzed", "message": "Sin analizar"})
         if svc.analysis.get(p) is None:  # file changed since: re-blessing the old record would be wrong
             raise HTTPException(status_code=409, detail={"code": "stale", "message": "El archivo ha cambiado: reanalízalo primero"})
+        from .prep.grid import edit_grid
+
         rec = svc.analysis.set_manual_bpm(p, body.bpm)
-        svc.analysis.set_beats_from_bpm(p, rec.bpm)
+        svc.analysis.save_grid(p, edit_grid(svc.analysis.get_grid(p), bpm=rec.bpm))
         before = file_stamp(p)
         if write_analysis_tags(p, rec.bpm, None):  # BPM only; key and other tags untouched
             svc.analysis.restamp(p)
@@ -356,6 +368,45 @@ def create_app(services: Services, token: str) -> FastAPI:
         if track:
             svc.library.set_track_analysis(str(p), rec.bpm, track.musical_key, track.camelot, track.lufs)
         return asdict(svc.analysis.get_any(p))
+
+    def _bpm_to_tags(p: Path, bpm: float) -> None:
+        from .analysis.runner import write_analysis_tags
+        from .analysis.store import file_stamp
+
+        before = file_stamp(p)
+        if write_analysis_tags(p, bpm, None):  # BPM only; key and other tags untouched
+            svc.analysis.restamp(p)
+            svc.stems.restamp(p, before)
+        track = svc.library.track_by_path(str(p))
+        if track:
+            svc.library.set_track_analysis(str(p), bpm, track.musical_key, track.camelot, track.lufs)
+
+    @api.put("/analysis/grid")
+    def put_grid(body: GridEdit):
+        from .prep.grid import Grid, edit_grid
+
+        p = Path(body.path)
+        if svc.analysis.get_any(p) is None:
+            raise HTTPException(status_code=404, detail={"code": "not_analyzed", "message": "Sin analizar"})
+        if svc.analysis.get(p) is None:
+            raise HTTPException(status_code=409, detail={"code": "stale", "message": "El archivo ha cambiado: reanalízalo primero"})
+        current = svc.analysis.get_grid(p)
+        rec = svc.analysis.get_any(p)
+        if body.reset:
+            auto = (svc.analysis.read_sidecar(p) or {}).get("grid_auto")
+            grid = Grid.from_dict(auto) if auto else Grid(current.anchor, current.bpm, "auto")
+            grid = Grid(grid.anchor, float(rec.bpm if rec.bpm_source == "auto" else grid.bpm), "auto")
+            if rec.bpm_source != "auto" or rec.bpm != grid.bpm:
+                svc.analysis.set_bpm(p, grid.bpm, "auto")
+        else:
+            grid = edit_grid(current, anchor=body.anchor, bpm=body.bpm, shift_ms=body.shift_ms,
+                             shift_beats=body.shift_beats, scale=body.scale)
+            if round(grid.bpm, 1) != (rec.bpm or 0):
+                svc.analysis.set_manual_bpm(p, grid.bpm)
+        svc.analysis.save_grid(p, grid)
+        if round(grid.bpm, 1) != (rec.bpm or 0):
+            _bpm_to_tags(p, round(grid.bpm, 1))
+        return {"grid": grid.to_dict()}
 
     class StemCheck(BaseModel):
         files: list[str] = Field(max_length=64)

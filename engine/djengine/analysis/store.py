@@ -112,25 +112,49 @@ class AnalysisStore:
             self._conn.commit()
 
     def set_manual_bpm(self, path: Path, bpm: float) -> AnalysisRecord | None:
+        return self.set_bpm(path, bpm, "manual")
+
+    def set_bpm(self, path: Path, bpm: float | None, source: str) -> AnalysisRecord | None:
         with self._lock:
-            self._conn.execute("UPDATE analyses SET bpm=?, bpm_source='manual' WHERE path=?", (round(bpm, 1), str(Path(path))))
+            self._conn.execute("UPDATE analyses SET bpm=?, bpm_source=? WHERE path=?",
+                               (round(bpm, 1) if bpm else bpm, source, str(Path(path))))
             self._conn.commit()
         return self.get_any(path)
 
-    def set_beats_from_bpm(self, path: Path, bpm: float) -> None:
-        """Manual BPM: rebuild an even grid from the first detected beat so the grid matches the new tempo."""
+    def read_sidecar(self, path: Path) -> dict | None:
+        """Sidecar even if the file changed since (to carry manual edits over a re-analysis)."""
+        p = self._sidecar_path(Path(path))
+        return json.loads(p.read_text(encoding="utf-8")) if p.exists() else None
+
+    def _write_sidecar(self, path: Path, side: dict) -> None:
         sp = self._sidecar_path(Path(path))
-        if not sp.exists():
-            return
-        side = json.loads(sp.read_text(encoding="utf-8"))
-        old = side.get("beats") or []
-        anchor = float(old[0]) if old else 0.0
-        step, end = 60.0 / bpm, float(side.get("duration") or 0)
-        n = int((end - anchor) / step) + 1 if end > anchor else 0
-        side["beats"] = [round(anchor + i * step, 4) for i in range(n)]
         tmp = sp.with_suffix(".tmp")
         tmp.write_text(json.dumps(side, allow_nan=False), encoding="utf-8")
         os.replace(tmp, sp)
+
+    def get_grid(self, path: Path):
+        """Fixed grid of the analysis; version-1 sidecars are converted (anchor = first old beat)."""
+        from ..prep.grid import Grid
+
+        side = self.read_sidecar(path)
+        rec = self.get_any(path)
+        if side is None or rec is None:
+            return None
+        if side.get("grid"):
+            return Grid.from_dict(side["grid"])
+        old = side.get("beats") or []
+        return Grid(float(old[0]) if old else 0.0, float(rec.bpm or 0))
+
+    def save_grid(self, path: Path, grid) -> None:
+        """Store the grid and rewrite the beat list from it (the waveform, mixer and metronome read the list)."""
+        from ..prep.grid import beats
+
+        side = self.read_sidecar(path)
+        if side is None:
+            return
+        side["grid"] = grid.to_dict()
+        side["beats"] = beats(grid, float(side.get("duration") or 0))
+        self._write_sidecar(path, side)
 
     def restamp(self, path: Path) -> None:
         """Record the file's current size/mtime (after we rewrote its tags ourselves)."""

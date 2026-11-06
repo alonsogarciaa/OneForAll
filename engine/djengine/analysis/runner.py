@@ -16,6 +16,7 @@ from .loudness import measure
 from .store import AnalysisRecord, file_stamp, now_iso
 from .tempo import estimate_tempo
 from .waveform import compute
+from ..prep.grid import Grid, beats, estimate_grid
 
 log = logging.getLogger(__name__)
 SR = 22050
@@ -58,7 +59,8 @@ def _analyse(path: Path, ctx, bpm_lo: int, bpm_hi: int):
     ctx.report("waveform", 85)
     wf = compute(y, SR)
     ctx.check_cancelled()
-    return tempo, key, lufs, peak, wf, len(y) / SR
+    grid_auto = estimate_grid(y, SR, tempo.bpm, tempo.beats)
+    return tempo, key, lufs, peak, wf, len(y) / SR, grid_auto
 
 
 def make_analysis_runner(svc, path: Path, force: bool = False, reset_bpm: bool = False):
@@ -75,7 +77,7 @@ def make_analysis_runner(svc, path: Path, force: bool = False, reset_bpm: bool =
         s = svc.settings
         work = asyncio.ensure_future(asyncio.to_thread(_analyse, path, ctx, s.bpm_min, s.bpm_max))
         try:
-            tempo, key, lufs, peak, wf, duration = await asyncio.shield(work)
+            tempo, key, lufs, peak, wf, duration, grid_auto = await asyncio.shield(work)
         except asyncio.CancelledError:
             # the thread cannot be killed: wait until it notices (or finishes) before tmp/ is removed
             ctx.cancelled = True
@@ -95,7 +97,13 @@ def make_analysis_runner(svc, path: Path, force: bool = False, reset_bpm: bool =
             key_confidence=_finite(key.confidence), lufs=_finite(lufs), peak_db=_finite(peak),
             version=ANALYSIS_VERSION, created_at=now_iso(),
         )
-        store.save(rec, {"beats": tempo.beats, "waveform": wf, "duration": round(duration, 3)})
+        old_side = store.read_sidecar(path) or {}
+        if old_side.get("grid", {}).get("source") == "manual" and not reset_bpm:
+            grid = Grid.from_dict(old_side["grid"])  # the user's grid survives a re-analysis
+        else:
+            grid = Grid(grid_auto.anchor, float(rec.bpm or 0), "auto")
+        store.save(rec, {"beats": beats(grid, duration), "grid": grid.to_dict(), "grid_auto": grid_auto.to_dict(),
+                         "waveform": wf, "duration": round(duration, 3)})
         has_key = bool(key.tonic and key.mode)  # silence: no key is stored or written
         before = file_stamp(path)
         if write_analysis_tags(path, rec.bpm, tag_key(key.tonic, key.mode, s.key_notation) if has_key else None):
