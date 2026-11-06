@@ -75,11 +75,17 @@ def _fill(song: ET.Element, t: ExportTrack) -> None:
     scan.set("Bpm", f"{60.0 / t.bpm:.6f}")  # VirtualDJ stores seconds per beat
     if t.key:
         scan.set("Key", t.key)
-    for poi in [p for p in song.findall("Poi") if p.get("Type") in ("beatgrid", "cue")]:
-        song.remove(poi)  # ours replace the old grid and cues: no duplicates on a second export
+    from ..prep.sections import LABELS
+
+    # ours (the grid and cues named after a section) are replaced; cues the user made in VirtualDJ stay
+    for poi in [p for p in song.findall("Poi")
+                if p.get("Type") == "beatgrid" or (p.get("Type") == "cue" and p.get("Name") in LABELS)]:
+        song.remove(poi)
+    taken = {p.get("Num") for p in song.findall("Poi") if p.get("Type") == "cue"}
     ET.SubElement(song, "Poi", Pos=f"{t.anchor:.3f}", Type="beatgrid")
-    for i, c in enumerate(t.cues[:_CUE_NUMS]):
-        ET.SubElement(song, "Poi", Name=c.name, Pos=f"{c.start:.3f}", Num=str(i + 1), Type="cue")
+    free = (str(n) for n in range(1, _CUE_NUMS + 1) if str(n) not in taken)
+    for c, num in zip(t.cues, free):
+        ET.SubElement(song, "Poi", Name=c.name, Pos=f"{c.start:.3f}", Num=num, Type="cue")
 
 
 def merge_database(xml_text: str | None, tracks: list[ExportTrack]) -> str:

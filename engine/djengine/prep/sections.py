@@ -52,7 +52,7 @@ def label_sections(energies: list[float]) -> list[str]:
             out[i] = "Outro"
         elif high[i]:
             out[i] = "Estribillo/Drop"
-        elif i > 0 and high[i - 1] and e[i] < 0.5 * e[i - 1]:  # a clear drop after a high part
+        elif i > 0 and high[i - 1] and e[i] < float(np.median(np.delete(e, i))):  # a dip after a high part
             out[i] = "Bajón"
         elif 0 < i < n - 1 and e[i] > e[i - 1] and high[i + 1]:
             out[i] = "Subida"
@@ -71,13 +71,15 @@ def _bar_features(y: np.ndarray, sr: int, bars: np.ndarray) -> tuple[np.ndarray,
     feats, energy = [], []
     for a, b in zip(frames[:-1], frames[1:]):
         b = max(b, a + 1)
-        feats.append(np.concatenate([[rms[a:b].mean()], mfcc[:, a:b].mean(axis=1), chroma[:, a:b].mean(axis=1)]))
+        # log energy (a small level change is a small step) + timbre without MFCC 0 (which is just loudness) + harmony
+        feats.append(np.concatenate([[np.log10(rms[a:b].mean() + 1e-6)], mfcc[1:, a:b].mean(axis=1),
+                                     chroma[:, a:b].mean(axis=1)]))
         energy.append(float(rms[a:b].mean()))
     f = np.asarray(feats)
     f = (f - f.mean(axis=0)) / (f.std(axis=0) + 1e-9)
     # each group (energy, timbre, harmony) weighs the same in the distance
-    f[:, 0] *= np.sqrt(13)
-    f[:, 14:] *= np.sqrt(13 / 12)
+    f[:, 0] *= np.sqrt(12)  # each group weighs the same: 1 energy, 12 timbre, 12 harmony values
+    f[:, 13:] *= 1.0
     return f, np.asarray(energy)
 
 
@@ -112,12 +114,19 @@ def detect_sections(y: np.ndarray, sr: int, grid: Grid, duration: float) -> list
              and bars[i] >= phrase - 1e-6 and duration - bars[i] >= phrase - 1e-6]  # no section under 8 bars
     if not cands:
         return [Section(0.0, round(duration, 3), "Verso")]
-    top = max(nov[i] for i in cands)
-    keep = sorted([i for i in cands if top > 0 and nov[i] >= 0.25 * top], key=lambda i: -nov[i])[: MAX_SECTIONS - 1]
-    cuts = sorted(keep)
+    vals = np.array([nov[i] for i in cands])
+    thr = float(vals.mean() + 0.5 * vals.std())
+    # a cut is a phrase boundary whose change stands out from the song's typical change
+    peaks = [c for c in cands if nov[c] > 0 and nov[c] >= max(thr, 0.5 * float(vals.max()))]
+    cuts = sorted(sorted(peaks, key=lambda i: -nov[i])[: MAX_SECTIONS - 1])
     edges = [0] + cuts + [n_bars]
     energies = [float(bar_energy[a:b].mean()) for a, b in zip(edges[:-1], edges[1:])]
     peak = max(energies) or 1.0
     labels = label_sections([e / peak for e in energies])
-    return [Section(round(float(bars[a]), 3), round(float(bars[b]), 3), lab)
-            for (a, b), lab in zip(zip(edges[:-1], edges[1:]), labels)]
+    out: list[Section] = []
+    for (a, b), lab in zip(zip(edges[:-1], edges[1:]), labels):
+        if out and out[-1].label == lab:  # two parts with the same name in a row are one section (one cue)
+            out[-1].end = round(float(bars[b]), 3)
+        else:
+            out.append(Section(round(float(bars[a]), 3), round(float(bars[b]), 3), lab))
+    return out

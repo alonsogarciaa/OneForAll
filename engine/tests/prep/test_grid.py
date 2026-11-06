@@ -113,3 +113,23 @@ def test_reanalysis_keeps_manual_grid(env, click_track_file):  # noqa: F811
     time.sleep(0.2)
     wait(c, lambda js: len(final(js, "analysis")) >= 2)
     assert svc.analysis.get_grid(p).anchor == 1.234
+
+
+def test_reanalysis_keeps_record_bpm_equal_to_manual_grid(env, click_track_file):  # noqa: F811
+    c, svc, tmp = env
+    p = _analysed(c, tmp, click_track_file)
+    side = svc.analysis.read_sidecar(p)
+    side["grid"] = Grid(0.4, 100.0, "manual").to_dict()
+    svc.analysis._write_sidecar(p, side)
+    c.post("/jobs", json={"type": "analysis", "paths": [str(p)], "force": True}, headers=H)
+    time.sleep(0.2)
+    wait(c, lambda js: len(final(js, "analysis")) >= 2)
+    rec = svc.analysis.get(p)
+    assert rec.bpm == 100.0 and svc.analysis.get_grid(p).bpm == 100.0
+
+
+def test_get_analysis_without_sidecar_is_404(env, click_track_file):  # noqa: F811
+    c, svc, tmp = env
+    p = _analysed(c, tmp, click_track_file)
+    svc.analysis._sidecar_path(p).unlink()
+    assert c.get("/analysis", params={"path": str(p)}, headers=H).status_code == 404

@@ -12,8 +12,8 @@ from .model import Cue, ExportTrack
 
 MIME = b"application/octet-stream\x00\x00"
 NAMES = {"autotags": "Serato Autotags", "beatgrid": "Serato BeatGrid", "markers2": "Serato Markers2"}
-FLAC_KEYS = {"autotags": "SERATO_AUTOTAGS", "beatgrid": "SERATO_BEATGRID", "markers2": "SERATO_MARKERS_V2"}
-MP4_KEYS = {"autotags": "----:com.serato.dj:autotags", "beatgrid": "----:com.serato.dj:beatgrid",
+FLAC_KEYS = {"autotags": "SERATO_AUTOGAIN", "beatgrid": "SERATO_BEATGRID", "markers2": "SERATO_MARKERS_V2"}
+MP4_KEYS = {"autotags": "----:com.serato.dj:autgain", "beatgrid": "----:com.serato.dj:beatgrid",
             "markers2": "----:com.serato.dj:markersv2"}
 MARKERS2_MIN = 470
 
@@ -124,6 +124,12 @@ def write_serato(path, track: ExportTrack) -> None:
             raise UserError("unsupported", "Formato no compatible con Serato")
     except PermissionError:
         raise UserError("busy", "Archivo en uso")
+    except Exception as e:  # mutagen wraps OS errors (locked or read-only file) in MutagenError
+        from mutagen import MutagenError
+
+        if isinstance(e, MutagenError) and isinstance(e.__cause__ or e.__context__, OSError):
+            raise UserError("busy", "Archivo en uso")
+        raise
 
 
 def read_serato(path) -> dict:

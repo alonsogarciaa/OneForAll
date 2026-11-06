@@ -84,3 +84,17 @@ def test_library_playlists(svc, tmp_path):
     svc.library.add_playlist_track(pl, 5, 0)
     assert svc.library.list_playlists() == [(pl, "Perreo")]
     assert svc.library.playlist_track_ids(pl) == [5, 7]
+
+
+def test_mp3_offset_survives_info_in_the_tags(tmp_path):
+    wav = tmp_path / "s.wav"
+    sf.write(wav, np.zeros((44100, 2), dtype=np.float32), 44100)
+    mp3 = tmp_path / "s.mp3"
+    subprocess.run([find_tool("ffmpeg"), "-v", "error", "-y", "-i", str(wav), "-c:a", "libmp3lame", "-b:a", "320k", str(mp3)], check=True)
+    base = mp3_decoder_offset(mp3)
+    from mutagen.id3 import COMM, ID3
+
+    tags = ID3()
+    tags.add(COMM(encoding=3, lang="eng", desc="", text="Info & booking: Xing records"))
+    tags.save(mp3)
+    assert base > 0.02 and mp3_decoder_offset(mp3) == base

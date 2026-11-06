@@ -48,7 +48,8 @@ def test_merge_keeps_foreign_songs_and_attributes():
     assert ours.find("Scan").get("Volume") == "1.2" and ours.find("Scan").get("Bpm") == "0.468750"
     assert ours.find("Comment").text == "hi"
     assert len([p for p in ours.findall("Poi") if p.get("Type") == "beatgrid"]) == 1
-    assert [p.get("Name") for p in ours.findall("Poi") if p.get("Type") == "cue"] == ["Intro", "Estribillo/Drop"]
+    cues = [(p.get("Name"), p.get("Num")) for p in ours.findall("Poi") if p.get("Type") == "cue"]
+    assert cues == [("Mine", "1"), ("Intro", "2"), ("Estribillo/Drop", "3")]  # the user's own cue survives
 
 
 def test_merge_twice_no_duplicates():

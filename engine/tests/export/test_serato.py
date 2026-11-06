@@ -109,3 +109,22 @@ def test_restamp_after_write(tmp_path, monkeypatch):
                       {"beats": [], "waveform": {}, "duration": 2.0})
     serato.export_serato(svc, track(p))
     assert svc.analysis.get(p) is not None
+
+
+def test_locked_file_is_reported_as_busy(tmp_path):
+    import os
+    import stat
+
+    p = make(tmp_path, "mp3")
+    os.chmod(p, stat.S_IREAD)
+    try:
+        with pytest.raises(UserError) as e:
+            serato.write_serato(p, track(p))
+        assert e.value.message == "Archivo en uso"
+    finally:
+        os.chmod(p, stat.S_IWRITE | stat.S_IREAD)
+
+
+def test_flac_m4a_autotags_keys_match_serato():
+    assert serato.FLAC_KEYS["autotags"] == "SERATO_AUTOGAIN"
+    assert serato.MP4_KEYS["autotags"] == "----:com.serato.dj:autgain"

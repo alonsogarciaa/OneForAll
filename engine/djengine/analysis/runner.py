@@ -114,6 +114,9 @@ def make_analysis_runner(svc, path: Path, force: bool = False, reset_bpm: bool =
         bpm, source = (tempo.bpm or None), "auto"
         if previous and previous.bpm_source == "manual" and not reset_bpm:
             bpm, source = previous.bpm, "manual"
+        if manual_grid is not None and manual_grid.bpm:
+            bpm = manual_grid.bpm  # the kept manual grid defines the tempo: record and grid must agree
+            source = "manual"
         size, mtime = file_stamp(path)
         rec = AnalysisRecord(
             path=str(path), size=size, mtime=mtime, bpm=_finite(bpm), bpm_confidence=_finite(tempo.confidence),

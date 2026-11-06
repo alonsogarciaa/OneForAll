@@ -352,8 +352,9 @@ def create_app(services: Services, token: str) -> FastAPI:
             src = svc.analysis.get(Path(body.path))
             if src is None or not src.bpm:
                 raise HTTPException(status_code=409, detail={"code": "not_analyzed", "message": "Analiza primero"})
+            g = svc.analysis.get_grid(Path(body.path))
             try:
-                check_range(src.bpm, body.bpm)
+                check_range(g.bpm if g and g.bpm else src.bpm, body.bpm)
             except _UE as e:
                 raise HTTPException(status_code=422, detail={"code": e.code, "message": e.message})
             runner = make_retempo_runner(svc, Path(body.path), body.bpm, body.semis, body.format)
@@ -399,7 +400,10 @@ def create_app(services: Services, token: str) -> FastAPI:
         rec = svc.analysis.get(Path(path))
         if rec is None:
             raise HTTPException(status_code=404, detail={"code": "not_analyzed", "message": "Sin analizar"})
-        side = dict(svc.analysis.get_sidecar(Path(path)) or {})
+        raw = svc.analysis.get_sidecar(Path(path))
+        if raw is None:  # record without its sidecar (deleted by hand): treat as not analysed, the sheet re-analyses
+            raise HTTPException(status_code=404, detail={"code": "not_analyzed", "message": "Sin analizar"})
+        side = dict(raw)
         side["grid"] = svc.analysis.get_grid(Path(path)).to_dict()
         side.setdefault("sections", [])
         side["needs_reanalysis"] = rec.version < ANALYSIS_VERSION_NOW

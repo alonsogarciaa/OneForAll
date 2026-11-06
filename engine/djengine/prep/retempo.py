@@ -16,7 +16,7 @@ from ..mixer.export import _CODEC
 from ..naming import unique_path
 from ..stems.names import ext_for
 from ..stems.runner import _duration
-from ..tags import TrackMeta, read_tags, set_bpm_key, write_tags
+from ..tags import TrackMeta, read_cover, read_tags, set_bpm_key, write_tags
 from ..tools import find_tool
 from .grid import Grid, beats
 from .sections import Section
@@ -89,11 +89,13 @@ def make_retempo_runner(svc, path: Path, bpm: float, semis: int, fmt: str | None
         src = svc.analysis.get(path)
         if not path.is_file() or src is None or not src.bpm:
             raise UserError("not_analyzed", "Analiza primero")
-        check_range(src.bpm, bpm)
+        grid_src = svc.analysis.get_grid(path)
+        base_bpm = float(grid_src.bpm) if grid_src and grid_src.bpm else float(src.bpm)  # the grid is the exact tempo
+        check_range(base_bpm, bpm)
         if not -12 <= semis <= 12:
             raise UserError("bad_request", "El cambio de tono va de −12 a +12 semitonos")
         side = svc.analysis.read_sidecar(path) or {}
-        ratio = bpm / src.bpm
+        ratio = bpm / base_bpm
         f = fmt or default_format(path)
         ext = ext_for(f)
         tmp = ctx.tmp_dir / f"retempo.{ext}"
@@ -131,12 +133,16 @@ def make_retempo_runner(svc, path: Path, bpm: float, semis: int, fmt: str | None
             meta = read_tags(path)
         except Exception:
             meta = TrackMeta(track.title if track else path.stem, track.artist if track else "")
-        name = retempo_name(path.stem, src.bpm, bpm, src.camelot, semis)
+        try:
+            cover = read_cover(path)
+        except Exception:
+            cover = None
+        name = retempo_name(path.stem, base_bpm, bpm, src.camelot, semis)
         final = unique_path(path.parent, name, ext)
         await asyncio.to_thread(_commit, tmp, final)
-        title = retempo_name(meta.title or path.stem, src.bpm, bpm, src.camelot, semis)
+        title = retempo_name(meta.title or path.stem, base_bpm, bpm, src.camelot, semis)
         try:
-            write_tags(final, TrackMeta(title, meta.artist, meta.album, meta.year, meta.source_url), None)
+            write_tags(final, TrackMeta(title, meta.artist, meta.album, meta.year, meta.source_url), cover)
         except Exception as e:  # e.g. a format mutagen cannot tag: the audio still counts
             log.info("tags not written for %s: %s", final.name, e)
         rec = await asyncio.to_thread(_light_analysis, svc, src, side, final, ratio, bpm, semis)

@@ -95,3 +95,20 @@ def test_no_section_shorter_than_8_bars_when_the_anchor_is_late():
     assert secs and all(s.end - s.start >= 8 * BAR - 1e-6 for s in secs[1:-1])
     assert secs[0].end - secs[0].start >= 8 * BAR - 1e-6
     assert rng is not None
+
+
+def test_bajon_is_a_dip_after_a_high_part():
+    # reggaeton breaks rarely fall under half the chorus energy
+    assert label_sections([0.3, 0.7, 1.0, 0.6, 0.95, 0.3])[3] == "Bajón"
+
+
+def test_a_long_steady_part_is_not_cut_at_every_phrase():
+    rng = np.random.default_rng(5)
+    parts = [_part(8, "hat", rng)]
+    for k in range(4):  # 32 bars of drop with small level changes every 8 bars
+        parts.append(_part(8, "drop", rng) * (1.0 + 0.12 * (-1) ** k))
+    parts.append(_part(8, "hat", rng))
+    y = np.concatenate(parts)
+    secs = detect_sections(y, SR, Grid(0.0, BPM), len(y) / SR)
+    assert len(secs) == 3, [(round(s.start / BAR), s.label) for s in secs]
+    assert all(a.label != b.label for a, b in zip(secs, secs[1:]))

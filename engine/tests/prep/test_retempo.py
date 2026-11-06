@@ -1,5 +1,6 @@
 import asyncio
 import time
+from dataclasses import replace
 
 import numpy as np
 import pytest
@@ -128,3 +129,38 @@ async def test_retempo_cancel_leaves_no_file(svc, song, monkeypatch):
         await asyncio.sleep(0.02)
     assert svc.jobs.get(job.id).status == "cancelled"
     assert sorted(p.name for p in song.parent.iterdir()) == ["Song.wav"]
+
+
+def _jpeg():
+    import io
+
+    from PIL import Image
+
+    buf = io.BytesIO()
+    Image.new("RGB", (64, 64), (200, 30, 30)).save(buf, "JPEG")
+    return buf.getvalue()
+
+
+async def test_retempo_copies_cover_and_tags(svc, song):
+    from djengine.analysis.store import file_stamp as fs
+    from djengine.tags import TrackMeta, read_cover, read_tags, write_tags
+
+    cover = _jpeg()
+    write_tags(song, TrackMeta("Song", "Artist", "Album", "2024"), cover)
+    rec = svc.analysis.get_any(song)
+    size, mtime = fs(song)
+    svc.analysis.save(replace(rec, size=size, mtime=mtime), svc.analysis.read_sidecar(song))
+    j = await _run(svc, song, 100.0, 0)
+    out = j.result["path"]
+    assert read_cover(out) == cover and read_tags(out).album == "Album" and read_tags(out).year == "2024"
+
+
+async def test_retempo_ratio_follows_the_grid_bpm(svc, song):
+    side = svc.analysis.read_sidecar(song)
+    side["grid"] = Grid(1.0, 68.65, "manual").to_dict()
+    svc.analysis._write_sidecar(song, side)
+    j = await _run(svc, song, 100.0, 0)
+    ratio = 100.0 / 68.65
+    g = svc.analysis.get_grid(j.result["path"])
+    assert abs(g.anchor - 1.0 / ratio) < 1e-4 and g.bpm == 100.0
+    assert abs(sf.info(j.result["path"]).duration - 4.0 / ratio) < 0.05

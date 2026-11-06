@@ -88,15 +88,22 @@ def mp3_decoder_offset(path) -> float:
         head = p.read_bytes()[: 1 << 18]
     except Exception:
         return 0.0
+    start = 0
+    if head[:3] == b"ID3" and len(head) >= 10:  # skip the ID3v2 tag: its text may contain "Info" or "Xing"
+        start = 10 + ((head[6] & 0x7F) << 21 | (head[7] & 0x7F) << 14 | (head[8] & 0x7F) << 7 | (head[9] & 0x7F))
+    frame = head[start: start + 2048]  # the Xing/Info header lives inside the first MPEG frame
     for marker in (b"Xing", b"Info"):
-        pos = head.find(marker)
-        if pos < 0 or pos + 8 > len(head):
+        rel = frame.find(marker)
+        if rel < 0:
+            continue
+        pos = start + rel
+        if pos + 8 > len(head):
             continue
         flags = int.from_bytes(head[pos + 4: pos + 8], "big")
         tag = pos + 8 + 4 * bool(flags & 1) + 4 * bool(flags & 2) + 100 * bool(flags & 4) + 4 * bool(flags & 8)
         version = head[tag: tag + 4]
         if version not in (b"LAME", b"Lavc", b"Lavf", b"GOGO") or tag + 23 > len(head):
-            return 0.0
+            continue
         delay = (head[tag + 21] << 4) | (head[tag + 22] >> 4)
         return round((delay + 529) / sr, 4)
     return 0.0
