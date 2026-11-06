@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DJ_PLAYLISTS Version="1.0.0">
+  <PRODUCT Name="OneForAll" Version="0.1.0" Company="OneForAll" />
+  <COLLECTION Entries="2">
+    <TRACK TrackID="1" Name="Canción &amp; Co" Artist="Bad Bunny" Album="Un Verano" Kind="MP3 File" Size="8000000" TotalTime="213" AverageBpm="92.00" Tonality="Am" Location="file://localhost/C:/M%C3%BAsica/Canci%C3%B3n%20%26%20Co%20%231%20100%25.mp3">
+      <TEMPO Inizio="0.512" Bpm="92.00" Metro="4/4" Battito="1" />
+      <POSITION_MARK Name="Intro" Type="0" Start="0.512" Num="-1" />
+      <POSITION_MARK Name="Intro" Type="0" Start="0.512" Num="0" Red="142" Green="142" Blue="147" />
+      <POSITION_MARK Name="Estribillo/Drop" Type="0" Start="21.380" Num="-1" />
+      <POSITION_MARK Name="Estribillo/Drop" Type="0" Start="21.380" Num="1" Red="255" Green="69" Blue="58" />
+    </TRACK>
+    <TRACK TrackID="2" Name="Say &quot;Hi&quot;" Artist="&lt;Artist&gt;" Album="" Kind="WAV File" Size="31000000" TotalTime="180" AverageBpm="128.00" Tonality="F#" Location="file://localhost/D:/DJ/x.wav">
+      <TEMPO Inizio="0.000" Bpm="128.00" Metro="4/4" Battito="1" />
+    </TRACK>
+  </COLLECTION>
+  <PLAYLISTS>
+    <NODE Type="0" Name="ROOT" Count="1">
+      <NODE Type="0" Name="OneForAll" Count="1">
+        <NODE Name="Perreo" Type="1" KeyType="0" Entries="2">
+          <TRACK Key="1" />
+          <TRACK Key="2" />
+        </NODE>
+      </NODE>
+    </NODE>
+  </PLAYLISTS>
+</DJ_PLAYLISTS>
