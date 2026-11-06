@@ -13,8 +13,8 @@ Plan: `docs/diseno/plans/2026-11-06-oneforall-fase4a.md`. Spec: `docs/diseno/spe
 
 | Prueba | Resultado |
 |---|---|
-| Motor (pytest) | 368 pasan |
-| App (Vitest) | 166 pasan |
+| Motor (pytest) | 377 pasan |
+| App (Vitest) | 167 pasan |
 | E2E (Playwright, app compilada) | 9 pasan. Incluye editar la rejilla, la copia con otro BPM analizada en la biblioteca y la exportación a Rekordbox. |
 | Diseño a 1280 y 375 px | Capturas en `test-results/`. Sin desbordes laterales (corregidos la barra de acciones y la fila de tap tempo). |
 | Banco de secciones (`docs/bench/2026-11-fase4a-secciones.md`) | 6 pistas reales. Falta que el dueño marque los cortes a oído. |
