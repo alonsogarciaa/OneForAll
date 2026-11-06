@@ -75,7 +75,7 @@ def _tools_on_path() -> None:
 def build_services(paths: AppPaths, fake: bool) -> Services:
     settings = load_settings(paths.settings_path)
     hub = EventHub()
-    jobs = JobManager(paths.tmp_dir, hub.broadcast, {"download": settings.download_concurrency, "convert": CONVERT_CONCURRENCY, "analysis": ANALYSIS_CONCURRENCY, "stems": 1, "mix_export": 1})
+    jobs = JobManager(paths.tmp_dir, hub.broadcast, {"download": settings.download_concurrency, "convert": CONVERT_CONCURRENCY, "analysis": ANALYSIS_CONCURRENCY, "stems": 1, "mix_export": 1, "retempo": 1})
     jobs.purge_orphans()
     _tools_on_path()
     from .pipelines import sweep_parts
@@ -189,7 +189,15 @@ class MixExportJobBody(BaseModel):
     format: Literal["wav16", "wav24", "flac", "mp3"] | None = None
 
 
-JobBody = Annotated[Union[DownloadJobBody, PlaylistJobBody, ConvertJobBody, AnalysisJobBody, StemsJobBody, MixExportJobBody],
+class RetempoJobBody(BaseModel):
+    type: Literal["retempo"]
+    path: str
+    bpm: float = Field(gt=20, lt=400)
+    semis: int = Field(ge=-12, le=12)
+    format: Literal["wav16", "wav24", "flac", "mp3"] | None = None
+
+
+JobBody = Annotated[Union[DownloadJobBody, PlaylistJobBody, ConvertJobBody, AnalysisJobBody, StemsJobBody, MixExportJobBody, RetempoJobBody],
                     Field(discriminator="type")]
 
 AUDIO_EXT = {".mp3", ".m4a", ".aac", ".wav", ".aif", ".aiff", ".flac", ".ogg", ".opus", ".webm"}
@@ -317,6 +325,20 @@ def create_app(services: Services, token: str) -> FastAPI:
                 log.warning("playlist start failed: %s", e)
                 raise HTTPException(status_code=502, detail={"code": "offline", "message": "No se pudo cargar la playlist."})
             return {"job": job.to_dict()}
+        if isinstance(body, RetempoJobBody):
+            from .errors import UserError as _UE
+            from .prep.retempo import check_range, make_retempo_runner
+
+            src = svc.analysis.get(Path(body.path))
+            if src is None or not src.bpm:
+                raise HTTPException(status_code=409, detail={"code": "not_analyzed", "message": "Analiza primero"})
+            try:
+                check_range(src.bpm, body.bpm)
+            except _UE as e:
+                raise HTTPException(status_code=422, detail={"code": e.code, "message": e.message})
+            runner = make_retempo_runner(svc, Path(body.path), body.bpm, body.semis, body.format)
+            return {"job": svc.jobs.submit("retempo", f"Cambiar BPM · {Path(body.path).stem}", runner,
+                                           payload=body.model_dump()).to_dict()}
         if isinstance(body, MixExportJobBody):
             from .mixer.export import make_mix_export_runner
 

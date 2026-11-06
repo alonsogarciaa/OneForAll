@@ -20,6 +20,12 @@ def from_camelot(code: str) -> tuple[str, str]:
     return _FROM[code.upper()]
 
 
+def camelot_shift(code: str, semis: int) -> str:
+    """Key after transposing by `semis` semitones: each semitone is 7 steps on the wheel, same letter."""
+    n, letter = int(code[:-1]), code[-1].upper()
+    return f"{((n - 1 + 7 * semis) % 12) + 1}{letter}"
+
+
 def display_key(tonic: str, mode: Mode) -> str:
     name = SPANISH[PITCHES.index(tonic)] + ("m" if mode == "minor" else "")
     return f"{to_camelot(tonic, mode)} · {name}"
