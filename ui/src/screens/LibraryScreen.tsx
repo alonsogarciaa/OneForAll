@@ -57,6 +57,7 @@ export function LibraryScreen() {
   const openData = useUiStore((s) => s.openData)
   const openStems = useUiStore((s) => s.openStems)
   const openRetempo = useUiStore((s) => s.openRetempo)
+  const openDjExport = useUiStore((s) => s.openDjExport)
 
   const load = useCallback(() => {
     client.library(q).then(setRows).catch((e) => toast(e.message, 'error'))
@@ -109,6 +110,9 @@ export function LibraryScreen() {
             }}
           >
             Cambiar BPM y tono…
+          </button>
+          <button className="btn btn-sm" onClick={() => openDjExport(selected.size ? [...selected] : null)}>
+            Exportar a…
           </button>
           <button className="btn btn-sm" onClick={() => fileInput.current?.click()}>
             <FileAudio size={14} />

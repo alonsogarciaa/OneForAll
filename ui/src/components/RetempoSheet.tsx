@@ -6,6 +6,7 @@ import { camelotShift } from '../lib/camelot'
 import { retempoName } from '../lib/format'
 import { useJobsStore } from '../stores/jobsStore'
 import { useUiStore } from '../stores/uiStore'
+import './datasheet.css'
 import type { AnalysisRecord } from '../lib/types'
 
 const FORMATS = [
