@@ -146,7 +146,7 @@ def _remember_speed(svc, rtf: float) -> None:
         save_settings(svc.paths.settings_path, svc.settings)
 
 
-def make_enhance_runner(svc, path: Path, mode: Mode, fmt: Fmt, then_stems=None):
+def make_enhance_runner(svc, path: Path, mode: Mode, fmt: Fmt, then_stems=None, analyze_after: bool = False):
     path = Path(path)
 
     async def run(ctx) -> dict:
@@ -204,6 +204,10 @@ def make_enhance_runner(svc, path: Path, mode: Mode, fmt: Fmt, then_stems=None):
         title = track.title if track else path.stem
         svc.library.add_history(svc.library.video_source(track), title, track.artist if track else "",
                                 "enhance", "done", track.id if track and mode == "replace" else None)
+        if analyze_after and svc.analysis is not None:
+            from ..pipelines import submit_analysis
+
+            submit_analysis(svc, final, title)
         if then_stems is not None:
             from ..pipelines import submit_stems
 
@@ -247,7 +251,7 @@ def _update_library(svc, track, path: Path, final: Path, mode: Mode, ext: str) -
         svc.library.set_track_analysis(str(final), rec.bpm, musical, rec.camelot, rec.lufs)
 
 
-def submit_enhance(svc, path: Path, mode: Mode, fmt: Fmt, then_stems=None):
+def submit_enhance(svc, path: Path, mode: Mode, fmt: Fmt, then_stems=None, analyze_after: bool = False):
     """Top-level job, one per file at a time (a second request for the same file returns the running one)."""
     from ..jobs import FINAL
 
@@ -255,7 +259,7 @@ def submit_enhance(svc, path: Path, mode: Mode, fmt: Fmt, then_stems=None):
         if j.type == "enhance" and j.status not in FINAL and (j.payload or {}).get("path") == str(path):
             return j
     title = f"Mejorar · {Path(path).stem}"
-    return svc.jobs.submit("enhance", title, make_enhance_runner(svc, Path(path), mode, fmt, then_stems),
+    return svc.jobs.submit("enhance", title, make_enhance_runner(svc, Path(path), mode, fmt, then_stems, analyze_after),
                            payload={"type": "enhance", "path": str(path), "mode": mode, "format": fmt})
 
 

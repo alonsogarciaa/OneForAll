@@ -153,9 +153,16 @@ def make_download_runner(svc, req: DownloadRequest, dest_dir: Path, playlist_id:
             bitrate=_bitrate(req.options), cover_path=cover_path, added_at="",
         ))
         svc.library.add_history(t.id, t.title, t.artist, "download", "done", track_id)
-        if svc.settings.analyze_on_download and svc.analysis is not None:
+        st = svc.settings
+        if st.analyze_on_download and svc.analysis is not None and not st.enhance_on_download:
             submit_analysis(svc, final, t.title)
-        if req.then_stems is not None:
+        if st.enhance_on_download:
+            from .enhance.runner import submit_enhance
+
+            # analysis and stems start from the enhanced file, never while it is being rewritten
+            submit_enhance(svc, final, st.enhance_mode, st.enhance_format, then_stems=req.then_stems,
+                           analyze_after=st.analyze_on_download)
+        elif req.then_stems is not None:
             submit_stems(svc, final, req.then_stems.stems, req.then_stems.karaoke, t.title)
         if playlist_id is not None:
             svc.library.add_playlist_track(playlist_id, track_id, position or 0)
