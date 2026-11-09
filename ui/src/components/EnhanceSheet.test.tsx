@@ -88,4 +88,44 @@ describe('EnhanceSheet', () => {
     expect(c.enhanceEstimate).toHaveBeenCalled()
     expect(screen.queryByText(/por canción/)).toBeNull()
   })
+
+  it('Mejorar is disabled while queueing (no double submit)', async () => {
+    let release: () => void = () => undefined
+    const c = client({ enhance: vi.fn(() => new Promise((r) => { release = () => r({ job: { id: 'e1' } }) })) })
+    setup([A], c)
+    const btn = screen.getByRole('button', { name: 'Mejorar' })
+    await userEvent.click(btn)
+    expect(btn).toBeDisabled()
+    await userEvent.click(btn)
+    expect(c.enhance).toHaveBeenCalledTimes(1)
+    await act(async () => release())
+  })
+
+  it('a rejected track does not stop the rest of the batch', async () => {
+    const c = client({
+      enhance: vi.fn(async (p: string) => {
+        if (p === A.path) throw new Error('No se encuentra el archivo')
+        return { job: { id: 'e2' } }
+      })
+    })
+    const { onClose } = setup([A, B], c)
+    await userEvent.click(screen.getByRole('button', { name: 'Mejorar' }))
+    expect(c.enhance).toHaveBeenCalledTimes(2)
+    expect(onClose).toHaveBeenCalled()
+  })
+
+  it('a failed preview can be retried', async () => {
+    const { c } = setup()
+    await userEvent.click(screen.getByRole('button', { name: 'Escuchar antes' }))
+    const job = { id: 'p1', type: 'enhance_preview', title: 't', status: 'failed', stage: 'restoring', pct: 10, parent_id: null, error: { code: 'x', message: 'No se pudo preparar' }, result: null, created_at: '' }
+    act(() => useJobsStore.getState().setAll([job as any]))
+    await userEvent.click(await screen.findByRole('button', { name: 'Escuchar antes' }))
+    expect(c.enhancePreview).toHaveBeenCalledTimes(2)
+  })
+
+  it('per-song estimate averages only the tracks that have one', async () => {
+    const est = vi.fn(async (p: string) => ({ seconds: p === A.path ? 120 : null }))
+    setup([A, B], client({ enhanceEstimate: est }))
+    expect(await screen.findByText('≈ 2 min por canción · 2 min en total')).toBeInTheDocument()
+  })
 })

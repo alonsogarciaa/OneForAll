@@ -40,7 +40,18 @@ function AbPlayer({ original, enhanced }: { original: string; enhanced: string }
 
   return (
     <div className="enh-ab">
-      <audio ref={a} src={original} preload="auto" loop />
+      <audio
+        ref={a}
+        src={original}
+        preload="auto"
+        loop
+        onTimeUpdate={() => {
+          // one clock: the restored clip follows the original (also across the loop restart)
+          if (a.current && b.current && Math.abs(b.current.currentTime - a.current.currentTime) > 0.08) {
+            b.current.currentTime = a.current.currentTime
+          }
+        }}
+      />
       <audio ref={b} src={enhanced} preload="auto" loop />
       <button className="btn btn-sm icon-btn" aria-label={playing ? 'Pausa' : 'Reproducir'} onClick={toggle}>
         {playing ? <Pause size={14} /> : <Play size={14} />}
@@ -63,7 +74,8 @@ export function EnhanceSheet({ items, onClose }: { items: EnhanceItem[]; onClose
   const toast = useUiStore((s) => s.toast)
   const [mode, setMode] = useState<Mode>('copy')
   const [fmt, setFmt] = useState<Fmt>('same')
-  const [estimate, setEstimate] = useState<number | null>(null)
+  const [estimate, setEstimate] = useState<{ total: number; known: number } | null>(null)
+  const [busy, setBusy] = useState(false)
   const [previewId, setPreviewId] = useState<string | null>(null)
   const preview = useJobsStore((s) => (previewId ? s.jobs[previewId] : undefined))
   const single = items.length === 1
@@ -73,7 +85,7 @@ export function EnhanceSheet({ items, onClose }: { items: EnhanceItem[]; onClose
     Promise.all(items.map((i) => client.enhanceEstimate(i.path).catch(() => ({ seconds: null }))))
       .then((rs: { seconds: number | null }[]) => {
         const known = rs.map((r) => r.seconds).filter((s): s is number => s != null)
-        if (alive) setEstimate(known.length ? known.reduce((x, y) => x + y, 0) : null)
+        if (alive) setEstimate(known.length ? { total: known.reduce((x, y) => x + y, 0), known: known.length } : null)
       })
       .catch(() => undefined)
     return () => {
@@ -82,12 +94,20 @@ export function EnhanceSheet({ items, onClose }: { items: EnhanceItem[]; onClose
   }, [client, items])
 
   const run = async () => {
-    try {
-      for (const i of items) await client.enhance(i.path, mode, fmt)
-      toast(items.length > 1 ? `${items.length} canciones en cola para mejorar` : 'Mejora en cola')
+    setBusy(true)
+    let queued = 0
+    for (const i of items) {
+      try {
+        await client.enhance(i.path, mode, fmt)
+        queued++
+      } catch (e: any) {
+        toast(`${i.path.split(/[\/]/).pop()}: ${e.message}`, 'error') // one bad file does not stop the rest
+      }
+    }
+    setBusy(false)
+    if (queued) {
+      toast(queued > 1 ? `${queued} canciones en cola para mejorar` : 'Mejora en cola')
       onClose()
-    } catch (e: any) {
-      toast(e.message, 'error')
     }
   }
 
@@ -109,7 +129,7 @@ export function EnhanceSheet({ items, onClose }: { items: EnhanceItem[]; onClose
       onClose={onClose}
       wide
       actions={
-        <button className="btn btn-primary" disabled={!items.length} onClick={() => void run()}>
+        <button className="btn btn-primary" disabled={!items.length || busy} onClick={() => void run()}>
           Mejorar
         </button>
       }
@@ -143,7 +163,7 @@ export function EnhanceSheet({ items, onClose }: { items: EnhanceItem[]; onClose
         </fieldset>
         {single && (
           <div className="djx-dest">
-            {!previewId && (
+            {(!previewId || preview?.status === 'failed' || preview?.status === 'cancelled') && (
               <button className="btn btn-sm" onClick={() => void listen()}>
                 Escuchar antes
               </button>
@@ -154,7 +174,7 @@ export function EnhanceSheet({ items, onClose }: { items: EnhanceItem[]; onClose
           </div>
         )}
         {estimate != null && (
-          <p className="ds-sub tabular">{`≈ ${minutes(estimate / items.length)} por canción · ${minutes(estimate)} en total`}</p>
+          <p className="ds-sub tabular">{`≈ ${minutes(estimate.total / estimate.known)} por canción · ${minutes(estimate.total)} en total`}</p>
         )}
       </div>
     </GlassSheet>

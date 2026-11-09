@@ -132,3 +132,12 @@ def test_preview_clips_are_removed_on_close(svc):  # noqa: F811
         clip.parent.mkdir(parents=True, exist_ok=True)
         clip.write_bytes(b"x")
     assert not clip.exists()
+
+
+def test_analysis_response_says_if_the_track_is_enhanced(svc, song):  # noqa: F811
+    from fastapi.testclient import TestClient
+
+    with TestClient(create_app(svc, token="t")) as c:
+        assert c.get("/analysis", params={"path": str(song)}, headers=H).json()["enhanced"] is False
+        svc.library.set_enhanced(str(song))
+        assert c.get("/analysis", params={"path": str(song)}, headers=H).json()["enhanced"] is True

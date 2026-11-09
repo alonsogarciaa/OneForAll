@@ -80,7 +80,7 @@ export function createClient(
     putSettings: (s: Settings) => json<Settings>('/settings', { method: 'PUT', body: JSON.stringify(s) }),
     analyze: (paths: string[], opts: { force?: boolean; reset_bpm?: boolean } = {}) =>
       json<{ jobs: Job[] }>('/jobs', post('/jobs', { type: 'analysis', paths, ...opts })),
-    getAnalysis: (path: string) => json<{ record: AnalysisRecord; sidecar: AnalysisSidecar }>(`/analysis?${new URLSearchParams({ path })}`),
+    getAnalysis: (path: string) => json<{ record: AnalysisRecord; sidecar: AnalysisSidecar; enhanced?: boolean }>(`/analysis?${new URLSearchParams({ path })}`),
     setManualBpm: (path: string, bpm: number) => json<AnalysisRecord>('/analysis/bpm', { method: 'PUT', body: JSON.stringify({ path, bpm }) }),
     harmonic: (params: { ref_track?: number; bpm?: number; camelot?: string; bpm_tolerance?: number }) =>
       json<HarmonicRow[]>(`/harmonic?${new URLSearchParams(Object.entries(params).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)]))}`),

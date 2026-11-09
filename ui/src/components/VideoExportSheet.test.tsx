@@ -55,4 +55,18 @@ describe('VideoExportSheet', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Mostrar en carpeta' }))
     expect(window.oneforall.showInFolder).toHaveBeenCalledWith('C:/Music/Videos/A.mp4')
   })
+
+  it('a fallback track that then failed is not counted as "con portada" nor listed twice', async () => {
+    setup()
+    await userEvent.click(screen.getByRole('button', { name: 'Exportar' }))
+    const result = {
+      exported: [{ title: 'A', file: 'C:/Music/Videos/A.mp4' }],
+      fallbacks: [{ title: 'C', reason: 'Sin vídeo original' }],
+      failed: [{ title: 'C', reason: 'No se pudo crear el vídeo' }]
+    }
+    act(() => useJobsStore.getState().setAll([job({ status: 'done', result }) as any]))
+    expect(await screen.findByText('1 exportados · 0 con portada')).toBeInTheDocument()
+    expect(screen.getAllByText(/^C — /)).toHaveLength(1)
+    expect(screen.getByText('C — No se pudo crear el vídeo')).toBeInTheDocument()
+  })
 })

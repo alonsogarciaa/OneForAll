@@ -122,4 +122,12 @@ describe('DataSheet', () => {
     await userEvent.click(await screen.findByRole('button', { name: /Cambiar BPM y tono/ }))
     expect(useUiStore.getState().retempoFor).toBe('C:/m/a.mp3')
   })
+
+  it('opens Mejorar audio knowing whether the track is already enhanced', async () => {
+    const c = client({ getAnalysis: vi.fn(async () => ({ record, sidecar, info, enhanced: true })) })
+    render(<EngineTestProvider client={c}><DataSheet path="C:/m/a.mp3" onClose={() => undefined} /></EngineTestProvider>)
+    await screen.findByText('128.0')
+    await userEvent.click(screen.getByRole('button', { name: /Mejorar audio/ }))
+    expect(useUiStore.getState().enhanceFor).toEqual([{ path: 'C:/m/a.mp3', enhanced: true }])
+  })
 })

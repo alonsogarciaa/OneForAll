@@ -459,7 +459,8 @@ def create_app(services: Services, token: str) -> FastAPI:
         side["grid"] = svc.analysis.get_grid(Path(path)).to_dict()
         side.setdefault("sections", [])
         side["needs_reanalysis"] = rec.version < ANALYSIS_VERSION_NOW
-        return {"record": asdict(rec), "sidecar": side, "info": _audio_info(Path(path))}
+        track = svc.library.track_by_path(path)
+        return {"record": asdict(rec), "sidecar": side, "info": _audio_info(Path(path)), "enhanced": bool(track and track.enhanced)}
 
     @api.put("/analysis/bpm")
     def manual_bpm(body: ManualBpm):
