@@ -10,6 +10,7 @@ log = logging.getLogger(__name__)
 Kind = Literal["song", "video", "playlist", "soundcloud"]
 SearchKind = Literal["songs", "videos", "playlists", "soundcloud"]
 SC_RESULTS = 25
+RADIO_LIMIT = 50
 SC_PREVIEW_S = 31  # Go+ tracks only stream a 30 s preview
 MAX_RESULTS = 30
 PLAYLIST_LIMIT = 500
@@ -85,6 +86,17 @@ def resolve_url(text: str) -> tuple[Literal["song", "playlist"], str] | None:
     if "list" in qs:
         return "playlist", qs["list"][0]
     return None
+
+
+def _length_s(text: str) -> int | None:
+    try:
+        parts = [int(p) for p in text.split(":")]
+    except ValueError:
+        return None
+    s = 0
+    for p in parts:
+        s = s * 60 + p
+    return s
 
 
 def _thumb(item: dict) -> str | None:
@@ -209,6 +221,27 @@ class SearchService:
         if single == "playlist":
             return [i for i in items if i.id and i.title.strip()][:MAX_RESULTS]
         return filter_results(items)[:MAX_RESULTS]
+
+    def similar(self, video_id: str) -> list[SearchResult]:
+        """YouTube Music radio of a song, without the song itself."""
+        w = self.ytm.get_watch_playlist(videoId=video_id, radio=True, limit=RADIO_LIMIT)
+        items = []
+        for t in w.get("tracks") or []:
+            if not t.get("videoId") or t["videoId"] == video_id:
+                continue
+            r = _from_ytm(t, "song")
+            if r.duration_s is None and t.get("length"):
+                r.duration_s = _length_s(t["length"])
+            items.append(r)
+        return filter_results(items)
+
+    def moods(self) -> list[dict]:
+        cats = self.ytm.get_mood_categories()
+        return [{"title": title, "items": [{"title": i["title"], "params": i["params"]} for i in items]}
+                for title, items in cats.items()]
+
+    def mood_playlists(self, params: str) -> list[SearchResult]:
+        return [r for r in (_from_ytm(p, "playlist") for p in self.ytm.get_mood_playlists(params)) if r.id]
 
     def get_song(self, video_id: str) -> SearchResult:
         d = self.ytm.get_song(video_id)["videoDetails"]

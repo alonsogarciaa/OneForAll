@@ -340,6 +340,44 @@ def create_app(services: Services, token: str) -> FastAPI:
                 r.in_library = svc.library.find_duplicate(r.id, r.artist, r.title) is not None
         return [r.model_dump() for r in results]
 
+    @api.get("/discover/similar")
+    async def discover_similar(track_id: int | None = None, video_id: str | None = None):
+        from .discover.recs import rec_rows, seed_for_track
+
+        if track_id is None and not video_id:
+            raise HTTPException(status_code=422, detail={"code": "bad_request", "message": "Falta la canción"})
+        if track_id is not None:
+            track = svc.library.track_by_id(track_id)
+            if track is None:
+                raise HTTPException(status_code=404, detail={"code": "not_found", "message": "No está en la biblioteca"})
+            video_id = await asyncio.to_thread(seed_for_track, svc, track)
+        if not video_id:
+            return {"seed": None, "items": []}
+        try:
+            seed = await asyncio.to_thread(svc.search.get_song, video_id)
+            items = await asyncio.to_thread(svc.search.similar, video_id)
+        except Exception as e:
+            log.warning("recommendations failed: %s", e)
+            raise HTTPException(status_code=502, detail={"code": "offline", "message": "Sin conexión"})
+        return {"seed": seed.model_dump(), "items": rec_rows(svc, items)}
+
+    @api.get("/discover/moods")
+    async def discover_moods():
+        try:
+            return await asyncio.to_thread(svc.search.moods)
+        except Exception as e:
+            log.warning("moods failed: %s", e)
+            raise HTTPException(status_code=502, detail={"code": "offline", "message": "Sin conexión"})
+
+    @api.get("/discover/mood")
+    async def discover_mood(params: str):
+        try:
+            pls = await asyncio.to_thread(svc.search.mood_playlists, params)
+        except Exception as e:
+            log.warning("mood playlists failed: %s", e)
+            raise HTTPException(status_code=502, detail={"code": "offline", "message": "Sin conexión"})
+        return [p.model_dump() for p in pls]
+
     @api.get("/playlist/{playlist_id}")
     async def playlist(playlist_id: str):
         try:

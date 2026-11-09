@@ -31,12 +31,32 @@ SC_TRACKS = [
 ]
 
 
+def _rec(i: int, title: str) -> SearchResult:
+    # ids ending in 8 analyse at 128 BPM in the fake clip downloader, the rest at 120
+    vid = f"fakerec{i}"
+    return SearchResult(kind="song", id=vid, title=title, artist="Fake Recs", album="", duration_s=200, views=100,
+                        thumbnail=None, url=f"https://music.youtube.com/watch?v={vid}")
+
+
+RECS = [_rec(i, f"Recomendada {i}") for i in range(1, 9)]
+
+
 class FakeSearch:
     def search(self, q: str, kind: str) -> list[SearchResult]:
         return {"songs": list(SONGS), "videos": [VIDEO], "playlists": [PLAYLIST], "soundcloud": list(SC_TRACKS)}[kind]
 
     def soundcloud(self, q: str) -> list[SearchResult]:
         return list(SC_TRACKS)
+
+    def similar(self, video_id: str) -> list[SearchResult]:
+        return [r for r in RECS if r.id != video_id]
+
+    def moods(self) -> list[dict]:
+        return [{"title": "Moods & moments", "items": [{"title": "Fiesta", "params": "fake-fiesta"}]},
+                {"title": "Genres", "items": [{"title": "Reggaetón", "params": "fake-reggaeton"}]}]
+
+    def mood_playlists(self, params: str) -> list[SearchResult]:
+        return [PLAYLIST]
 
     def get_playlist(self, playlist_id: str) -> PlaylistInfo:
         return PlaylistInfo(id="PLfake", title="Fake Playlist", tracks=list(PLAYLIST_TRACKS))
