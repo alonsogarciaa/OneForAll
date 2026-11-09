@@ -52,3 +52,19 @@ async def fake_downloader(ctx, url: str) -> Path:
     await proc.wait()
     ctx.check_cancelled()
     return out
+
+
+async def fake_video_downloader(ctx, url: str, quality: str) -> Path:
+    """A 5 s test pattern standing in for the YouTube video; a "private" id is unavailable."""
+    if "private" in url.lower():
+        raise user_error("unavailable")
+    ctx.report("fetching_video", 50)
+    out = ctx.tmp_dir / "video.mp4"
+    proc = await asyncio.create_subprocess_exec(
+        find_tool("ffmpeg"), "-v", "error", "-nostdin", "-f", "lavfi", "-i", "testsrc=d=5:s=640x360:r=25",
+        "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p", "-y", str(out),
+    )
+    ctx.register_process(proc)
+    await proc.wait()
+    ctx.check_cancelled()
+    return out

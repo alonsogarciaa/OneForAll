@@ -27,6 +27,7 @@ class Settings(BaseModel):
     stems_dir: str | None = None  # None: <music_dir>/Stems
     stems_format: Literal["wav16", "wav24", "flac", "mp3"] = "wav16"
     stems_backend: Literal["auto", "cpu"] = "auto"
+    videos_dir: str | None = None  # None: <music_dir>/Videos
     enhance_on_download: bool = False
     enhance_mode: Literal["copy", "replace"] = "replace"
     enhance_format: Literal["same", "flac"] = "same"
