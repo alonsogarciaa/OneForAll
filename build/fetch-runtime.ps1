@@ -100,6 +100,6 @@ if (-not (Test-Path $apolloBin)) {
 & $pyexe -c "import sys; from pathlib import Path; from djengine.enhance.models import convert, SAFE; d = Path(sys.argv[1]); convert(d / 'pytorch_model.bin', d / SAFE); print('apollo model ok')" $apollo
 if ($LASTEXITCODE -ne 0) { throw 'apollo model convert failed' }
 Remove-Item $apolloBin  # only the safetensors copy ships
-& $pyexe -c "import numpy as np; from djengine.enhance.apollo import ApolloRestorer; y = ApolloRestorer('cpu').restore(np.zeros((2, 44100), dtype=np.float32), lambda p: None, lambda: False); assert y.shape == (2, 44100); print('enhance ok')"
+& $pyexe -c "import numpy as np; from djengine.enhance.apollo import ApolloRestorer; y = ApolloRestorer().restore(np.zeros((2, 44100), dtype=np.float32), lambda p: None, lambda: False); assert y.shape == (2, 44100); print('enhance ok')"
 if ($LASTEXITCODE -ne 0) { throw 'enhance smoke test failed' }
 Remove-Item Env:\ONEFORALL_MODELS

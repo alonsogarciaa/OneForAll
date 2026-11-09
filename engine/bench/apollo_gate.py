@@ -25,7 +25,7 @@ def main() -> None:
     ap.add_argument("--seconds", type=float, default=30.0)
     args = ap.parse_args()
     OUT.mkdir(parents=True, exist_ok=True)
-    r = ApolloRestorer.shared("cpu")
+    r = ApolloRestorer.shared()
     key, rows = {}, []
     for i, f in enumerate(args.files, 1):
         y = load_audio(Path(f))

@@ -37,3 +37,7 @@ Umbral: preferir la versión mejorada en al menos 4 de las 5.
 ## DirectML
 
 No se ha probado todavía. En la Fase 3a, con esta misma GPU (RX 9060 XT), DirectML calculó mal Demucs (−43 dB). Además, `onnxruntime-directml` choca con el `onnxruntime` de la app. Apollo usa STFT complejo, así que exportarlo a ONNX exigiría reescribir el STFT y el iSTFT como convoluciones.
+
+## Decisión del dueño (2026-11-09)
+
+Se sigue con la CPU sola, aunque tarde unos 12 min por canción. Las canciones se procesan en cola y en segundo plano. No se prueba DirectML en esta fase.

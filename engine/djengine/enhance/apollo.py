@@ -101,16 +101,7 @@ class ApolloRestorer(_Chunked):
     _shared: dict = {}
     _lock = threading.Lock()
 
-    def __init__(self, backend: str = "cpu"):
-        self.backend = backend
-        if backend == "directml":
-            import onnxruntime
-
-            from .accel import onnx_dir, ONNX_MODEL
-
-            self._sess = onnxruntime.InferenceSession(
-                str(onnx_dir() / ONNX_MODEL), providers=["DmlExecutionProvider", "CPUExecutionProvider"])
-            return
+    def __init__(self):
         import torch
 
         from ..vendor.apollo.model import Apollo
@@ -124,19 +115,13 @@ class ApolloRestorer(_Chunked):
         self._model.eval()
 
     @classmethod
-    def shared(cls, backend: str = "cpu") -> "ApolloRestorer":
+    def shared(cls) -> "ApolloRestorer":
         with cls._lock:
-            if backend not in cls._shared:
-                cls._shared[backend] = cls(backend)
-            return cls._shared[backend]
+            if "cpu" not in cls._shared:
+                cls._shared["cpu"] = cls()
+            return cls._shared["cpu"]
 
     def _run(self, x):
-        size = int(CHUNK_S * SR)
-        pad = size - x.shape[1]
-        if self.backend == "directml":  # the exported graph has a fixed 10 s input
-            xin = np.pad(x, ((0, 0), (0, pad))) if pad > 0 else x
-            y = self._sess.run(None, {"audio": xin[None].astype(np.float32)})[0][0]
-            return y[:, : x.shape[1]].astype(np.float32)
         import torch
 
         with torch.inference_mode():
@@ -147,6 +132,4 @@ class ApolloRestorer(_Chunked):
 def get_restorer(svc) -> Restorer:
     if svc.fake or os.environ.get("ONEFORALL_FAKE_ENHANCE") == "1":
         return FakeRestorer()
-    from .accel import backend
-
-    return ApolloRestorer.shared(backend(svc.settings))
+    return ApolloRestorer.shared()
