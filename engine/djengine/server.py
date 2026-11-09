@@ -279,6 +279,7 @@ def create_app(services: Services, token: str) -> FastAPI:
     async def lifespan(app: FastAPI):
         yield
         await svc.jobs.cancel_all()
+        shutil.rmtree(svc.paths.tmp_dir / "preview", ignore_errors=True)
 
     app = FastAPI(lifespan=lifespan)
     # The Electron renderer loads from file:// (origin "null") or the dev server on localhost.
@@ -306,6 +307,7 @@ def create_app(services: Services, token: str) -> FastAPI:
 
     @api.put("/settings")
     def put_settings(s: Settings):
+        s.enhance_rtf = svc.settings.enhance_rtf  # measured by the engine, never by the UI
         svc.settings = s
         save_settings(svc.paths.settings_path, s)
         svc.jobs.set_concurrency("download", s.download_concurrency)

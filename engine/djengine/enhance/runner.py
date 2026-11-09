@@ -70,6 +70,8 @@ def target_codec(path: Path, fmt: Fmt, probed: tuple[str, int | None] | None = N
     deep = (bits or 16) > 16
     if suffix == ".m4a" and codec == "alac":
         return "m4a", ["-c:a", "alac"]
+    if suffix == ".ogg" and codec == "opus":
+        return "ogg", ["-c:a", "libopus", "-b:a", "256k"]
     if suffix in _LOSSY:
         ext, args = _LOSSY[suffix]
         return ext, list(args)
@@ -132,10 +134,10 @@ def _move_aside(original: Path, backup_dir: Path) -> Path:
     try:
         os.replace(original, backup)
         return backup
-    except PermissionError:
-        raise BUSY
     except OSError as e:
-        if getattr(e, "winerror", None) in (32, 33):
+        if getattr(e, "winerror", None) in (32, 33):  # sharing / lock violation: open in another program
+            raise BUSY
+        if isinstance(e, PermissionError) and getattr(e, "winerror", None) is None:
             raise BUSY
         if not (e.errno == errno.EXDEV or getattr(e, "winerror", None) == 17):
             raise user_error("disk")
@@ -234,8 +236,17 @@ def _make_enhance(svc, path: Path, mode: Mode, fmt: Fmt, then_stems, analyze_aft
                         shutil.move(str(backup), str(path))
                 raise
 
-        await asyncio.to_thread(_save_analysis, svc, src_rec, side, path, final, mode)
-        _update_library(svc, track, path, final, mode, ext)
+        # the file is in place: bookkeeping is best-effort, it never turns a done enhance into a failure
+        try:
+            _update_library(svc, track, path, final, mode, ext)
+        except Exception as e:
+            log.warning("library not updated after enhance of %s: %s", final.name, e)
+        try:
+            await asyncio.to_thread(_save_analysis, svc, src_rec, side, path, final, mode)
+            if svc.analysis.get(final) is not None:
+                _set_library_analysis(svc, final)
+        except Exception as e:
+            log.warning("analysis not carried over to %s: %s", final.name, e)
         _remember_speed(svc, rtf)
         title = track.title if track else path.stem
         svc.library.add_history(svc.library.video_source(track), title, track.artist if track else "",
@@ -268,7 +279,6 @@ def _save_analysis(svc, src_rec, side, path: Path, final: Path, mode: Mode) -> N
 
 
 def _update_library(svc, track, path: Path, final: Path, mode: Mode, ext: str) -> None:
-    rec = svc.analysis.get(final)
     if mode == "copy":
         title = enhanced_name(track.title) if track else final.stem
         svc.library.add_track(TrackRecord(
@@ -280,19 +290,25 @@ def _update_library(svc, track, path: Path, final: Path, mode: Mode, ext: str) -
     elif track is None:
         svc.library.add_track(TrackRecord(None, None, final.stem, "", "", None, None, str(final), ext, None, None, ""))
     svc.library.set_enhanced(str(final))
-    if rec is not None:
-        from ..analysis.camelot import tag_key
 
-        musical = tag_key(rec.tonic, rec.mode, "musical") if rec.tonic and rec.mode else None
-        svc.library.set_track_analysis(str(final), rec.bpm, musical, rec.camelot, rec.lufs)
+
+def _set_library_analysis(svc, final: Path) -> None:
+    from ..analysis.camelot import tag_key
+
+    rec = svc.analysis.get(final)
+    musical = tag_key(rec.tonic, rec.mode, "musical") if rec.tonic and rec.mode else None
+    svc.library.set_track_analysis(str(final), rec.bpm, musical, rec.camelot, rec.lufs)
 
 
 def submit_enhance(svc, path: Path, mode: Mode, fmt: Fmt, then_stems=None, analyze_after: bool = False):
     """Top-level job, one per file at a time (a second request for the same file returns the running one)."""
     from ..jobs import FINAL
 
+    from ..server import _norm
+
+    key = _norm(path)
     for j in svc.jobs.list():
-        if j.type == "enhance" and j.status not in FINAL and (j.payload or {}).get("path") == str(path):
+        if j.type == "enhance" and j.status not in FINAL and _norm((j.payload or {}).get("path", "")) == key:
             return j
     title = f"Mejorar · {Path(path).stem}"
     return svc.jobs.submit("enhance", title, make_enhance_runner(svc, Path(path), mode, fmt, then_stems, analyze_after),

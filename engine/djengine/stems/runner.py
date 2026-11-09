@@ -42,6 +42,20 @@ def _duration(path: Path) -> float | None:
             return float(f.info.length)
         return sf.info(str(path)).duration
     except Exception:
+        return _probe_duration(path)
+
+
+def _probe_duration(path: Path) -> float | None:
+    """ffprobe for containers mutagen and soundfile cannot read (webm)."""
+    import subprocess
+
+    from ..tools import find_tool
+
+    try:
+        r = subprocess.run([find_tool("ffprobe"), "-v", "error", "-show_entries", "format=duration", "-of",
+                            "default=nw=1:nk=1", str(path)], capture_output=True, text=True, timeout=30)
+        return float(r.stdout.strip()) or None
+    except Exception:
         return None
 
 

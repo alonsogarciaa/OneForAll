@@ -33,7 +33,7 @@ def video_args(audio: Path, image: Path | None, still: bool, quality: str, speed
     elif still:
         inputs = ["-f", "lavfi", "-i", f"color=c={BG}:s={w}x{h}:r=2"]
         font = f"fontfile={_ff_path(_FONT)}:" if _FONT.is_file() else ""
-        vf = (f"drawtext={font}textfile={_ff_path(text_file)}:expansion=none:fontcolor=white:fontsize={h // 18}:"
+        vf = (f"drawtext={font}textfile={text_file.name}:expansion=none:fontcolor=white:fontsize={h // 18}:"
               f"x=(w-text_w)/2:y=(h-text_h)/2:line_spacing={h // 40},format=yuv420p") if text_file else "format=yuv420p"
     else:
         inputs = ["-i", str(image)]
@@ -90,8 +90,8 @@ async def _fetch(svc, ctx, vid: str, quality: str, cache: Path) -> Path:
     return final
 
 
-async def _render(ctx, args: list[str], total: float, base: float, share: float) -> None:
-    proc = await asyncio.create_subprocess_exec(find_tool("ffmpeg"), *args,
+async def _render(ctx, args: list[str], total: float, base: float, share: float, cwd: Path | None = None) -> None:
+    proc = await asyncio.create_subprocess_exec(find_tool("ffmpeg"), *args, cwd=str(cwd) if cwd else None,
                                                 stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
     ctx.register_process(proc)
     err_task = asyncio.create_task(proc.stderr.read())
@@ -152,7 +152,7 @@ def make_video_export_runner(svc, track_ids: list[int], quality: str, out_dir: s
             seconds = _duration(path)
             args = video_args(path, image, still, quality, speed, tmp_out, text_file=text_file, duration=seconds)
             try:
-                await _render(ctx, args, seconds or 0.0, base, share * 0.95)
+                await _render(ctx, args, seconds or 0.0, base, share * 0.95, cwd=work)  # textfile is relative
             except UserError:
                 result["failed"].append({"title": t.title, "reason": FAILED})
                 continue
