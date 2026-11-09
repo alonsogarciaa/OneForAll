@@ -1,5 +1,5 @@
 import type {
-  AnalysisRecord, AnalysisSidecar, HarmonicRow,
+  AnalysisRecord, AnalysisSidecar, Grid, GridOp, HarmonicRow, Section,
   ConvertOptions, DownloadRequest, EngineEvent, HistoryEntry, Job, PlaylistInfo, SearchKind, SearchResult, Settings, TrackRecord
 } from './types'
 
@@ -89,6 +89,17 @@ export function createClient(
       json<{ jobs: Job[] }>('/jobs', post('/jobs', { type: 'stems', paths, stems, karaoke })),
     getStems: (path: string) =>
       json<{ folder: string | null; stems: { stem: string; file: string; size_bytes: number }[] }>(`/stems?${new URLSearchParams({ path })}`),
+    putGrid: (path: string, op: GridOp) =>
+      json<{ grid: Grid }>('/analysis/grid', { method: 'PUT', body: JSON.stringify({ path, ...op }) }),
+    putSections: (path: string, sections: Section[] | null) =>
+      json<{ sections: Section[] }>('/analysis/sections', {
+        method: 'PUT',
+        body: JSON.stringify(sections ? { path, sections } : { path, reset: true })
+      }),
+    retempo: (path: string, bpm: number, semis: number, format?: string) =>
+      json<{ job: Job }>('/jobs', post('/jobs', { type: 'retempo', path, bpm, semis, ...(format ? { format } : {}) })),
+    djExport: (target: 'rekordbox' | 'virtualdj' | 'serato', trackIds: number[] | null, out?: string) =>
+      json<{ job: Job }>('/jobs', post('/jobs', { type: 'dj_export', target, track_ids: trackIds, ...(out ? { out } : {}) })),
     getMixerState: (path: string) => json<{ state: unknown }>(`/mixer/state?${new URLSearchParams({ path })}`),
     putMixerState: (path: string, state: unknown) =>
       json<{ ok: boolean }>('/mixer/state', { method: 'PUT', body: JSON.stringify({ path, state }) }),

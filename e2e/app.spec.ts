@@ -1,5 +1,5 @@
 import { test, expect, _electron as electron, type ElectronApplication, type Page } from '@playwright/test'
-import { mkdtempSync, readdirSync, existsSync, statSync } from 'node:fs'
+import { mkdtempSync, readdirSync, readFileSync, existsSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { execFileSync } from 'node:child_process'
 import { join } from 'node:path'
@@ -203,4 +203,64 @@ test('mixer: open from the data sheet, play, speed, loop export, state restored'
   await page.keyboard.press('Escape')
   await page.getByRole('button', { name: 'Mezclador' }).click()
   await expect(page.getByLabel('Velocidad', { exact: true })).toHaveValue('0.75', { timeout: 30_000 })
+})
+
+test('DJ tools: grid edit, change BPM into a new analysed file, export to Rekordbox', async () => {
+  await launch()
+  await search('graciosa')
+  await downloadFirstSong()
+  await nav('Biblioteca')
+  const rows = page.locator('.stable-row:not(.stable-head)')
+  await expect(rows.first()).toBeVisible({ timeout: 30_000 })
+  await rows.first().dblclick()
+  await expect(page.locator('.ds-value').first()).not.toHaveText('—', { timeout: 30_000 })
+
+  // grid: +1 beat moves the "1"
+  await page.getByRole('button', { name: 'Rejilla', exact: true }).click()
+  const readout = page.locator('.ds-gridctl .ds-sub').first()
+  const before = await readout.textContent()
+  await page.getByRole('button', { name: '+1 golpe' }).click()
+  await expect(readout).not.toHaveText(before ?? '', { timeout: 10_000 })
+  await page.screenshot({ path: 'test-results/datasheet-grid-desktop.png' })
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: 'test-results/datasheet-grid-375.png' })
+  expect(await page.locator('.sheet').evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1)
+  const outside = await page.locator('.sheet').evaluate((sheet) => {
+    const box = sheet.getBoundingClientRect()
+    return [...sheet.querySelectorAll('.sheet-actions .btn')].filter((b) => {
+      const r = b.getBoundingClientRect()
+      return r.left < box.left - 1 || r.right > box.right + 1
+    }).length
+  })
+  expect(outside).toBe(0)
+  expect(await page.locator('.sheet-body').evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1)
+  await page.setViewportSize({ width: 1280, height: 800 })
+
+  // change BPM: a new, analysed copy appears in the library
+  await page.getByRole('dialog').getByRole('button', { name: /Cambiar BPM y tono/ }).click()
+  const num = page.getByLabel('BPM destino (número)')
+  const bpm = Number(await num.inputValue())
+  await num.fill(String(Math.round(bpm * 0.9)))
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: 'test-results/retempo-375.png' })
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await page.getByRole('button', { name: 'Crear copia' }).click()
+  await expect(page.getByRole('button', { name: 'Mostrar en carpeta' })).toBeVisible({ timeout: 60_000 })
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('Escape')
+  await expect(rows).toHaveCount(2, { timeout: 20_000 })
+  await expect(rows.filter({ hasText: 'BPM' })).toHaveCount(1)
+
+  // export the whole library to Rekordbox
+  await page.getByRole('button', { name: 'Exportar a…' }).click()
+  await page.getByRole('radio', { name: 'Toda la biblioteca' }).check()
+  await page.getByRole('button', { name: 'Exportar', exact: true }).click()
+  await expect(page.getByText(/2 exportadas/)).toBeVisible({ timeout: 30_000 })
+  const xml = join(musicDir, 'OneForAll rekordbox.xml')
+  expect(existsSync(xml)).toBe(true)
+  const text = readFileSync(xml, 'utf-8')
+  expect(text.match(/<TRACK TrackID=/g)?.length).toBe(2)
+  expect(text).toContain('<TEMPO ')
 })

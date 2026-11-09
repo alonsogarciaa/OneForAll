@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { DataSheet } from './DataSheet'
 import { EngineTestProvider } from '../lib/engine'
 import { EngineError } from '../lib/engineClient'
+import { useUiStore } from '../stores/uiStore'
 
 const record = {
   path: 'C:/m/a.mp3', bpm: 128, bpm_confidence: 0.8, bpm_source: 'auto', tonic: 'A', mode: 'minor', camelot: '8A',
@@ -85,5 +86,40 @@ describe('DataSheet', () => {
     render(<EngineTestProvider client={c}><DataSheet path="C:/m/a.mp3" onClose={() => undefined} /></EngineTestProvider>)
     await userEvent.click(await screen.findByRole('button', { name: 'Volver al automático' }))
     expect(c.analyze).toHaveBeenCalledWith(['C:/m/a.mp3'], { reset_bpm: true })
+  })
+
+  it('an old analysis asks to re-analyse for sections', async () => {
+    const c = client({ getAnalysis: vi.fn(async () => ({ record, sidecar: { ...sidecar, needs_reanalysis: true }, info })) })
+    render(<EngineTestProvider client={c}><DataSheet path="C:/m/a.mp3" onClose={() => undefined} /></EngineTestProvider>)
+    expect(await screen.findByText('Reanaliza para detectar secciones')).toBeInTheDocument()
+  })
+
+  it('the Rejilla toggle reveals the grid controls and a grid change reloads the analysis', async () => {
+    const grid = { anchor: 0.5, bpm: 128, source: 'auto', meter: 4 }
+    const c = client({
+      getAnalysis: vi.fn(async () => ({ record, sidecar: { ...sidecar, grid }, info })),
+      putGrid: vi.fn(async () => ({ grid: { ...grid, anchor: 0.97, source: 'manual' } }))
+    })
+    render(<EngineTestProvider client={c}><DataSheet path="C:/m/a.mp3" onClose={() => undefined} /></EngineTestProvider>)
+    await screen.findByText('128.0')
+    expect(screen.queryByRole('button', { name: '+1 golpe' })).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Rejilla' }))
+    await userEvent.click(screen.getByRole('button', { name: '+1 golpe' }))
+    expect(c.putGrid).toHaveBeenCalledWith('C:/m/a.mp3', { shift_beats: 1 })
+    await waitFor(() => expect(c.getAnalysis).toHaveBeenCalledTimes(2))
+  })
+
+  it('shows the sections and their editor', async () => {
+    const sections = [{ start: 0, end: 100, label: 'Intro' }, { start: 100, end: 213, label: 'Estribillo/Drop' }]
+    const grid = { anchor: 0.5, bpm: 128, source: 'auto', meter: 4 }
+    const c = client({ getAnalysis: vi.fn(async () => ({ record, sidecar: { ...sidecar, grid, sections }, info })) })
+    render(<EngineTestProvider client={c}><DataSheet path="C:/m/a.mp3" onClose={() => undefined} /></EngineTestProvider>)
+    expect(await screen.findByRole('combobox', { name: 'Etiqueta de la sección 2' })).toHaveValue('Estribillo/Drop')
+  })
+
+  it('opens the change BPM and key sheet', async () => {
+    render(<EngineTestProvider client={client()}><DataSheet path="C:/m/a.mp3" onClose={() => undefined} /></EngineTestProvider>)
+    await userEvent.click(await screen.findByRole('button', { name: /Cambiar BPM y tono/ }))
+    expect(useUiStore.getState().retempoFor).toBe('C:/m/a.mp3')
   })
 })

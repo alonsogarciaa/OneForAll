@@ -220,6 +220,13 @@ class Library:
             "INSERT INTO playlists (yt_id, name, path, added_at) VALUES (?,?,?,?)", (yt_id, name, str(path), _now())
         ).lastrowid
 
+    def list_playlists(self) -> list[tuple[int, str]]:
+        return [(r["id"], r["name"]) for r in self._query("SELECT id, name FROM playlists ORDER BY id")]
+
+    def playlist_track_ids(self, playlist_id: int) -> list[int]:
+        rows = self._query("SELECT track_id FROM playlist_tracks WHERE playlist_id=? ORDER BY position", (playlist_id,))
+        return [r["track_id"] for r in rows]
+
     def add_playlist_track(self, playlist_id, track_id, position) -> None:
         self._exec(
             "INSERT INTO playlist_tracks (playlist_id, track_id, position) VALUES (?,?,?)",

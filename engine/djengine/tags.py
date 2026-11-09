@@ -215,6 +215,22 @@ def read_tags(path: Path) -> TrackMeta:
     return _read_vorbis(audio)
 
 
+def read_cover(path: Path) -> bytes | None:
+    """The embedded front cover, if any (ID3 APIC, MP4 covr or FLAC/Vorbis picture)."""
+    audio = _open(Path(path))
+    tags = audio.tags
+    if tags is None:
+        return None
+    if isinstance(audio, (MP3, WAVE, AIFF)):
+        pics = tags.getall("APIC")
+        return bytes(pics[0].data) if pics else None
+    if isinstance(audio, MP4):
+        covr = tags.get("covr")
+        return bytes(covr[0]) if covr else None
+    pics = getattr(audio, "pictures", None)
+    return bytes(pics[0].data) if pics else None
+
+
 def set_bpm_key(path: Path, bpm: float | None, key: str | None) -> None:
     """Edit only the BPM and key fields in place; every other tag, comment and picture is left alone.
 

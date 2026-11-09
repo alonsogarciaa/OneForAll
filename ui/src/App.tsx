@@ -9,6 +9,8 @@ import { ConverterScreen } from './screens/ConverterScreen'
 import { SettingsScreen } from './screens/SettingsScreen'
 import { HarmonyScreen } from './screens/HarmonyScreen'
 import { MixerSheet } from './components/MixerSheet'
+import { RetempoSheet } from './components/RetempoSheet'
+import { DjExportSheet } from './components/DjExportSheet'
 import { PlaylistSummaryHost } from './components/PlaylistSummarySheet'
 import { DataSheet } from './components/DataSheet'
 import { StemsSheet } from './components/StemsSheet'
@@ -42,6 +44,18 @@ function MixerSheetHost() {
   return path ? <MixerSheet key={path} path={path} onClose={close} /> : null
 }
 
+function RetempoSheetHost() {
+  const path = useUiStore((s) => s.retempoFor)
+  const close = useUiStore((s) => s.closeRetempo)
+  return path ? <RetempoSheet key={path} path={path} onClose={close} /> : null
+}
+
+function DjExportSheetHost() {
+  const djExport = useUiStore((s) => s.djExport)
+  const close = useUiStore((s) => s.closeDjExport)
+  return djExport ? <DjExportSheet trackIds={djExport.trackIds} onClose={close} /> : null
+}
+
 function Body() {
   const { status, retry } = useEngine()
   if (status === 'failed') {
@@ -70,6 +84,8 @@ function Body() {
       <DataSheetHost />
       <StemsSheetHost />
       <MixerSheetHost />
+      <RetempoSheetHost />
+      <DjExportSheetHost />
     </>
   )
 }

@@ -3,6 +3,8 @@ import { FolderOpen, Pause, Play, RefreshCw, X } from 'lucide-react'
 import { GlassSheet } from './GlassSheet'
 import { Waveform } from './Waveform'
 import { StemsSection } from './StemsSection'
+import { GridControls } from './GridControls'
+import { SectionEditor } from './SectionEditor'
 import { useClient } from '../lib/engine'
 import { displayKey } from '../lib/camelot'
 import { formatDuration } from '../lib/format'
@@ -37,6 +39,16 @@ function infoLine(i?: Loaded['info']): string | null {
 const MIN_BPM = 20
 const MAX_BPM = 400
 
+/** Bar start times from the grid (every 4th beat counted from the anchor). */
+function barTimes(side: AnalysisSidecar): number[] {
+  const g = side.grid
+  if (!g || !g.bpm) return []
+  const bar = (4 * 60) / g.bpm
+  const out: number[] = []
+  for (let t = g.anchor - Math.floor(g.anchor / bar) * bar; t < side.duration; t += bar) out.push(Math.round(t * 1000) / 1000)
+  return out
+}
+
 export function DataSheet({ path, onClose }: { path: string; onClose(): void }) {
   const client = useClient()
   const toast = useUiStore((s) => s.toast)
@@ -50,6 +62,8 @@ export function DataSheet({ path, onClose }: { path: string; onClose(): void }) 
   const tapper = useRef(new TapTempo())
   const [tapBpm, setTapBpm] = useState<number | null>(null)
   const started = useRef(false)
+  const [gridMode, setGridMode] = useState(false)
+  const openRetempo = useUiStore((s) => s.openRetempo)
 
   const load = useCallback(
     async (analyzeIfMissing: boolean) => {
@@ -161,6 +175,9 @@ export function DataSheet({ path, onClose }: { path: string; onClose(): void }) 
             <FolderOpen size={15} />
             Mostrar en carpeta
           </button>
+          <button className="btn" onClick={() => openRetempo(path)} disabled={analyzing || !data?.record.bpm}>
+            Cambiar BPM y tono…
+          </button>
           <button className="btn" onClick={reanalyze} disabled={analyzing}>
             <RefreshCw size={15} />
             Reanalizar
@@ -188,6 +205,7 @@ export function DataSheet({ path, onClose }: { path: string; onClose(): void }) 
             <Waveform
               data={data.sidecar.waveform}
               beats={data.sidecar.beats}
+              sections={data.sidecar.sections}
               duration={data.sidecar.duration}
               position={position}
               onSeek={(s) => {
@@ -198,6 +216,9 @@ export function DataSheet({ path, onClose }: { path: string; onClose(): void }) 
             <span className="ds-time tabular">
               {formatDuration(position)} / {formatDuration(data.sidecar.duration)}
             </span>
+            <button className="btn btn-sm" aria-pressed={gridMode} onClick={() => setGridMode((v) => !v)}>
+              Rejilla
+            </button>
             <audio
               ref={audio}
               src={client.audioUrl(path)}
@@ -207,6 +228,25 @@ export function DataSheet({ path, onClose }: { path: string; onClose(): void }) 
               onTimeUpdate={(e) => setPosition(e.currentTarget.currentTime)}
             />
           </div>
+          {data.sidecar.needs_reanalysis && <p className="ds-sub ds-notice">Reanaliza para detectar secciones</p>}
+          {gridMode && (
+            <GridControls
+              path={path}
+              grid={data.sidecar.grid ?? { anchor: data.sidecar.beats[0] ?? 0, bpm: r.bpm ?? 0, source: 'auto', meter: 4 }}
+              position={position}
+              audio={audio.current}
+              onChange={() => void load(false)}
+            />
+          )}
+          {!!data.sidecar.sections?.length && (
+            <SectionEditor
+              path={path}
+              sections={data.sidecar.sections}
+              bars={barTimes(data.sidecar)}
+              position={position}
+              onChange={() => void load(false)}
+            />
+          )}
           <div className="ds-grid">
             <div className="ds-fact ds-big">
               <span className="ds-label">BPM</span>

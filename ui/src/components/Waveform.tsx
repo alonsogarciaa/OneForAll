@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
-import type { AnalysisSidecar } from '../lib/types'
+import type { AnalysisSidecar, Section } from '../lib/types'
+import { sectionColor } from '../lib/sections'
 
 interface Props {
   data: AnalysisSidecar['waveform']
@@ -12,6 +13,8 @@ interface Props {
   onLoop?(start: number, end: number): void
   /** Beat times the loop edges snap to (Alt held: no snapping). */
   snap?: number[]
+  /** Song sections, drawn as coloured bands with their name along the top. */
+  sections?: Section[]
 }
 
 const MIN_LOOP_S = 0.25
@@ -33,7 +36,7 @@ function mix(l: number, m: number, h: number): string {
   return `rgb(${c[0]},${c[1]},${c[2]})`
 }
 
-export function Waveform({ data, beats, duration, position, onSeek, loop = null, onLoop, snap }: Props) {
+export function Waveform({ data, beats, duration, position, onSeek, loop = null, onLoop, snap, sections }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null)
   const drag = useRef<{ t0: number; anchor: number | null } | null>(null)
 
@@ -81,6 +84,22 @@ export function Waveform({ data, beats, duration, position, onSeek, loop = null,
         ctx.fillRect(x, mid - amp, 1, Math.max(1, amp * 2))
       }
       ctx.globalAlpha = 1
+      if (duration > 0 && sections?.length) {
+        ctx.font = '600 10px system-ui, sans-serif'
+        ctx.textBaseline = 'top'
+        for (const s of sections) {
+          const x0 = (s.start / duration) * w
+          const x1 = (s.end / duration) * w
+          ctx.fillStyle = sectionColor(s.label)
+          ctx.globalAlpha = 0.85
+          ctx.fillRect(x0, 0, Math.max(1, x1 - x0 - 1), 14)
+          ctx.globalAlpha = 1
+          if (x1 - x0 > 40) {
+            ctx.fillStyle = '#000000'
+            ctx.fillText(s.label, x0 + 4, 2, x1 - x0 - 8)
+          }
+        }
+      }
       if (duration > 0 && loop) {
         const x0 = (loop.start / duration) * w
         const x1 = (loop.end / duration) * w
@@ -118,7 +137,7 @@ export function Waveform({ data, beats, duration, position, onSeek, loop = null,
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(draw) : null
     ro?.observe(el)
     return () => ro?.disconnect()
-  }, [data, beats, duration, position, loop])
+  }, [data, beats, duration, position, loop, sections])
 
   return (
     <canvas

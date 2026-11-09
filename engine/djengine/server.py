@@ -18,6 +18,7 @@ from .convert import ConvertOptions
 from .download import download_audio, ytdlp_cmd
 from .jobs import JobManager
 from .library import Library
+from .analysis.config import ANALYSIS_VERSION as ANALYSIS_VERSION_NOW
 from .mixer.state import MixState
 from .pipelines import (DownloadRequest, make_convert_runner, make_download_runner, start_playlist, submit_analysis,
                         submit_stems)
@@ -74,7 +75,7 @@ def _tools_on_path() -> None:
 def build_services(paths: AppPaths, fake: bool) -> Services:
     settings = load_settings(paths.settings_path)
     hub = EventHub()
-    jobs = JobManager(paths.tmp_dir, hub.broadcast, {"download": settings.download_concurrency, "convert": CONVERT_CONCURRENCY, "analysis": ANALYSIS_CONCURRENCY, "stems": 1, "mix_export": 1})
+    jobs = JobManager(paths.tmp_dir, hub.broadcast, {"download": settings.download_concurrency, "convert": CONVERT_CONCURRENCY, "analysis": ANALYSIS_CONCURRENCY, "stems": 1, "mix_export": 1, "retempo": 1, "dj_export": 1})
     jobs.purge_orphans()
     _tools_on_path()
     from .pipelines import sweep_parts
@@ -153,6 +154,28 @@ class MixerStateBody(BaseModel):
     state: MixState
 
 
+class SectionIn(BaseModel):
+    start: float = Field(ge=0)
+    end: float
+    label: str
+
+
+class SectionsEdit(BaseModel):
+    path: str
+    sections: list[SectionIn] | None = Field(default=None, max_length=64)
+    reset: bool = False
+
+
+class GridEdit(BaseModel):
+    path: str
+    anchor: float | None = Field(default=None, ge=0)
+    bpm: float | None = Field(default=None, gt=20, lt=400)
+    shift_ms: float | None = Field(default=None, ge=-2000, le=2000)
+    shift_beats: int | None = Field(default=None, ge=-64, le=64)
+    scale: Literal[0.5, 2] | None = None
+    reset: bool = False
+
+
 class ManualBpm(BaseModel):
     path: str
     bpm: float = Field(gt=20, lt=400)
@@ -166,7 +189,29 @@ class MixExportJobBody(BaseModel):
     format: Literal["wav16", "wav24", "flac", "mp3"] | None = None
 
 
-JobBody = Annotated[Union[DownloadJobBody, PlaylistJobBody, ConvertJobBody, AnalysisJobBody, StemsJobBody, MixExportJobBody],
+class RetempoJobBody(BaseModel):
+    type: Literal["retempo"]
+    path: str
+    bpm: float = Field(gt=20, lt=400)
+    semis: int = Field(ge=-12, le=12)
+    format: Literal["wav16", "wav24", "flac", "mp3"] | None = None
+
+
+class DjExportJobBody(BaseModel):
+    type: Literal["dj_export"]
+    target: Literal["rekordbox", "virtualdj", "serato"]
+    track_ids: list[int] | None = None  # None: the whole library
+    out: str | None = None  # Rekordbox only
+
+    @field_validator("out")
+    @classmethod
+    def _xml(cls, v):
+        if v is not None and not v.lower().endswith(".xml"):
+            raise ValueError("el archivo de Rekordbox debe ser .xml")
+        return v
+
+
+JobBody = Annotated[Union[DownloadJobBody, PlaylistJobBody, ConvertJobBody, AnalysisJobBody, StemsJobBody, MixExportJobBody, RetempoJobBody, DjExportJobBody],
                     Field(discriminator="type")]
 
 AUDIO_EXT = {".mp3", ".m4a", ".aac", ".wav", ".aif", ".aiff", ".flac", ".ogg", ".opus", ".webm"}
@@ -294,6 +339,27 @@ def create_app(services: Services, token: str) -> FastAPI:
                 log.warning("playlist start failed: %s", e)
                 raise HTTPException(status_code=502, detail={"code": "offline", "message": "No se pudo cargar la playlist."})
             return {"job": job.to_dict()}
+        if isinstance(body, DjExportJobBody):
+            from .export.job import TITLES, make_dj_export_runner
+
+            runner = make_dj_export_runner(svc, body.target, body.track_ids, body.out)
+            return {"job": svc.jobs.submit("dj_export", f"Exportar a {TITLES[body.target]}", runner,
+                                           payload=body.model_dump()).to_dict()}
+        if isinstance(body, RetempoJobBody):
+            from .errors import UserError as _UE
+            from .prep.retempo import check_range, make_retempo_runner
+
+            src = svc.analysis.get(Path(body.path))
+            if src is None or not src.bpm:
+                raise HTTPException(status_code=409, detail={"code": "not_analyzed", "message": "Analiza primero"})
+            g = svc.analysis.get_grid(Path(body.path))
+            try:
+                check_range(g.bpm if g and g.bpm else src.bpm, body.bpm)
+            except _UE as e:
+                raise HTTPException(status_code=422, detail={"code": e.code, "message": e.message})
+            runner = make_retempo_runner(svc, Path(body.path), body.bpm, body.semis, body.format)
+            return {"job": svc.jobs.submit("retempo", f"Cambiar BPM · {Path(body.path).stem}", runner,
+                                           payload=body.model_dump()).to_dict()}
         if isinstance(body, MixExportJobBody):
             from .mixer.export import make_mix_export_runner
 
@@ -334,7 +400,14 @@ def create_app(services: Services, token: str) -> FastAPI:
         rec = svc.analysis.get(Path(path))
         if rec is None:
             raise HTTPException(status_code=404, detail={"code": "not_analyzed", "message": "Sin analizar"})
-        return {"record": asdict(rec), "sidecar": svc.analysis.get_sidecar(Path(path)), "info": _audio_info(Path(path))}
+        raw = svc.analysis.get_sidecar(Path(path))
+        if raw is None:  # record without its sidecar (deleted by hand): treat as not analysed, the sheet re-analyses
+            raise HTTPException(status_code=404, detail={"code": "not_analyzed", "message": "Sin analizar"})
+        side = dict(raw)
+        side["grid"] = svc.analysis.get_grid(Path(path)).to_dict()
+        side.setdefault("sections", [])
+        side["needs_reanalysis"] = rec.version < ANALYSIS_VERSION_NOW
+        return {"record": asdict(rec), "sidecar": side, "info": _audio_info(Path(path))}
 
     @api.put("/analysis/bpm")
     def manual_bpm(body: ManualBpm):
@@ -346,8 +419,10 @@ def create_app(services: Services, token: str) -> FastAPI:
             raise HTTPException(status_code=404, detail={"code": "not_analyzed", "message": "Sin analizar"})
         if svc.analysis.get(p) is None:  # file changed since: re-blessing the old record would be wrong
             raise HTTPException(status_code=409, detail={"code": "stale", "message": "El archivo ha cambiado: reanalízalo primero"})
+        from .prep.grid import edit_grid
+
         rec = svc.analysis.set_manual_bpm(p, body.bpm)
-        svc.analysis.set_beats_from_bpm(p, rec.bpm)
+        svc.analysis.save_grid(p, edit_grid(svc.analysis.get_grid(p), bpm=rec.bpm))
         before = file_stamp(p)
         if write_analysis_tags(p, rec.bpm, None):  # BPM only; key and other tags untouched
             svc.analysis.restamp(p)
@@ -356,6 +431,71 @@ def create_app(services: Services, token: str) -> FastAPI:
         if track:
             svc.library.set_track_analysis(str(p), rec.bpm, track.musical_key, track.camelot, track.lufs)
         return asdict(svc.analysis.get_any(p))
+
+    def _bpm_to_tags(p: Path, bpm: float) -> None:
+        from .analysis.runner import write_analysis_tags
+        from .analysis.store import file_stamp
+
+        before = file_stamp(p)
+        if write_analysis_tags(p, bpm, None):  # BPM only; key and other tags untouched
+            svc.analysis.restamp(p)
+            svc.stems.restamp(p, before)
+        track = svc.library.track_by_path(str(p))
+        if track:
+            svc.library.set_track_analysis(str(p), bpm, track.musical_key, track.camelot, track.lufs)
+
+    @api.put("/analysis/sections")
+    def put_sections(body: SectionsEdit):
+        from .prep.sections import LABELS, Section
+
+        p = Path(body.path)
+        if svc.analysis.get_any(p) is None:
+            raise HTTPException(status_code=404, detail={"code": "not_analyzed", "message": "Sin analizar"})
+        if svc.analysis.get(p) is None:
+            raise HTTPException(status_code=409, detail={"code": "stale", "message": "El archivo ha cambiado: reanalízalo primero"})
+        side = svc.analysis.read_sidecar(p) or {}
+        if body.reset:
+            out = [Section.from_dict(d) for d in side.get("sections_auto") or []]
+        else:
+            duration = float(side.get("duration") or 0)
+            items = body.sections or []
+            prev_end = 0.0
+            for it in items:
+                bad = (it.label not in LABELS or it.end <= it.start or it.start < prev_end - 1e-6
+                       or it.end > duration + 1e-3)
+                if bad:
+                    raise HTTPException(status_code=422, detail={"code": "bad_request", "message": "Secciones no válidas"})
+                prev_end = it.end
+            out = [Section(round(it.start, 3), round(it.end, 3), it.label, "manual") for it in items]
+        svc.analysis.save_sections(p, out)
+        return {"sections": [x.to_dict() for x in out]}
+
+    @api.put("/analysis/grid")
+    def put_grid(body: GridEdit):
+        from .prep.grid import Grid, edit_grid
+
+        p = Path(body.path)
+        if svc.analysis.get_any(p) is None:
+            raise HTTPException(status_code=404, detail={"code": "not_analyzed", "message": "Sin analizar"})
+        if svc.analysis.get(p) is None:
+            raise HTTPException(status_code=409, detail={"code": "stale", "message": "El archivo ha cambiado: reanalízalo primero"})
+        current = svc.analysis.get_grid(p)
+        rec = svc.analysis.get_any(p)
+        if body.reset:
+            auto = (svc.analysis.read_sidecar(p) or {}).get("grid_auto")
+            grid = Grid.from_dict(auto) if auto else Grid(current.anchor, current.bpm, "auto")
+            grid = Grid(grid.anchor, float(rec.bpm if rec.bpm_source == "auto" else grid.bpm), "auto")
+            if rec.bpm_source != "auto" or rec.bpm != grid.bpm:
+                svc.analysis.set_bpm(p, grid.bpm, "auto")
+        else:
+            grid = edit_grid(current, anchor=body.anchor, bpm=body.bpm, shift_ms=body.shift_ms,
+                             shift_beats=body.shift_beats, scale=body.scale)
+            if round(grid.bpm, 1) != (rec.bpm or 0):
+                svc.analysis.set_manual_bpm(p, grid.bpm)
+        svc.analysis.save_grid(p, grid)
+        if round(grid.bpm, 1) != (rec.bpm or 0):
+            _bpm_to_tags(p, round(grid.bpm, 1))
+        return {"grid": grid.to_dict()}
 
     class StemCheck(BaseModel):
         files: list[str] = Field(max_length=64)

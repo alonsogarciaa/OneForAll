@@ -95,3 +95,122 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+.ds-gridctl {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--surface-raised);
+}
+.ds-gridctl-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ds-gridctl .btn[aria-pressed='true'],
+.ds-wave .btn[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+.ds-notice {
+  margin-top: 8px;
+  color: var(--lg-text-secondary);
+}
+
+.ds-sections {
+  margin-top: 12px;
+}
+.ds-sections ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ds-sections li {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ds-section-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.ds-sections-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.retempo,
+.djx {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.retempo-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.retempo-row input[type='range'] {
+  flex: 1 1 200px;
+  accent-color: var(--accent);
+}
+.retempo-num {
+  width: 90px;
+}
+.retempo-name {
+  font-weight: 600;
+  color: var(--lg-text-primary);
+  word-break: break-word;
+}
+.djx-group {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.djx-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  cursor: pointer;
+}
+.djx-option small {
+  display: block;
+  color: var(--lg-text-secondary);
+  font-size: 13px;
+}
+.djx-option input {
+  accent-color: var(--accent);
+  margin-top: 3px;
+}
+.djx-dest {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.djx-result ul {
+  margin: 4px 0 8px;
+  padding-left: 18px;
+}
+@media (max-width: 520px) {
+  .ds-tap {
+    grid-template-columns: auto 1fr;
+  }
+  .ds-tap > :nth-child(n + 3) {
+    grid-column: 1 / -1;
+  }
+}

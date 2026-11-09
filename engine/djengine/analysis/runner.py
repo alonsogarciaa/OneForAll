@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+from dataclasses import dataclass
 import logging
 from pathlib import Path
 
@@ -16,6 +17,8 @@ from .loudness import measure
 from .store import AnalysisRecord, file_stamp, now_iso
 from .tempo import estimate_tempo
 from .waveform import compute
+from ..prep.grid import Grid, beats, estimate_grid
+from ..prep.sections import Section, detect_sections
 
 log = logging.getLogger(__name__)
 SR = 22050
@@ -39,7 +42,19 @@ def result_dict(rec: AnalysisRecord) -> dict:
     }
 
 
-def _analyse(path: Path, ctx, bpm_lo: int, bpm_hi: int):
+@dataclass
+class AnalysisParts:
+    tempo: object
+    key: object
+    lufs: float | None
+    peak: float | None
+    wf: dict
+    duration: float
+    grid_auto: Grid
+    sections_auto: list[Section]
+
+
+def _analyse(path: Path, ctx, bpm_lo: int, bpm_hi: int, grid_for_sections: Grid | None = None) -> AnalysisParts:
     """Blocking work, run in a thread: one decode, then every estimator."""
     ctx.report("decoding", 0)
     stereo = decode(path, sr=SR_FULL, mono=False)
@@ -58,7 +73,12 @@ def _analyse(path: Path, ctx, bpm_lo: int, bpm_hi: int):
     ctx.report("waveform", 85)
     wf = compute(y, SR)
     ctx.check_cancelled()
-    return tempo, key, lufs, peak, wf, len(y) / SR
+    grid_auto = estimate_grid(y, SR, tempo.bpm, tempo.beats)
+    duration = len(y) / SR
+    ctx.report("sections", 90)
+    sections = detect_sections(y, SR, grid_for_sections or grid_auto, duration)
+    ctx.check_cancelled()
+    return AnalysisParts(tempo, key, lufs, peak, wf, duration, grid_auto, sections)
 
 
 def make_analysis_runner(svc, path: Path, force: bool = False, reset_bpm: bool = False):
@@ -73,9 +93,15 @@ def make_analysis_runner(svc, path: Path, force: bool = False, reset_bpm: bool =
             return result_dict(cached)
         previous = store.get_any(path)
         s = svc.settings
-        work = asyncio.ensure_future(asyncio.to_thread(_analyse, path, ctx, s.bpm_min, s.bpm_max))
+        old_side = store.read_sidecar(path) or {}
+        manual_grid = None
+        if (old_side.get("grid") or {}).get("source") == "manual" and not reset_bpm:
+            manual_grid = Grid.from_dict(old_side["grid"])  # the user's grid survives a re-analysis
+        work = asyncio.ensure_future(asyncio.to_thread(_analyse, path, ctx, s.bpm_min, s.bpm_max, manual_grid))
         try:
-            tempo, key, lufs, peak, wf, duration = await asyncio.shield(work)
+            parts = await asyncio.shield(work)
+            tempo, key, lufs, peak, wf, duration, grid_auto = (parts.tempo, parts.key, parts.lufs, parts.peak,
+                                                               parts.wf, parts.duration, parts.grid_auto)
         except asyncio.CancelledError:
             # the thread cannot be killed: wait until it notices (or finishes) before tmp/ is removed
             ctx.cancelled = True
@@ -88,6 +114,9 @@ def make_analysis_runner(svc, path: Path, force: bool = False, reset_bpm: bool =
         bpm, source = (tempo.bpm or None), "auto"
         if previous and previous.bpm_source == "manual" and not reset_bpm:
             bpm, source = previous.bpm, "manual"
+        if manual_grid is not None and manual_grid.bpm:
+            bpm = manual_grid.bpm  # the kept manual grid defines the tempo: record and grid must agree
+            source = "manual"
         size, mtime = file_stamp(path)
         rec = AnalysisRecord(
             path=str(path), size=size, mtime=mtime, bpm=_finite(bpm), bpm_confidence=_finite(tempo.confidence),
@@ -95,7 +124,13 @@ def make_analysis_runner(svc, path: Path, force: bool = False, reset_bpm: bool =
             key_confidence=_finite(key.confidence), lufs=_finite(lufs), peak_db=_finite(peak),
             version=ANALYSIS_VERSION, created_at=now_iso(),
         )
-        store.save(rec, {"beats": tempo.beats, "waveform": wf, "duration": round(duration, 3)})
+        grid = manual_grid or Grid(grid_auto.anchor, float(rec.bpm or 0), "auto")
+        auto_sections = [x.to_dict() for x in parts.sections_auto]
+        old_sections = old_side.get("sections") or []
+        sections = old_sections if any(x.get("source") == "manual" for x in old_sections) else auto_sections
+        store.save(rec, {"beats": beats(grid, duration), "grid": grid.to_dict(), "grid_auto": grid_auto.to_dict(),
+                         "sections": sections, "sections_auto": auto_sections,
+                         "waveform": wf, "duration": round(duration, 3)})
         has_key = bool(key.tonic and key.mode)  # silence: no key is stored or written
         before = file_stamp(path)
         if write_analysis_tags(path, rec.bpm, tag_key(key.tonic, key.mode, s.key_notation) if has_key else None):
