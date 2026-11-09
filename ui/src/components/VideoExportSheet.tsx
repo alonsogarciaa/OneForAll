@@ -33,7 +33,9 @@ export function VideoExportSheet({ trackIds, onClose }: { trackIds: number[]; on
     client
       .getSettings()
       .then((s: { music_dir?: string; videos_dir?: string | null }) =>
-        setDefaultDir(s.videos_dir ?? (s.music_dir ? `${s.music_dir.replace(/[\\/]$/, '')}/Videos` : ''))
+        setDefaultDir(
+          s.videos_dir ?? (s.music_dir ? `${s.music_dir.replace(/[\\/]$/, '')}${s.music_dir.includes('/') ? '/' : '\\'}Videos` : '')
+        )
       )
       .catch(() => undefined)
   }, [client])

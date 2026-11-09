@@ -125,7 +125,7 @@ export function EnhanceSheet({ items, onClose }: { items: EnhanceItem[]; onClose
           <label className="djx-option">
             <input type="radio" name="enh-mode" checked={mode === 'replace'} onChange={() => setMode('replace')} aria-label="Reemplazar el original" />
             <span>
-              <strong>Reemplazar el original</strong>
+              Reemplazar el original
               {mode === 'replace' && <small>El original se guarda en Originales</small>}
             </span>
           </label>
