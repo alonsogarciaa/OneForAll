@@ -18,12 +18,26 @@
 
 | Prueba | Resultado |
 |---|---|
-| Motor (pytest) | Ver el informe final |
-| App (Vitest) | Ver el informe final |
+| Motor (pytest) | 539 pasan |
+| App (Vitest) | 219 pasan |
 | E2E (Playwright) | 12 pasan, incluidas Descubrir con "Parecidas" e importar desde Spotify. |
 | Diseño | Las pantallas, a 1280 px y a 1024 px (el ancho mínimo de la ventana); las hojas, a 375 px. Sin desbordes. |
-| Banco (`docs/bench/2026-11-fase5a-descubrir.md`) | Emparejado: 98–100 % `found`. Recomendaciones: 25 con datos, el 80 % en 32–39 s. |
+| Banco (`docs/bench/2026-11-fase5a-descubrir.md`) | Emparejado: 98–100 % `found`. Recomendaciones: 25 con datos, el 80 % en 55–56 s con los modelos cargados y en 64–70 s la primera vez de cada sesión. |
 
 ## Pendiente del dueño
 
 - Probar con tus propias playlists de Spotify o Apple Music, y con alguna de SoundCloud.
+
+## Revisión final
+
+Se corrigieron 8 fallos importantes, cada uno con un test que primero falló:
+- El análisis rápido usaba los estimadores de respaldo.
+- Un enlace de canción de Apple Music importaba el álbum entero.
+- Las canciones que ya tenías no entraban en la playlist importada.
+- Las versiones "(Official Live Video)" empataban con la original.
+- En los sets de SoundCloud, las entradas venían incompletas y las Go+ no se marcaban.
+- El aviso de Descubrir seguía visible después de elegir una canción.
+- Las playlists de moods largas se quedaban colgadas.
+- Al cerrar Importar no se cancelaba el emparejado.
+
+Quedan detalles menores apuntados en el informe final.
