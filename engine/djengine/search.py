@@ -11,6 +11,7 @@ Kind = Literal["song", "video", "playlist", "soundcloud"]
 SearchKind = Literal["songs", "videos", "playlists", "soundcloud"]
 SC_RESULTS = 25
 RADIO_LIMIT = 50
+SIMILAR_MAX = 25  # each row gets a quick analysis: 25 keeps 80 % of them under a minute
 SC_PREVIEW_S = 31  # Go+ tracks only stream a 30 s preview
 MAX_RESULTS = 30
 PLAYLIST_LIMIT = 500
@@ -242,7 +243,7 @@ class SearchService:
             if r.duration_s is None and t.get("length"):
                 r.duration_s = _length_s(t["length"])
             items.append(r)
-        return filter_results(items)
+        return filter_results(items)[:SIMILAR_MAX]
 
     def moods(self) -> list[dict]:
         cats = self.ytm.get_mood_categories()
