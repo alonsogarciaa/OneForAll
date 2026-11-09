@@ -198,7 +198,7 @@ async def test_import_match_job_emits_one_event_per_item(svc): ...  # 5 items ‚Ü
 - Test: `engine/tests/discover/test_quick.py`, `engine/tests/discover/test_fit.py`
 
 **Interfaces:**
-- Consumes: `decode`, `estimate_tempo` (`fold_bpm`, rango de Ajustes), `estimate_key` y `to_camelot`/`camelot_of`, que ya existen en `analysis/`.
+- Consumes: `decode`, `estimate_tempo` (`fold_bpm`, rango de Ajustes), `estimate_key` y `to_camelot`, que ya existen en `analysis/`.
 - Produces:
   - `fit(ref_bpm: float | None, ref_camelot: str | None, bpm: float | None, camelot: str | None) -> Literal["encaja", "cerca"] | None`.
   - `download_clip(ctx, url, start_s: float, seconds: float = 60) -> Path`, la versi√≥n real: yt-dlp `-f bestaudio --download-sections "*{start}-{end}" --force-keyframes-at-cuts`. Si falla, `-f worstaudio` completo y recorte con ffmpeg.
