@@ -75,7 +75,7 @@ def _tools_on_path() -> None:
 def build_services(paths: AppPaths, fake: bool) -> Services:
     settings = load_settings(paths.settings_path)
     hub = EventHub()
-    jobs = JobManager(paths.tmp_dir, hub.broadcast, {"download": settings.download_concurrency, "convert": CONVERT_CONCURRENCY, "analysis": ANALYSIS_CONCURRENCY, "stems": 1, "mix_export": 1, "retempo": 1, "dj_export": 1})
+    jobs = JobManager(paths.tmp_dir, hub.broadcast, {"download": settings.download_concurrency, "convert": CONVERT_CONCURRENCY, "analysis": ANALYSIS_CONCURRENCY, "stems": 1, "mix_export": 1, "retempo": 1, "dj_export": 1, "enhance": 1})
     jobs.purge_orphans()
     _tools_on_path()
     from .pipelines import sweep_parts
@@ -211,7 +211,15 @@ class DjExportJobBody(BaseModel):
         return v
 
 
-JobBody = Annotated[Union[DownloadJobBody, PlaylistJobBody, ConvertJobBody, AnalysisJobBody, StemsJobBody, MixExportJobBody, RetempoJobBody, DjExportJobBody],
+class EnhanceJobBody(BaseModel):
+    type: Literal["enhance"]
+    path: str
+    mode: Literal["copy", "replace"]
+    format: Literal["same", "flac"]
+
+
+JobBody = Annotated[Union[DownloadJobBody, PlaylistJobBody, ConvertJobBody, AnalysisJobBody, StemsJobBody, MixExportJobBody, RetempoJobBody, DjExportJobBody,
+                          EnhanceJobBody],
                     Field(discriminator="type")]
 
 AUDIO_EXT = {".mp3", ".m4a", ".aac", ".wav", ".aif", ".aiff", ".flac", ".ogg", ".opus", ".webm"}
@@ -345,6 +353,12 @@ def create_app(services: Services, token: str) -> FastAPI:
             runner = make_dj_export_runner(svc, body.target, body.track_ids, body.out)
             return {"job": svc.jobs.submit("dj_export", f"Exportar a {TITLES[body.target]}", runner,
                                            payload=body.model_dump()).to_dict()}
+        if isinstance(body, EnhanceJobBody):
+            from .enhance.runner import submit_enhance
+
+            if not Path(body.path).is_file():
+                raise HTTPException(status_code=404, detail={"code": "not_found", "message": "No se encuentra el archivo"})
+            return {"job": submit_enhance(svc, Path(body.path), body.mode, body.format).to_dict()}
         if isinstance(body, RetempoJobBody):
             from .errors import UserError as _UE
             from .prep.retempo import check_range, make_retempo_runner
@@ -394,6 +408,13 @@ def create_app(services: Services, token: str) -> FastAPI:
     @api.delete("/jobs/{job_id}")
     async def cancel_job(job_id: str):
         return {"cancelled": await svc.jobs.cancel(job_id)}
+
+    @api.get("/enhance/estimate")
+    def enhance_estimate(path: str):
+        from .stems.runner import _duration
+
+        rtf, seconds = svc.settings.enhance_rtf, _duration(Path(path))
+        return {"seconds": round(seconds * rtf, 1) if rtf and seconds else None}
 
     @api.get("/analysis")
     def get_analysis(path: str):

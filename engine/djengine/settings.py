@@ -27,6 +27,7 @@ class Settings(BaseModel):
     stems_dir: str | None = None  # None: <music_dir>/Stems
     stems_format: Literal["wav16", "wav24", "flac", "mp3"] = "wav16"
     stems_backend: Literal["auto", "cpu"] = "auto"
+    enhance_rtf: float | None = None  # measured seconds of compute per second of audio
 
     @model_validator(mode="after")
     def _bpm_range(self):

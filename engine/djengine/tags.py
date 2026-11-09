@@ -259,3 +259,43 @@ def set_bpm_key(path: Path, bpm: float | None, key: str | None) -> None:
     else:
         raise ValueError(f"etiquetas no soportadas para {type(audio).__name__}")
     audio.save()
+
+
+def _family(audio) -> str | None:
+    if isinstance(audio, (MP3, WAVE, AIFF)):
+        return "id3"
+    if isinstance(audio, MP4):
+        return "mp4"
+    if isinstance(audio, (FLAC, OggVorbis, OggOpus)):
+        return "vorbis"
+    return None
+
+
+def copy_tags(src: Path, dst: Path) -> bool:
+    """Copy every tag (Serato frames and pictures included) when both files use the same tag format.
+
+    Returns False when the formats differ, so the caller can fall back to write_tags.
+    """
+    a, b = _open(Path(src)), _open(Path(dst))
+    fam = _family(a)
+    if fam is None or fam != _family(b):
+        return False
+    if a.tags is None:
+        return True
+    if b.tags is None:
+        b.add_tags()
+    b.tags.clear()
+    if fam == "id3":
+        for frame in a.tags.values():
+            b.tags.add(frame)
+    elif fam == "mp4":
+        for k, v in a.tags.items():
+            b.tags[k] = v
+    else:
+        b.tags.extend(list(a.tags))
+        if isinstance(a, FLAC) and isinstance(b, FLAC):
+            b.clear_pictures()
+            for pic in a.pictures:
+                b.add_picture(pic)
+    b.save()
+    return True
