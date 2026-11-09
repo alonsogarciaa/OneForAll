@@ -87,6 +87,13 @@ def make_retempo_runner(svc, path: Path, bpm: float, semis: int, fmt: str | None
     path = Path(path)
 
     async def run(ctx) -> dict:
+        try:
+            return await _run(ctx)
+        except (UserError, OSError, ValueError):
+            svc.library.add_history(None, path.stem, "", "retempo", "failed")
+            raise
+
+    async def _run(ctx) -> dict:
         src = svc.analysis.get(path)
         if not path.is_file() or src is None or not src.bpm:
             raise UserError("not_analyzed", "Analiza primero")

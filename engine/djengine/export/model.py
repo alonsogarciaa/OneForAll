@@ -1,5 +1,6 @@
 """What every DJ-software exporter needs about a track, collected from the library and the analysis."""
 import os
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -32,6 +33,14 @@ class ExportTrack:
     anchor: float
     cues: list[Cue] = field(default_factory=list)
     kind: str = ""
+
+
+_CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+
+
+def clean_text(s: str) -> str:
+    """Drop control characters: XML 1.0 cannot hold them, and DJ programs refuse such files."""
+    return _CONTROL.sub("", s or "")
 
 
 def english_key(tonic: str | None, mode: str | None) -> str:

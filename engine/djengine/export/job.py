@@ -17,7 +17,7 @@ def make_dj_export_runner(svc, target: str, track_ids: list[int] | None, out: st
     async def run(ctx) -> dict:
         try:
             result = await _export(ctx)
-        except UserError:
+        except (UserError, OSError, ValueError):
             svc.library.add_history(None, TITLES[target], "", "export", "failed")
             raise
         svc.library.add_history(None, TITLES[target], "", "export", "done")

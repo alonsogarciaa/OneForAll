@@ -7,10 +7,11 @@ from datetime import datetime
 from pathlib import Path
 
 from ..errors import UserError
-from .model import ExportTrack
+from .model import ExportTrack, clean_text
 
 PROCESS_NAMES = {"virtualdj.exe", "virtualdj8.exe", "virtualdj_pc.exe"}
 _CUE_NUMS = 64
+BACKUPS = 5
 
 
 def _documents() -> Path:
@@ -61,9 +62,9 @@ def _fill(song: ET.Element, t: ExportTrack) -> None:
     tags = song.find("Tags")
     if tags is None:
         tags = ET.SubElement(song, "Tags")
-    tags.set("Author", t.artist)
-    tags.set("Title", t.title)
-    tags.set("Album", t.album)
+    tags.set("Author", clean_text(t.artist))
+    tags.set("Title", clean_text(t.title))
+    tags.set("Album", clean_text(t.album))
     infos = song.find("Infos")
     if infos is None:
         infos = ET.SubElement(song, "Infos")
@@ -88,10 +89,10 @@ def _fill(song: ET.Element, t: ExportTrack) -> None:
         ET.SubElement(song, "Poi", Name=c.name, Pos=f"{c.start:.3f}", Num=num, Type="cue")
 
 
-def merge_database(xml_text: str | None, tracks: list[ExportTrack]) -> str:
+def merge_database(xml_text: str | bytes | None, tracks: list[ExportTrack]) -> str:
     if xml_text:
-        try:
-            root = ET.fromstring(xml_text.encode("utf-8"))
+        try:  # bytes: the parser follows the file's own encoding declaration (older databases are not UTF-8)
+            root = ET.fromstring(xml_text if isinstance(xml_text, bytes) else xml_text.encode("utf-8"))
         except ET.ParseError:
             raise UserError("bad_request", "No se pudo leer la base de datos de VirtualDJ")
     else:
@@ -114,16 +115,20 @@ def write_virtualdj(tracks: list[ExportTrack]) -> tuple[list[Path], list[dict]]:
     groups: dict[Path, list[ExportTrack]] = defaultdict(list)
     for t in tracks:
         groups[database_for(t.path)].append(t)
-    written, skipped = [], []
+    written, skipped, plan = [], [], []
+    # read and merge every drive's database first: one unreadable file means nothing is written anywhere
     for db, items in groups.items():
         if not db.parent.is_dir():
             skipped += [{"title": t.title, "reason": "No se encontró la carpeta de VirtualDJ"} for t in items]
             continue
-        old = db.read_text(encoding="utf-8") if db.exists() else None
-        new = merge_database(old, items)  # raises before anything is written if the old file is unreadable
+        old = db.read_bytes() if db.exists() else None
+        plan.append((db, old, merge_database(old, items)))
+    for db, old, new in plan:
         if old is not None:
             stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-            (db.parent / f"database.xml.bak-{stamp}").write_text(old, encoding="utf-8")
+            (db.parent / f"database.xml.bak-{stamp}").write_bytes(old)
+            for stale in sorted(db.parent.glob("database.xml.bak-*"))[:-BACKUPS]:  # keep the newest few
+                stale.unlink(missing_ok=True)
         tmp = db.with_name(f"~oneforall-{uuid.uuid4().hex}.part")
         try:
             tmp.write_text(new, encoding="utf-8")
