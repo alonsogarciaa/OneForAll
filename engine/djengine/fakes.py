@@ -85,6 +85,27 @@ async def fake_downloader(ctx, url: str) -> Path:
     return out
 
 
+async def fake_clip_downloader(ctx, url: str, start_s: float, seconds: float = 60) -> Path:
+    """A 20 s click track standing in for the 60 s clip: 128 BPM when the id ends in 8, else 120."""
+    import numpy as np
+    import soundfile as sf
+
+    if "private" in url.lower():
+        raise user_error("unavailable")
+    bpm = 128 if url.rstrip("/").endswith("8") else 120
+    sr, n = 44100, int(0.02 * 44100)
+    y = np.zeros(20 * sr, dtype=np.float32)
+    click = (np.sin(2 * np.pi * 1000 * np.arange(n) / sr) * np.hanning(n)).astype(np.float32)
+    t = 0.0
+    while t < 19.9:
+        i = int(t * sr)
+        y[i:i + n] += click[: len(y) - i]
+        t += 60.0 / bpm
+    out = ctx.tmp_dir / f"clip-{abs(hash(url))}.wav"
+    await asyncio.to_thread(sf.write, out, y, sr)
+    return out
+
+
 async def fake_video_downloader(ctx, url: str, quality: str) -> Path:
     """A 5 s test pattern standing in for the YouTube video; a "private" id is unavailable."""
     if "private" in url.lower():

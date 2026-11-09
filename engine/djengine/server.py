@@ -59,6 +59,7 @@ class Services:
     allowed_paths: set = field(default_factory=set)  # files the user picked this session (/audio)
     shutdown: Callable[[], None] | None = None
     video_downloader: Any = None
+    clip_downloader: Any = None
 
 
 def _tools_on_path() -> None:
@@ -77,7 +78,7 @@ def _tools_on_path() -> None:
 def build_services(paths: AppPaths, fake: bool) -> Services:
     settings = load_settings(paths.settings_path)
     hub = EventHub()
-    jobs = JobManager(paths.tmp_dir, hub.broadcast, {"download": settings.download_concurrency, "convert": CONVERT_CONCURRENCY, "analysis": ANALYSIS_CONCURRENCY, "stems": 1, "mix_export": 1, "retempo": 1, "dj_export": 1, "enhance": 1, "enhance_preview": 1, "video_export": 1, "import_match": 1})
+    jobs = JobManager(paths.tmp_dir, hub.broadcast, {"download": settings.download_concurrency, "convert": CONVERT_CONCURRENCY, "analysis": ANALYSIS_CONCURRENCY, "stems": 1, "mix_export": 1, "retempo": 1, "dj_export": 1, "enhance": 1, "enhance_preview": 1, "video_export": 1, "import_match": 1, "quick_analysis": 1})
     shutil.rmtree(paths.tmp_dir / "preview", ignore_errors=True)  # A/B clips live for one session
     jobs.purge_orphans()
     _tools_on_path()
@@ -88,13 +89,17 @@ def build_services(paths: AppPaths, fake: bool) -> Services:
     library = Library(paths.db_path)
     library.refresh_missing()
     if fake:
-        from .fakes import FakeSearch, fake_downloader, fake_video_downloader
+        from .fakes import FakeSearch, fake_clip_downloader, fake_downloader, fake_video_downloader
 
         search, downloader, video_downloader = FakeSearch(), fake_downloader, fake_video_downloader
+        clip_downloader = fake_clip_downloader
     else:
         from .download import download_video
 
+        from .discover.quick import download_clip
+
         search, downloader, video_downloader = SearchService(), download_audio, download_video
+        clip_downloader = download_clip
     from .analysis.store import AnalysisStore
 
     from .mixer.state import MixerStore
@@ -102,7 +107,8 @@ def build_services(paths: AppPaths, fake: bool) -> Services:
 
     analysis = AnalysisStore(paths.db_path, paths.root / "analysis")
     return Services(paths, settings, library, jobs, search, downloader, fake, hub, analysis=analysis,
-                    stems=StemsStore(paths.db_path), mixer=MixerStore(paths.db_path), video_downloader=video_downloader)
+                    stems=StemsStore(paths.db_path), mixer=MixerStore(paths.db_path), video_downloader=video_downloader,
+                    clip_downloader=clip_downloader)
 
 
 # --- request bodies -----------------------------------------------------------
@@ -217,6 +223,12 @@ class DjExportJobBody(BaseModel):
         return v
 
 
+class QuickAnalysisJobBody(BaseModel):
+    type: Literal["quick_analysis"]
+    video_ids: list[str] = Field(min_length=1, max_length=200)
+    durations: list[int | None] = []
+
+
 class ImportMatchJobBody(BaseModel):
     type: Literal["import_match"]
     items: list[dict] = Field(min_length=1, max_length=500)
@@ -242,7 +254,8 @@ class EnhanceJobBody(BaseModel):
 
 
 JobBody = Annotated[Union[DownloadJobBody, PlaylistJobBody, ConvertJobBody, AnalysisJobBody, StemsJobBody, MixExportJobBody, RetempoJobBody, DjExportJobBody,
-                          EnhanceJobBody, EnhancePreviewJobBody, VideoExportJobBody, ImportMatchJobBody],
+                          EnhanceJobBody, EnhancePreviewJobBody, VideoExportJobBody, ImportMatchJobBody,
+                          QuickAnalysisJobBody],
                     Field(discriminator="type")]
 
 AUDIO_EXT = {".mp3", ".m4a", ".aac", ".wav", ".aif", ".aiff", ".flac", ".ogg", ".opus", ".webm"}
@@ -427,6 +440,13 @@ def create_app(services: Services, token: str) -> FastAPI:
             runner = make_dj_export_runner(svc, body.target, body.track_ids, body.out)
             return {"job": svc.jobs.submit("dj_export", f"Exportar a {TITLES[body.target]}", runner,
                                            payload=body.model_dump()).to_dict()}
+        if isinstance(body, QuickAnalysisJobBody):
+            from .discover.quick import make_quick_runner
+
+            durations = (body.durations + [None] * len(body.video_ids))[: len(body.video_ids)]
+            return {"job": svc.jobs.submit("quick_analysis", f"Analizar recomendaciones ({len(body.video_ids)})",
+                                           make_quick_runner(svc, body.video_ids, durations),
+                                           payload={"type": "quick_analysis", "count": len(body.video_ids)}).to_dict()}
         if isinstance(body, ImportMatchJobBody):
             from .discover.links import ImportItem
             from .discover.match import make_match_runner
