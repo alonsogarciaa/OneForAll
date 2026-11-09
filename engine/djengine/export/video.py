@@ -33,7 +33,7 @@ def video_args(audio: Path, image: Path | None, still: bool, quality: str, speed
     elif still:
         inputs = ["-f", "lavfi", "-i", f"color=c={BG}:s={w}x{h}:r=2"]
         font = f"fontfile={_ff_path(_FONT)}:" if _FONT.is_file() else ""
-        vf = (f"drawtext={font}textfile={_ff_path(text_file)}:fontcolor=white:fontsize={h // 18}:"
+        vf = (f"drawtext={font}textfile={_ff_path(text_file)}:expansion=none:fontcolor=white:fontsize={h // 18}:"
               f"x=(w-text_w)/2:y=(h-text_h)/2:line_spacing={h // 40},format=yuv420p") if text_file else "format=yuv420p"
     else:
         inputs = ["-i", str(image)]

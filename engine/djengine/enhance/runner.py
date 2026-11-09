@@ -1,9 +1,11 @@
 """enhance job: restore a track with Apollo, as a new copy or in place of the original (kept in Originales/)."""
 import asyncio
 import contextlib
+import errno
 import json
 import logging
 import os
+import shutil
 import subprocess
 import time
 from dataclasses import replace
@@ -97,8 +99,9 @@ def _restore(svc, ctx, path: Path, out_wav: Path) -> float:
 
 
 async def _encode(ctx, src_wav: Path, out: Path, args: list[str]) -> None:
+    rate = 48000 if "libopus" in args else SR  # libopus only takes 48/24/16/12/8 kHz
     proc = await asyncio.create_subprocess_exec(
-        find_tool("ffmpeg"), "-v", "error", "-nostdin", "-y", "-i", str(src_wav), "-ar", str(SR), "-ac", "2",
+        find_tool("ffmpeg"), "-v", "error", "-nostdin", "-y", "-i", str(src_wav), "-ar", str(rate), "-ac", "2",
         *args, str(out), stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.PIPE)
     ctx.register_process(proc)
     _, err = await proc.communicate()
@@ -128,12 +131,25 @@ def _move_aside(original: Path, backup_dir: Path) -> Path:
     backup = unique_path(backup_dir, original.stem, original.suffix[1:])
     try:
         os.replace(original, backup)
+        return backup
     except PermissionError:
         raise BUSY
     except OSError as e:
         if getattr(e, "winerror", None) in (32, 33):
             raise BUSY
+        if not (e.errno == errno.EXDEV or getattr(e, "winerror", None) == 17):
+            raise user_error("disk")
+    # another drive: copy the backup, then remove the original (a file in use stays where it was)
+    try:
+        shutil.copy2(original, backup)
+    except OSError:
+        backup.unlink(missing_ok=True)
         raise user_error("disk")
+    try:
+        original.unlink()
+    except OSError:
+        backup.unlink(missing_ok=True)
+        raise BUSY
     return backup
 
 
@@ -148,7 +164,26 @@ def _remember_speed(svc, rtf: float) -> None:
 
 def make_enhance_runner(svc, path: Path, mode: Mode, fmt: Fmt, then_stems=None, analyze_after: bool = False):
     path = Path(path)
+    inner = _make_enhance(svc, path, mode, fmt, then_stems, analyze_after)
 
+    async def run(ctx) -> dict:
+        try:
+            return await inner(ctx)
+        except BaseException:
+            # the enhance did not happen: what was asked after it still runs on the original
+            if not ctx.finishing and path.is_file():
+                from ..pipelines import submit_analysis, submit_stems
+
+                if analyze_after and svc.analysis is not None:
+                    submit_analysis(svc, path, path.stem)
+                if then_stems is not None:
+                    submit_stems(svc, path, then_stems.stems, then_stems.karaoke, path.stem)
+            raise
+
+    return run
+
+
+def _make_enhance(svc, path: Path, mode: Mode, fmt: Fmt, then_stems, analyze_after: bool):
     async def run(ctx) -> dict:
         if not path.is_file():
             raise UserError("not_found", "No se encuentra el archivo")
@@ -195,7 +230,8 @@ def make_enhance_runner(svc, path: Path, mode: Mode, fmt: Fmt, then_stems=None, 
                 await asyncio.to_thread(_commit, encoded, final)
             except BaseException:
                 with contextlib.suppress(OSError):
-                    os.replace(backup, path)
+                    if not path.exists():  # put the original back (shutil.move also works across drives)
+                        shutil.move(str(backup), str(path))
                 raise
 
         await asyncio.to_thread(_save_analysis, svc, src_rec, side, path, final, mode)

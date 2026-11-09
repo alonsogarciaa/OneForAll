@@ -209,3 +209,10 @@ def test_video_export_api(svc, tmp_path):
         assert r.status_code == 200 and r.json()["job"]["type"] == "video_export"
         assert c.post("/jobs", json={"type": "video_export", "track_ids": []}, headers=H).status_code == 422
         assert c.post("/jobs", json={"type": "video_export", "track_ids": [t.id], "quality": "4k"}, headers=H).status_code == 422
+
+
+async def test_title_card_with_percent_in_the_title(svc, tmp_path):
+    t = _track(svc, tmp_path, "100% Pure Love", cover=False)
+    j = await _run(svc, [t.id])
+    assert j.status == "done", j.error
+    assert j.result["failed"] == [] and len(j.result["exported"]) == 1

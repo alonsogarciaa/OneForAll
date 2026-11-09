@@ -207,3 +207,44 @@ def test_enhance_api(svc, song):
         assert r.status_code == 200 and r.json() == {"seconds": None}
         svc.settings.enhance_rtf = 3.5
         assert abs(c.get("/enhance/estimate", params={"path": str(song)}, headers=H).json()["seconds"] - 14.0) < 0.5
+
+
+@pytest.mark.parametrize("ext,codec", [("mp3", ["-c:a", "libmp3lame"]), ("m4a", ["-c:a", "aac"]),
+                                       ("opus", ["-c:a", "libopus", "-ar", "48000"]), ("ogg", ["-c:a", "libvorbis"])])
+async def test_every_lossy_format_really_encodes(svc, tmp_path, ext, codec):
+    src = _make(tmp_path / "music" / f"S.{ext}", codec)
+    job = await _run(svc, src, "copy", "same")
+    assert job.status == "done", job.error
+    assert Path(job.result["path"]).suffix == f".{ext}"
+
+
+async def test_replace_across_drives_copies_the_backup(svc, song, monkeypatch):
+    real = os.replace
+    backup_dir = Path(svc.settings.music_dir) / "Originales"
+
+    def cross(a, b):
+        if Path(a) == song and Path(b).parent == backup_dir:
+            e = OSError(18, "cross-device")
+            e.winerror = 17
+            raise e
+        return real(a, b)
+
+    monkeypatch.setattr(er.os, "replace", cross)
+    job = await _run(svc, song, "replace", "same")
+    assert job.status == "done", job.error
+    assert (backup_dir / "Song.mp3").is_file() and song.is_file()
+
+
+async def test_failed_enhance_still_runs_the_requested_analysis_and_stems(svc, song, monkeypatch):
+    from djengine.errors import UserError
+    from djengine.pipelines import ThenStems
+
+    def boom(*a, **k):
+        raise UserError("model_missing", "No se pudo descargar el modelo de mejora")
+
+    monkeypatch.setattr(er, "_restore", boom)
+    job = await _wait(svc, submit_enhance(svc, song, "replace", "same", then_stems=ThenStems(stems=["vocals"]),
+                                          analyze_after=True))
+    assert job.status == "failed"
+    kinds = {j.type: j.payload for j in svc.jobs.list() if j.type in ("stems", "analysis")}
+    assert kinds["stems"]["paths"] == [str(song)] and kinds["analysis"]["paths"] == [str(song)]

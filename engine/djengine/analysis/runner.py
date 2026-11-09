@@ -130,7 +130,8 @@ def make_analysis_runner(svc, path: Path, force: bool = False, reset_bpm: bool =
         sections = old_sections if any(x.get("source") == "manual" for x in old_sections) else auto_sections
         store.save(rec, {"beats": beats(grid, duration), "grid": grid.to_dict(), "grid_auto": grid_auto.to_dict(),
                          "sections": sections, "sections_auto": auto_sections,
-                         "waveform": wf, "duration": round(duration, 3)})
+                         "waveform": wf, "duration": round(duration, 3),
+                         **({"origin_bpm": old_side["origin_bpm"]} if old_side.get("origin_bpm") else {})})
         has_key = bool(key.tonic and key.mode)  # silence: no key is stored or written
         before = file_stamp(path)
         if write_analysis_tags(path, rec.bpm, tag_key(key.tonic, key.mode, s.key_notation) if has_key else None):
