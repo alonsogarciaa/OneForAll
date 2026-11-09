@@ -1,0 +1,57 @@
+{
+ "_type": "playlist",
+ "id": "scsearch5:quevedo",
+ "title": "quevedo",
+ "entries": [
+  {
+   "_type": "url",
+   "ie_key": "Soundcloud",
+   "id": "2310783158",
+   "url": "https://api.soundcloud.com/tracks/soundcloud%3Atracks%3A2310783158",
+   "title": "LA GRACIOSA",
+   "duration": 257.759,
+   "uploader": "QUEVEDO",
+   "availability": null
+  },
+  {
+   "_type": "url",
+   "ie_key": "Soundcloud",
+   "id": "2424535347",
+   "url": "https://api.soundcloud.com/tracks/soundcloud%3Atracks%3A2424535347",
+   "title": "DOGGY",
+   "duration": 203.514,
+   "uploader": "QUEVEDO",
+   "availability": null
+  },
+  {
+   "_type": "url",
+   "ie_key": "Soundcloud",
+   "id": "2310780566",
+   "url": "https://api.soundcloud.com/tracks/soundcloud%3Atracks%3A2310780566",
+   "title": "AL GOLPITO",
+   "duration": 207.78,
+   "uploader": "QUEVEDO",
+   "availability": null
+  },
+  {
+   "_type": "url",
+   "ie_key": "Soundcloud",
+   "id": "1553847277",
+   "url": "https://api.soundcloud.com/tracks/soundcloud%3Atracks%3A1553847277",
+   "title": "Columbia",
+   "duration": 186.046,
+   "uploader": "QUEVEDO",
+   "availability": null
+  },
+  {
+   "_type": "url",
+   "ie_key": "Soundcloud",
+   "id": "999",
+   "url": "https://api.soundcloud.com/tracks/soundcloud%3Atracks%3A999",
+   "title": "Go+ only",
+   "duration": 30.0,
+   "uploader": "Somebody",
+   "availability": "premium_only"
+  }
+ ]
+}

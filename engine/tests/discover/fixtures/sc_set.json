@@ -1,0 +1,37 @@
+{
+ "_type": "playlist",
+ "id": "123",
+ "title": "Mi set de prueba",
+ "entries": [
+  {
+   "_type": "url",
+   "ie_key": "Soundcloud",
+   "id": "2310783158",
+   "url": "https://api.soundcloud.com/tracks/soundcloud%3Atracks%3A2310783158",
+   "title": "LA GRACIOSA",
+   "duration": 257.759,
+   "uploader": "QUEVEDO",
+   "availability": null
+  },
+  {
+   "_type": "url",
+   "ie_key": "Soundcloud",
+   "id": "2424535347",
+   "url": "https://api.soundcloud.com/tracks/soundcloud%3Atracks%3A2424535347",
+   "title": "DOGGY",
+   "duration": 203.514,
+   "uploader": "QUEVEDO",
+   "availability": null
+  },
+  {
+   "_type": "url",
+   "ie_key": "Soundcloud",
+   "id": "2310780566",
+   "url": "https://api.soundcloud.com/tracks/soundcloud%3Atracks%3A2310780566",
+   "title": "AL GOLPITO",
+   "duration": 207.78,
+   "uploader": "QUEVEDO",
+   "availability": null
+  }
+ ]
+}
