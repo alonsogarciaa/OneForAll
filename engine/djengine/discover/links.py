@@ -31,6 +31,7 @@ class ImportItem(BaseModel):
     artist: str
     duration_s: int | None = None
     url: str | None = None  # SoundCloud only: already downloadable, no matching needed
+    id: str | None = None  # SoundCloud only: "sc:<id>", the library's video_id
 
 
 class ImportList(BaseModel):
@@ -178,7 +179,8 @@ def read_soundcloud(link: Link, run: Callable[[str], dict] = _ytdlp_json) -> Imp
         if not url:
             continue
         items.append(ImportItem(title=e.get("title") or "", artist=e.get("uploader") or "",
-                                duration_s=round(e["duration"]) if e.get("duration") else None, url=url))
+                                duration_s=round(e["duration"]) if e.get("duration") else None, url=url,
+                                id=f"sc:{e['id']}" if e.get("id") else None))
     if not items:
         raise UserError(*BAD_LINK)
     return ImportList(name=data.get("title") or "SoundCloud", service="soundcloud", items=items)

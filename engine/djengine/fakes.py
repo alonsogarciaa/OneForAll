@@ -48,6 +48,21 @@ class FakeSearch:
     def soundcloud(self, q: str) -> list[SearchResult]:
         return list(SC_TRACKS)
 
+    def read_link(self, text: str):
+        from .discover.links import BAD_LINK, ImportItem, ImportList, parse_link
+
+        link = parse_link(text)
+        if link is None:
+            from .errors import UserError
+
+            raise UserError(*BAD_LINK)
+        if link.service == "soundcloud":
+            return ImportList(name="Fake SC Set", service="soundcloud", items=[
+                ImportItem(title=t.title, artist=t.artist, duration_s=t.duration_s, url=t.url, id=t.id)
+                for t in SC_TRACKS if not t.preview_only])
+        return ImportList(name="Lista Fake", service=link.service, items=[
+            ImportItem(title=s.title, artist=s.artist, duration_s=s.duration_s) for s in SONGS])
+
     def similar(self, video_id: str) -> list[SearchResult]:
         return [r for r in RECS if r.id != video_id]
 

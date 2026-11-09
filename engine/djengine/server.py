@@ -23,7 +23,7 @@ from .analysis.config import ANALYSIS_VERSION as ANALYSIS_VERSION_NOW
 from .mixer.state import MixState
 from .pipelines import (DownloadRequest, make_convert_runner, make_download_runner, start_playlist, submit_analysis,
                         submit_stems)
-from .search import SearchService
+from .search import SearchResult, SearchService
 from .settings import Settings, load_settings, save_settings
 
 log = logging.getLogger(__name__)
@@ -223,6 +223,17 @@ class DjExportJobBody(BaseModel):
         return v
 
 
+class ImportJobBody(BaseModel):
+    type: Literal["import"]
+    name: str = Field(min_length=1, max_length=200)
+    targets: list[SearchResult] = Field(min_length=1, max_length=500)
+    options: ConvertOptions
+
+
+class LinkBody(BaseModel):
+    text: str = Field(max_length=2000)
+
+
 class QuickAnalysisJobBody(BaseModel):
     type: Literal["quick_analysis"]
     video_ids: list[str] = Field(min_length=1, max_length=200)
@@ -255,7 +266,7 @@ class EnhanceJobBody(BaseModel):
 
 JobBody = Annotated[Union[DownloadJobBody, PlaylistJobBody, ConvertJobBody, AnalysisJobBody, StemsJobBody, MixExportJobBody, RetempoJobBody, DjExportJobBody,
                           EnhanceJobBody, EnhancePreviewJobBody, VideoExportJobBody, ImportMatchJobBody,
-                          QuickAnalysisJobBody],
+                          QuickAnalysisJobBody, ImportJobBody],
                     Field(discriminator="type")]
 
 AUDIO_EXT = {".mp3", ".m4a", ".aac", ".wav", ".aif", ".aiff", ".flac", ".ogg", ".opus", ".webm"}
@@ -374,6 +385,16 @@ def create_app(services: Services, token: str) -> FastAPI:
             raise HTTPException(status_code=502, detail={"code": "offline", "message": "Sin conexión"})
         return {"seed": seed.model_dump(), "items": rec_rows(svc, items)}
 
+    @api.post("/discover/link")
+    async def discover_link(body: LinkBody):
+        from .errors import UserError as _UE
+
+        try:
+            lst = await asyncio.to_thread(svc.search.read_link, body.text)
+        except _UE as e:
+            raise HTTPException(status_code=422, detail={"code": e.code, "message": e.message})
+        return lst.model_dump()
+
     @api.get("/discover/moods")
     async def discover_moods():
         try:
@@ -440,6 +461,12 @@ def create_app(services: Services, token: str) -> FastAPI:
             runner = make_dj_export_runner(svc, body.target, body.track_ids, body.out)
             return {"job": svc.jobs.submit("dj_export", f"Exportar a {TITLES[body.target]}", runner,
                                            payload=body.model_dump()).to_dict()}
+        if isinstance(body, ImportJobBody):
+            from .pipelines import start_import
+
+            if any(t.preview_only for t in body.targets):
+                raise HTTPException(status_code=422, detail={"code": "preview_only", "message": "Solo vista previa"})
+            return {"job": start_import(svc, body.name, body.targets, body.options).to_dict()}
         if isinstance(body, QuickAnalysisJobBody):
             from .discover.quick import make_quick_runner
 

@@ -175,13 +175,27 @@ async def start_playlist(svc, playlist_id: str, options: ConvertOptions) -> Job:
     info = await asyncio.to_thread(svc.search.get_playlist, playlist_id)
     seen: set[str] = set()
     info.tracks = [t for t in info.tracks if not (t.id in seen or seen.add(t.id))]  # same video twice: one download
-    folder = Path(svc.settings.music_dir) / (sanitize_filename(info.title) or "Playlist")
+    return _submit_playlist(svc, info.title, info.id, info.tracks, options,
+                            {"type": "playlist", "id": playlist_id, "options": options.model_dump()})
+
+
+def start_import(svc, name: str, targets: list[SearchResult], options: ConvertOptions) -> Job:
+    """A list read from Spotify / Apple Music / SoundCloud, already matched: same flow as a YouTube playlist."""
+    seen: set[str] = set()
+    targets = [t for t in targets if not (t.id in seen or seen.add(t.id))]
+    return _submit_playlist(svc, name, None, targets, options,
+                            {"type": "import", "name": name, "options": options.model_dump()})
+
+
+def _submit_playlist(svc, title: str, yt_id: str | None, tracks: list[SearchResult], options: ConvertOptions,
+                     payload: dict) -> Job:
+    folder = Path(svc.settings.music_dir) / (sanitize_filename(title) or "Playlist")
 
     async def parent(ctx: JobContext) -> dict:
         _ensure_dir(folder)
-        pl_db = svc.library.add_playlist(info.id, info.title, str(folder))
+        pl_db = svc.library.add_playlist(yt_id, title, str(folder))
         kids = []
-        for i, t in enumerate(info.tracks):
+        for i, t in enumerate(tracks):
             req = DownloadRequest(target=t, options=options, skip_existing=True)
             kids.append(svc.jobs.submit(
                 "download", t.title, make_download_runner(svc, req, folder, pl_db, i),
@@ -196,7 +210,7 @@ async def start_playlist(svc, playlist_id: str, options: ConvertOptions) -> Job:
                 break
             await asyncio.sleep(0.2)
         result = {"done": 0, "skipped": 0, "failed": [], "cancelled": 0, "options": options.model_dump()}
-        for i, (k, track) in enumerate(zip(kids, info.tracks)):
+        for i, (k, track) in enumerate(zip(kids, tracks)):
             j = svc.jobs.get(k.id)
             if j.status == "done" and (j.result or {}).get("skipped"):
                 result["skipped"] += 1
@@ -209,8 +223,7 @@ async def start_playlist(svc, playlist_id: str, options: ConvertOptions) -> Job:
                 result["cancelled"] += 1
         return result
 
-    return svc.jobs.submit("playlist", info.title, parent,
-                           payload={"type": "playlist", "id": playlist_id, "options": options.model_dump()})
+    return svc.jobs.submit("playlist", title, parent, payload=payload)
 
 
 def submit_analysis(svc, path: Path, title: str | None = None, force: bool = False, reset_bpm: bool = False):

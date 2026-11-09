@@ -184,6 +184,15 @@ class SearchService:
         self._fallback = fallback or _ytdlp_flat_search
         self._sc_fetch = sc_fetch or _sc_flat
 
+    def read_link(self, text: str):
+        from .discover.links import BAD_LINK, parse_link, read_link
+        from .errors import UserError
+
+        link = parse_link(text)
+        if link is None:
+            raise UserError(*BAD_LINK)
+        return read_link(link)
+
     def soundcloud(self, q: str) -> list[SearchResult]:
         return soundcloud_results(self._sc_fetch(f"scsearch{SC_RESULTS}:{q}"))
 
