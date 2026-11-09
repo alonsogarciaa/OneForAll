@@ -257,3 +257,52 @@ def submit_enhance(svc, path: Path, mode: Mode, fmt: Fmt, then_stems=None):
     title = f"Mejorar · {Path(path).stem}"
     return svc.jobs.submit("enhance", title, make_enhance_runner(svc, Path(path), mode, fmt, then_stems),
                            payload={"type": "enhance", "path": str(path), "mode": mode, "format": fmt})
+
+
+PREVIEW_S = 15.0
+
+
+def preview_start(sidecar: dict | None, duration: float) -> float:
+    """Start of the first chorus/drop, else 30 % into the song; always leaves a full 15 s clip when possible."""
+    start = next((float(s["start"]) for s in (sidecar or {}).get("sections") or [] if s.get("label") == "Estribillo/Drop"),
+                 0.3 * duration)
+    return round(max(0.0, min(start, duration - PREVIEW_S)), 3)
+
+
+def _preview_work(svc, ctx, path: Path, folder: Path) -> tuple[Path, Path, float]:
+    from ..server import _norm
+
+    audio = load_audio(path)
+    duration = audio.shape[1] / SR
+    start = preview_start(svc.analysis.read_sidecar(path), duration)
+    a = int(start * SR)
+    clip = audio[:, a: a + int(PREVIEW_S * SR)]
+    ctx.report("restoring", 0)
+    y = get_restorer(svc).restore(clip, lambda f: ctx.report("restoring", 95 * f), lambda: ctx.cancelled)
+    folder.mkdir(parents=True, exist_ok=True)
+    orig, enh = folder / f"{ctx.job.id}-original.wav", folder / f"{ctx.job.id}-mejorado.wav"
+    sf.write(orig, clip.T, SR, subtype="PCM_24")
+    sf.write(enh, np.clip(y, -1.0, 1.0).T, SR, subtype="PCM_24")
+    svc.allowed_paths.update({_norm(orig), _norm(enh)})
+    return orig, enh, start
+
+
+def make_preview_runner(svc, path: Path):
+    """15 s of the original and of the restored audio, aligned, for the A/B check before saving."""
+    path = Path(path)
+
+    async def run(ctx) -> dict:
+        if not path.is_file():
+            raise UserError("not_found", "No se encuentra el archivo")
+        ctx.report("loading_model", 0)
+        work = asyncio.ensure_future(asyncio.to_thread(_preview_work, svc, ctx, path, svc.paths.tmp_dir / "preview"))
+        try:
+            orig, enh, start = await asyncio.shield(work)
+        except asyncio.CancelledError:
+            ctx.cancelled = True
+            with contextlib.suppress(BaseException):
+                await work
+            raise
+        return {"original": str(orig), "enhanced": str(enh), "start": start}
+
+    return run

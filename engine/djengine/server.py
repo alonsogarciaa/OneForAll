@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import shutil
 import threading
 import secrets
 from contextlib import asynccontextmanager
@@ -75,7 +76,8 @@ def _tools_on_path() -> None:
 def build_services(paths: AppPaths, fake: bool) -> Services:
     settings = load_settings(paths.settings_path)
     hub = EventHub()
-    jobs = JobManager(paths.tmp_dir, hub.broadcast, {"download": settings.download_concurrency, "convert": CONVERT_CONCURRENCY, "analysis": ANALYSIS_CONCURRENCY, "stems": 1, "mix_export": 1, "retempo": 1, "dj_export": 1, "enhance": 1})
+    jobs = JobManager(paths.tmp_dir, hub.broadcast, {"download": settings.download_concurrency, "convert": CONVERT_CONCURRENCY, "analysis": ANALYSIS_CONCURRENCY, "stems": 1, "mix_export": 1, "retempo": 1, "dj_export": 1, "enhance": 1, "enhance_preview": 1})
+    shutil.rmtree(paths.tmp_dir / "preview", ignore_errors=True)  # A/B clips live for one session
     jobs.purge_orphans()
     _tools_on_path()
     from .pipelines import sweep_parts
@@ -211,6 +213,11 @@ class DjExportJobBody(BaseModel):
         return v
 
 
+class EnhancePreviewJobBody(BaseModel):
+    type: Literal["enhance_preview"]
+    path: str
+
+
 class EnhanceJobBody(BaseModel):
     type: Literal["enhance"]
     path: str
@@ -219,7 +226,7 @@ class EnhanceJobBody(BaseModel):
 
 
 JobBody = Annotated[Union[DownloadJobBody, PlaylistJobBody, ConvertJobBody, AnalysisJobBody, StemsJobBody, MixExportJobBody, RetempoJobBody, DjExportJobBody,
-                          EnhanceJobBody],
+                          EnhanceJobBody, EnhancePreviewJobBody],
                     Field(discriminator="type")]
 
 AUDIO_EXT = {".mp3", ".m4a", ".aac", ".wav", ".aif", ".aiff", ".flac", ".ogg", ".opus", ".webm"}
@@ -353,6 +360,11 @@ def create_app(services: Services, token: str) -> FastAPI:
             runner = make_dj_export_runner(svc, body.target, body.track_ids, body.out)
             return {"job": svc.jobs.submit("dj_export", f"Exportar a {TITLES[body.target]}", runner,
                                            payload=body.model_dump()).to_dict()}
+        if isinstance(body, EnhancePreviewJobBody):
+            from .enhance.runner import make_preview_runner
+
+            return {"job": svc.jobs.submit("enhance_preview", f"Escuchar · {Path(body.path).stem}",
+                                           make_preview_runner(svc, Path(body.path)), payload=body.model_dump()).to_dict()}
         if isinstance(body, EnhanceJobBody):
             from .enhance.runner import submit_enhance
 
