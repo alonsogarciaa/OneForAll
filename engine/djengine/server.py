@@ -77,7 +77,7 @@ def _tools_on_path() -> None:
 def build_services(paths: AppPaths, fake: bool) -> Services:
     settings = load_settings(paths.settings_path)
     hub = EventHub()
-    jobs = JobManager(paths.tmp_dir, hub.broadcast, {"download": settings.download_concurrency, "convert": CONVERT_CONCURRENCY, "analysis": ANALYSIS_CONCURRENCY, "stems": 1, "mix_export": 1, "retempo": 1, "dj_export": 1, "enhance": 1, "enhance_preview": 1, "video_export": 1})
+    jobs = JobManager(paths.tmp_dir, hub.broadcast, {"download": settings.download_concurrency, "convert": CONVERT_CONCURRENCY, "analysis": ANALYSIS_CONCURRENCY, "stems": 1, "mix_export": 1, "retempo": 1, "dj_export": 1, "enhance": 1, "enhance_preview": 1, "video_export": 1, "import_match": 1})
     shutil.rmtree(paths.tmp_dir / "preview", ignore_errors=True)  # A/B clips live for one session
     jobs.purge_orphans()
     _tools_on_path()
@@ -217,6 +217,11 @@ class DjExportJobBody(BaseModel):
         return v
 
 
+class ImportMatchJobBody(BaseModel):
+    type: Literal["import_match"]
+    items: list[dict] = Field(min_length=1, max_length=500)
+
+
 class VideoExportJobBody(BaseModel):
     type: Literal["video_export"]
     track_ids: list[int] = Field(min_length=1)
@@ -237,7 +242,7 @@ class EnhanceJobBody(BaseModel):
 
 
 JobBody = Annotated[Union[DownloadJobBody, PlaylistJobBody, ConvertJobBody, AnalysisJobBody, StemsJobBody, MixExportJobBody, RetempoJobBody, DjExportJobBody,
-                          EnhanceJobBody, EnhancePreviewJobBody, VideoExportJobBody],
+                          EnhanceJobBody, EnhancePreviewJobBody, VideoExportJobBody, ImportMatchJobBody],
                     Field(discriminator="type")]
 
 AUDIO_EXT = {".mp3", ".m4a", ".aac", ".wav", ".aif", ".aiff", ".flac", ".ogg", ".opus", ".webm"}
@@ -382,6 +387,16 @@ def create_app(services: Services, token: str) -> FastAPI:
             runner = make_dj_export_runner(svc, body.target, body.track_ids, body.out)
             return {"job": svc.jobs.submit("dj_export", f"Exportar a {TITLES[body.target]}", runner,
                                            payload=body.model_dump()).to_dict()}
+        if isinstance(body, ImportMatchJobBody):
+            from .discover.links import ImportItem
+            from .discover.match import make_match_runner
+
+            try:
+                items = [ImportItem.model_validate(i) for i in body.items]
+            except ValueError:
+                raise HTTPException(status_code=422, detail={"code": "bad_request", "message": "Lista no válida"})
+            return {"job": svc.jobs.submit("import_match", f"Emparejar ({len(items)})", make_match_runner(svc, items),
+                                           payload={"type": "import_match", "count": len(items)}).to_dict()}
         if isinstance(body, VideoExportJobBody):
             from .export.video import make_video_export_runner
 
