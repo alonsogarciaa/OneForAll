@@ -121,4 +121,4 @@ def test_api_422_on_bad_target(svc, tmp_path):  # noqa: F811
         end = time.time() + 10
         while time.time() < end and next(j for j in c.get("/jobs", headers=H).json() if j["id"] == jid)["status"] not in FINAL:
             time.sleep(0.05)
-        assert (tmp_path / "x.xml").exists()
+        assert (tmp_path / "OneForAll rekordbox.xml").exists()
