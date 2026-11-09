@@ -101,7 +101,7 @@ export function EnhanceSheet({ items, onClose }: { items: EnhanceItem[]; onClose
         await client.enhance(i.path, mode, fmt)
         queued++
       } catch (e: any) {
-        toast(`${i.path.split(/[\/]/).pop()}: ${e.message}`, 'error') // one bad file does not stop the rest
+        toast(`${i.path.split(/[\\/]/).pop()}: ${e.message}`, 'error') // one bad file does not stop the rest
       }
     }
     setBusy(false)
