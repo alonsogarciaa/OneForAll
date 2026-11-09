@@ -70,7 +70,13 @@ export function SearchScreen() {
       setLoading(true)
       client
         .discoverLink(term)
-        .then((list) => my === seq.current && useUiStore.getState().openImport(list))
+        .then((list) => {
+          if (my !== seq.current) return
+          useUiStore.getState().openImport(list)
+          // the link has been used: clear it so coming back to Buscar does not import it again
+          useUiStore.setState({ query: '', submittedQuery: '' })
+          setTerm('')
+        })
         .catch((e) => my === seq.current && toast(e.message, 'error'))
         .finally(() => my === seq.current && setLoading(false))
       return

@@ -128,4 +128,19 @@ describe('SearchScreen', () => {
     useUiStore.getState().submitQuery('https://music.apple.com/es/playlist/x/pl.u-1')
     await waitFor(() => expect(useUiStore.getState().toasts.at(-1)?.text).toBe('No se pudo leer el enlace'))
   })
+
+  it('coming back to Buscar after reading a link does not open the import again', async () => {
+    const list = { name: 'Lista', service: 'spotify', items: [], truncated: false }
+    const c = makeClient({ discoverLink: vi.fn(async () => list) })
+    window.oneforall = { showInFolder: vi.fn() } as any
+    const { unmount } = render(<EngineTestProvider client={c}><SearchScreen /></EngineTestProvider>)
+    useUiStore.getState().submitQuery('https://open.spotify.com/playlist/abc')
+    await waitFor(() => expect(useUiStore.getState().importList).toEqual(list))
+    unmount()
+    useUiStore.setState({ importList: null })
+    render(<EngineTestProvider client={c}><SearchScreen /></EngineTestProvider>)
+    await new Promise((r) => setTimeout(r, 50))
+    expect(c.discoverLink).toHaveBeenCalledTimes(1)
+    expect(useUiStore.getState().importList).toBeNull()
+  })
 })
