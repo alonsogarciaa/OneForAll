@@ -64,6 +64,7 @@ export function DataSheet({ path, onClose }: { path: string; onClose(): void }) 
   const started = useRef(false)
   const [gridMode, setGridMode] = useState(false)
   const openRetempo = useUiStore((s) => s.openRetempo)
+  const openEnhance = useUiStore((s) => s.openEnhance)
 
   const load = useCallback(
     async (analyzeIfMissing: boolean) => {
@@ -177,6 +178,9 @@ export function DataSheet({ path, onClose }: { path: string; onClose(): void }) 
           </button>
           <button className="btn" onClick={() => openRetempo(path)} disabled={analyzing || !data?.record.bpm}>
             Cambiar BPM y tono…
+          </button>
+          <button className="btn" onClick={() => openEnhance([{ path, enhanced: false }])}>
+            Mejorar audio…
           </button>
           <button className="btn" onClick={reanalyze} disabled={analyzing}>
             <RefreshCw size={15} />

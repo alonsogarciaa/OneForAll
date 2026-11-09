@@ -35,6 +35,10 @@ interface UiState {
   retempoFor: string | null
   openRetempo(path: string): void
   closeRetempo(): void
+  /** Tracks waiting for the "Mejorar audio" sheet. */
+  enhanceFor: { path: string; enhanced: boolean }[] | null
+  openEnhance(items: { path: string; enhanced: boolean }[]): void
+  closeEnhance(): void
   /** "Exportar a…" sheet: selected track ids, or null for the whole library. */
   djExport: { trackIds: number[] | null } | null
   openDjExport(trackIds: number[] | null): void
@@ -80,6 +84,9 @@ export const useUiStore = create<UiState>((set, get) => ({
   retempoFor: null,
   openRetempo: (path) => set({ retempoFor: path }),
   closeRetempo: () => set({ retempoFor: null }),
+  enhanceFor: null,
+  openEnhance: (items) => set({ enhanceFor: items }),
+  closeEnhance: () => set({ enhanceFor: null }),
   djExport: null,
   openDjExport: (trackIds) => set({ djExport: { trackIds } }),
   closeDjExport: () => set({ djExport: null }),

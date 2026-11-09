@@ -98,6 +98,10 @@ export function createClient(
       }),
     retempo: (path: string, bpm: number, semis: number, format?: string) =>
       json<{ job: Job }>('/jobs', post('/jobs', { type: 'retempo', path, bpm, semis, ...(format ? { format } : {}) })),
+    enhance: (path: string, mode: 'copy' | 'replace', format: 'same' | 'flac') =>
+      json<{ job: Job }>('/jobs', post('/jobs', { type: 'enhance', path, mode, format })),
+    enhancePreview: (path: string) => json<{ job: Job }>('/jobs', post('/jobs', { type: 'enhance_preview', path })),
+    enhanceEstimate: (path: string) => json<{ seconds: number | null }>(`/enhance/estimate?${new URLSearchParams({ path })}`),
     djExport: (target: 'rekordbox' | 'virtualdj' | 'serato', trackIds: number[] | null, out?: string) =>
       json<{ job: Job }>('/jobs', post('/jobs', { type: 'dj_export', target, track_ids: trackIds, ...(out ? { out } : {}) })),
     getMixerState: (path: string) => json<{ state: unknown }>(`/mixer/state?${new URLSearchParams({ path })}`),

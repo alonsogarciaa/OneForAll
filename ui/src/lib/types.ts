@@ -43,6 +43,8 @@ export interface TrackRecord {
   lufs?: number | null
   analyzed_at?: string | null
   has_stems?: boolean
+  enhanced?: boolean
+  origin_video_id?: string | null
 }
 
 export interface HistoryEntry {
