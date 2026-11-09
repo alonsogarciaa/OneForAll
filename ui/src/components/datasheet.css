@@ -221,3 +221,60 @@
   gap: 10px;
   flex-wrap: wrap;
 }
+
+.imp-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.imp-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 52vh;
+  overflow: auto;
+}
+.imp-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 12px;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--hairline);
+}
+.imp-orig {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.imp-title,
+.imp-found {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.imp-match {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.imp-match select {
+  min-width: 0;
+  flex: 1 1 160px;
+}
+.imp-found {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+@media (max-width: 640px) {
+  .imp-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

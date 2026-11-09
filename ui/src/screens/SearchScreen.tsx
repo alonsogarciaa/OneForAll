@@ -12,9 +12,11 @@ import './search.css'
 const KINDS: { kind: SearchKind; label: string }[] = [
   { kind: 'songs', label: 'Canciones' },
   { kind: 'videos', label: 'Vídeos' },
-  { kind: 'playlists', label: 'Playlists' }
+  { kind: 'playlists', label: 'Playlists' },
+  { kind: 'soundcloud', label: 'SoundCloud' }
 ]
 const DEBOUNCE_MS = 400
+const IMPORT_LINK = /(open\.spotify\.com\/|^spotify:|spotify\.link\/|music\.apple\.com\/|soundcloud\.com\/)/i
 
 /** YouTube Music sometimes repeats a video; rows are keyed by id, so repeats must go. */
 export function uniqueResults(rs: SearchResult[]): SearchResult[] {
@@ -63,6 +65,16 @@ export function SearchScreen() {
   useEffect(() => {
     if (!term) return
     const my = ++seq.current
+    if (IMPORT_LINK.test(term)) {
+      // Spotify / Apple Music / SoundCloud link: read it and offer to import it, no search
+      setLoading(true)
+      client
+        .discoverLink(term)
+        .then((list) => my === seq.current && useUiStore.getState().openImport(list))
+        .catch((e) => my === seq.current && toast(e.message, 'error'))
+        .finally(() => my === seq.current && setLoading(false))
+      return
+    }
     setLoading(true)
     client
       .search(term, kind)

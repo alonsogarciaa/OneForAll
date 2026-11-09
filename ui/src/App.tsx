@@ -14,6 +14,7 @@ import { RetempoSheet } from './components/RetempoSheet'
 import { DjExportSheet } from './components/DjExportSheet'
 import { EnhanceSheet } from './components/EnhanceSheet'
 import { VideoExportSheet } from './components/VideoExportSheet'
+import { ImportSheet } from './components/ImportSheet'
 import { PlaylistSummaryHost } from './components/PlaylistSummarySheet'
 import { DataSheet } from './components/DataSheet'
 import { StemsSheet } from './components/StemsSheet'
@@ -60,6 +61,12 @@ function EnhanceSheetHost() {
   return items ? <EnhanceSheet items={items} onClose={close} /> : null
 }
 
+function ImportSheetHost() {
+  const list = useUiStore((s) => s.importList)
+  const close = useUiStore((s) => s.closeImport)
+  return list ? <ImportSheet key={list.name} list={list} onClose={close} /> : null
+}
+
 function VideoExportSheetHost() {
   const v = useUiStore((s) => s.videoExport)
   const close = useUiStore((s) => s.closeVideoExport)
@@ -104,6 +111,7 @@ function Body() {
       <DjExportSheetHost />
       <EnhanceSheetHost />
       <VideoExportSheetHost />
+      <ImportSheetHost />
     </>
   )
 }
