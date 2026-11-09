@@ -50,6 +50,8 @@ function createWindow(): void {
     height: 800,
     minWidth: 1024,
     minHeight: 640,
+    // the installed .exe carries the icon itself; in development it comes from build/resources
+    icon: app.isPackaged ? undefined : join(ROOT, 'build', 'resources', 'icon.ico'),
     show: false,
     backgroundMaterial: 'acrylic',
     backgroundColor: '#00000000',

@@ -26,11 +26,10 @@
 | E2E (Playwright, app compilada) | 10 pasan. Incluye mejorar con escucha A/B y exportar vídeo. |
 | Diseño a 1280 y 375 px | Capturas en `test-results/enhance-*.png` y `test-results/video-*.png`. Sin desbordes. |
 | Instalador | `dist/OneForAll Setup 0.1.0.exe`. Incluye `runtime/models/apollo/apollo.safetensors`. Prueba de humo de la mejora con el Python del instalador: correcta. |
-| Puerta de Apollo (`docs/bench/2026-11-fase4b-apollo.md`) | Unos 3,5 s por s de audio en CPU, más que el límite de 3. El dueño decidió seguir solo con CPU. DirectML no se probó. |
+| Puerta de Apollo (`docs/bench/2026-11-fase4b-apollo.md`) | Unos 3,5 s por s de audio en CPU, más que el límite de 3. El dueño decidió seguir solo con CPU. DirectML no se probó. Escucha a ciegas: 5 de 5 a favor de la mejorada. |
 
 ## Pendiente del dueño
 
-- La escucha a ciegas de las 5 parejas de `engine/bench/data/apollo/`, apuntada en el banco.
 - Probar una mejora completa y una exportación de vídeo en VirtualDJ o Serato Video.
 
 ## Revisión final

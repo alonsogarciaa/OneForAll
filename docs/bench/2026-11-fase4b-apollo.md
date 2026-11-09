@@ -22,7 +22,7 @@ Script: `python -m bench.apollo_gate <archivos>`. Las parejas están en `engine/
 
 ## Escucha a ciegas
 
-Pendiente del dueño. Para cada pareja `NN-A.wav` / `NN-B.wav`, apunta cuál suena mejor antes de abrir `key.json`.
+Hecha el 2026-11-09 por un DJ amigo del dueño. Escuchó a ciegas y eligió la versión mejorada en las 5 parejas.
 
 | Pareja | Preferida (A/B) | ¿Es la mejorada? |
 |---|---|---|
@@ -32,7 +32,7 @@ Pendiente del dueño. Para cada pareja `NN-A.wav` / `NN-B.wav`, apunta cuál sue
 | 04 | | |
 | 05 | | |
 
-Umbral: preferir la versión mejorada en al menos 4 de las 5.
+Umbral: preferir la versión mejorada en al menos 4 de las 5. **Resultado: 5 de 5, cumple.**
 
 ## DirectML
 
