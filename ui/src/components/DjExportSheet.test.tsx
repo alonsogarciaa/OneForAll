@@ -60,4 +60,16 @@ describe('DjExportSheet', () => {
     expect(screen.queryByRole('radio', { name: /Seleccionadas/ })).toBeNull()
     expect(screen.getByRole('radio', { name: 'Toda la biblioteca' })).toBeChecked()
   })
+
+  it('previews the Rekordbox path with the folder separator, and never a bare "/" while loading', async () => {
+    const c = { djExport: vi.fn(), getSettings: vi.fn(() => new Promise(() => undefined)) } as any
+    render(<EngineTestProvider client={c}><DjExportSheet trackIds={[1]} onClose={() => undefined} /></EngineTestProvider>)
+    expect(screen.getByText('Se guardará en …')).toBeInTheDocument()
+  })
+
+  it('uses backslashes for a Windows music folder', async () => {
+    const c = { djExport: vi.fn(), getSettings: vi.fn(async () => ({ music_dir: 'C:\\Música' })) } as any
+    render(<EngineTestProvider client={c}><DjExportSheet trackIds={[1]} onClose={() => undefined} /></EngineTestProvider>)
+    expect(await screen.findByText('Se guardará en C:\\Música\\OneForAll rekordbox.xml')).toBeInTheDocument()
+  })
 })

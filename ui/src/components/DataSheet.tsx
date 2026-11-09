@@ -242,7 +242,7 @@ export function DataSheet({ path, onClose }: { path: string; onClose(): void }) 
               onChange={() => void load(false)}
             />
           )}
-          {!!data.sidecar.sections?.length && (
+          {!!(data.sidecar.sections?.length || data.sidecar.sections_auto?.length) && (
             <SectionEditor
               path={path}
               sections={data.sidecar.sections}

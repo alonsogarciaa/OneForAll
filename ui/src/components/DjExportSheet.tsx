@@ -33,6 +33,8 @@ export function DjExportSheet({ trackIds, onClose }: { trackIds: number[] | null
       .catch(() => undefined)
   }, [client])
 
+  const base = folder ?? musicDir
+  const dest = base ? `${base.replace(/[\\/]$/, '')}${base.includes('/') ? '/' : '\\'}${FILE}` : ''
   const running = job && !['done', 'failed', 'cancelled'].includes(job.status)
   const result = job?.status === 'done' ? (job.result as { exported: number; skipped: { title: string; reason: string }[]; file: string | null }) : null
 
@@ -85,7 +87,7 @@ export function DjExportSheet({ trackIds, onClose }: { trackIds: number[] | null
         </fieldset>
         {target === 'rekordbox' && (
           <div className="djx-dest">
-            <span className="ds-sub">{`Se guardará en ${folder ?? musicDir ?? '…'}/${FILE}`}</span>
+            <span className="ds-sub">{dest ? `Se guardará en ${dest}` : 'Se guardará en …'}</span>
             <button className="btn btn-sm" onClick={async () => setFolder((await window.oneforall.pickFolder()) ?? folder)}>
               Elegir carpeta…
             </button>
