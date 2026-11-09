@@ -36,10 +36,15 @@ def _ratio(a: str, b: str) -> float:
     return SequenceMatcher(None, a, b).ratio() if a and b else 0.0
 
 
+def _word(w: str, text: str) -> bool:
+    return re.search(r"\b" + re.escape(w) + r"\b", text) is not None
+
+
 def _title_score(item: ImportItem, cand: SearchResult) -> float:
     a, b = _title(item.title), _title(cand.title)
     r = _ratio(a, b)
-    if any(w in b and w not in a for w in _VERSIONS):
+    raw_a, raw_b = item.title.lower(), cand.title.lower()  # brackets kept: "(Official Live Video)" is still live
+    if any(_word(w, raw_b) and not _word(w, raw_a) for w in _VERSIONS):
         r *= 0.6  # a remix or live take must not win over the original the playlist asked for
     return r
 

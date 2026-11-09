@@ -32,6 +32,7 @@ class ImportItem(BaseModel):
     duration_s: int | None = None
     url: str | None = None  # SoundCloud only: already downloadable, no matching needed
     id: str | None = None  # SoundCloud only: "sc:<id>", the library's video_id
+    preview_only: bool = False  # SoundCloud Go+: only a 30 s preview can be downloaded
 
 
 class ImportList(BaseModel):
@@ -142,12 +143,19 @@ def read_spotify(link: Link, fetch: Callable[[str], str] = _get) -> ImportList:
     return ImportList(name=name, service="spotify", items=items, truncated=len(items) >= SPOTIFY_LIMIT)
 
 
+def _apple_row_id(row: dict) -> str:
+    cd = ((row.get("contentDescriptor") or {}).get("identifiers") or {}).get("storeAdamID")
+    return str(cd) if cd else str(row.get("id", "")).rsplit(" - ", 1)[-1]
+
+
 def read_apple(link: Link, fetch: Callable[[str], str] = _get) -> ImportList:
     html = _fetch(fetch, link.url)
     try:
         sections = _script_json(html, "serialized-server-data")["data"][0]["data"]["sections"]
         header = next((s["items"][0] for s in sections if "header" in s.get("id", "") and s.get("items")), {})
         rows = next(s["items"] for s in sections if s.get("itemKind") in ("trackLockup", "listLockup") and s.get("items"))
+        if link.kind == "track":  # an album page with ?i=<song>: only that song
+            rows = [r for r in rows if _apple_row_id(r) == link.id]
         items = [ImportItem(title=r["title"], artist=r.get("artistName") or "", duration_s=_secs(r.get("duration")))
                  for r in rows if r.get("title")]
         if not items:
@@ -175,12 +183,16 @@ def read_soundcloud(link: Link, run: Callable[[str], dict] = _ytdlp_json) -> Imp
     entries = data.get("entries") if data.get("_type") == "playlist" else [data]
     items = []
     for e in entries or []:
+        if not isinstance(e, dict):
+            continue
         url = e.get("webpage_url") or e.get("url")
         if not url:
             continue
-        items.append(ImportItem(title=e.get("title") or "", artist=e.get("uploader") or "",
-                                duration_s=round(e["duration"]) if e.get("duration") else None, url=url,
-                                id=f"sc:{e['id']}" if e.get("id") else None))
+        dur = float(e["duration"]) if e.get("duration") else None
+        items.append(ImportItem(title=e.get("title") or "", artist=e.get("uploader") or data.get("uploader") or "",
+                                duration_s=round(dur) if dur else None, url=url,
+                                id=f"sc:{e['id']}" if e.get("id") else None,
+                                preview_only=e.get("availability") == "premium_only" or (dur is not None and 29 <= dur <= 31)))
     if not items:
         raise UserError(*BAD_LINK)
     return ImportList(name=data.get("title") or "SoundCloud", service="soundcloud", items=items)

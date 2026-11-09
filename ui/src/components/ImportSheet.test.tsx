@@ -18,6 +18,7 @@ function client(over: Record<string, unknown> = {}) {
   return {
     importMatch: vi.fn(async () => ({ job: { id: 'm1' } })),
     startImport: vi.fn(async () => ({ job: { id: 'p1' } })),
+    cancelJob: vi.fn(async () => ({ cancelled: true })),
     getSettings: vi.fn(async () => ({ default_format: 'mp3', default_quality: '320' })),
     ...over
   } as any
@@ -88,5 +89,25 @@ describe('ImportSheet', () => {
     await act(async () => undefined)
     result(0, { status: 'missing', best: null, alternatives: [] })
     expect(screen.getByRole('button', { name: /Descargar todas \(0\)/ })).toBeDisabled()
+  })
+
+  it('closing the sheet cancels the matching job', async () => {
+    const c = client({ cancelJob: vi.fn(async () => ({ cancelled: true })) })
+    const { unmount } = render(<EngineTestProvider client={c}><ImportSheet list={LIST} onClose={() => undefined} /></EngineTestProvider>)
+    await act(async () => undefined)
+    unmount()
+    expect(c.cancelJob).toHaveBeenCalledWith('m1')
+  })
+
+  it('a Go+ track in a SoundCloud set is shown but not downloaded', async () => {
+    const sc: ImportList = {
+      name: 'Set', service: 'soundcloud', truncated: false,
+      items: [{ title: 'Full', artist: 'DJ', duration_s: 300, url: 'https://soundcloud.com/dj/full', id: 'sc:1' },
+              { title: 'Prev', artist: 'DJ', duration_s: 30, url: 'https://soundcloud.com/dj/prev', id: 'sc:2', preview_only: true }]
+    }
+    setup(sc)
+    await act(async () => undefined)
+    expect(screen.getByText('Solo vista previa')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Descargar todas \(1\)/ })).toBeInTheDocument()
   })
 })

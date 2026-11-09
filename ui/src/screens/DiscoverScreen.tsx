@@ -11,6 +11,7 @@ import './discover.css'
 
 type Tab = 'similar' | 'moods'
 type Order = 'youtube' | 'fit'
+const MAX_ANALYSE = 50 // a long mood playlist: only the first rows get a 60 s clip (spec: the visible ones)
 const FIT_RANK: Record<string, number> = { encaja: 0, cerca: 1, none: 2, pending: 3 }
 
 const comma = (n: number) => n.toFixed(1).replace('.', ',')
@@ -29,7 +30,9 @@ function useQuick(rows: Rec[]) {
     const known: Record<string, QuickInfo> = {}
     for (const r of rows) if (r.analysed) known[r.id] = { bpm: r.bpm, camelot: r.camelot, failed: r.bpm == null }
     if (Object.keys(known).length) setQuick(known)
-    const todo = rows.filter((r) => !r.analysed && !useDiscoverStore.getState().quick[r.id] && r.source !== 'soundcloud')
+    const todo = rows
+      .slice(0, MAX_ANALYSE)
+      .filter((r) => !r.analysed && !useDiscoverStore.getState().quick[r.id] && r.source !== 'soundcloud')
     if (!todo.length) return
     let jobId: string | null = null
     let left = false
@@ -39,7 +42,10 @@ function useQuick(rows: Rec[]) {
         jobId = r.job.id
         if (left) void client.cancelJob(jobId).catch(() => undefined)
       })
-      .catch(() => undefined)
+      .catch(() => {
+        // the analysis could not start: show "—" rather than "analizando…" forever
+        setQuick(Object.fromEntries(todo.map((r) => [r.id, { bpm: null, camelot: null, failed: true }])))
+      })
     return () => {
       left = true
       if (jobId) void client.cancelJob(jobId).catch(() => undefined)
@@ -247,6 +253,7 @@ function Moods({ options, onOptions }: { options: ConvertOptions; onOptions(o: C
 /** "Descubrir": songs like one of yours, or by mood and genre, with BPM and key worked out on the fly. */
 export function DiscoverScreen() {
   const client = useClient()
+  const seedId = useUiStore((s) => s.discoverSeed)
   const [tab, setTab] = useState<Tab>('similar')
   const [options, setOptions] = useState<ConvertOptions>({ format: 'mp3', quality: '320' })
   const loaded = useRef(false)
@@ -276,7 +283,7 @@ export function DiscoverScreen() {
         </div>
       </div>
       {tab === 'similar' ? <Similar options={options} onOptions={setOptions} /> : <Moods options={options} onOptions={setOptions} />}
-      {tab === 'similar' && useUiStore.getState().discoverSeed == null && (
+      {tab === 'similar' && seedId == null && (
         <div className="empty">
           <Compass size={40} strokeWidth={1.4} />
           <p>Elige una canción de tu biblioteca para ver otras que encajen con ella</p>

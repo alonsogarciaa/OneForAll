@@ -115,6 +115,8 @@ def make_download_runner(svc, req: DownloadRequest, dest_dir: Path, playlist_id:
         if req.skip_existing:
             dup = svc.library.find_duplicate(t.id, t.artist, t.title)
             if dup is not None:
+                if playlist_id is not None:  # the playlist must list the songs you already have too
+                    svc.library.add_playlist_track(playlist_id, dup.id, position or 0)
                 return {"skipped": True, "existing_path": dup.path}
         try:
             src = await svc.downloader(ctx, t.url)

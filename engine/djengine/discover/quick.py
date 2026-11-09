@@ -9,10 +9,12 @@ from pathlib import Path
 
 import numpy as np
 
+from ..analysis import runner as _register_estimators  # noqa: F401  (registers deeprhythm and CNN, like a full analysis)
 from ..errors import JobCancelled, UserError
 
 log = logging.getLogger(__name__)
 CLIP_S = 60.0
+KEY_S = 30
 START_AT = 0.3
 CONCURRENCY = 4  # 6-core CPU: 4 clips at once reach 80 % of 25 rows in under a minute
 RETRY_AFTER = timedelta(hours=24)
@@ -89,7 +91,9 @@ def quick_analyse(path: Path, lo: int, hi: int) -> dict:
         raise UserError("unreadable", "Fragmento demasiado corto")
     y = librosa.resample(mono44, orig_sr=44100, target_sr=22050)
     tempo = estimate_tempo(y, 22050, method=DEFAULT_TEMPO_METHOD, lo=lo, hi=hi)
-    key = estimate_key(mono44, 44100, method=DEFAULT_KEY_METHOD)
+    # the CNN key model is the slow part and runs one at a time: its central 30 s give the same key in half the time
+    mid, half = mono44.size // 2, KEY_S * 44100 // 2
+    key = estimate_key(mono44[max(0, mid - half): mid + half], 44100, method=DEFAULT_KEY_METHOD)
     return {"bpm": round(float(tempo.bpm), 1) if tempo.bpm else None, "tonic": key.tonic, "mode": key.mode,
             "camelot": key.camelot}
 

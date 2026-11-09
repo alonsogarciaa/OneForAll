@@ -108,4 +108,33 @@ describe('DiscoverScreen', () => {
     await userEvent.click(within(row).getByRole('button', { name: /Descargar en/ }))
     expect(c.download).toHaveBeenCalledWith(expect.objectContaining({ target: expect.objectContaining({ id: 'r1' }) }))
   })
+
+  it('picking a seed from the sidebar entry hides the empty prompt', async () => {
+    useUiStore.setState({ discoverSeed: null })
+    render(<EngineTestProvider client={client()}><DiscoverScreen /></EngineTestProvider>)
+    expect(screen.getByText(/Elige una canción de tu biblioteca para ver/)).toBeInTheDocument()
+    act(() => useUiStore.getState().openDiscover(7))
+    await screen.findByText('Rec 1')
+    expect(screen.queryByText(/Elige una canción de tu biblioteca para ver/)).toBeNull()
+  })
+
+  it('a long mood playlist only analyses the first 50 rows', async () => {
+    const many = Array.from({ length: 120 }, (_, i) => rec(100 + i))
+    const c = client({ getPlaylist: vi.fn(async () => ({ id: 'PL1', title: 'Larga', tracks: many })) })
+    render(<EngineTestProvider client={c}><DiscoverScreen /></EngineTestProvider>)
+    await userEvent.click(screen.getByRole('button', { name: 'Moods y géneros' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Reggaetón' }))
+    await userEvent.click(await screen.findByRole('button', { name: /Perreo/ }))
+    await screen.findByText('Rec 100')
+    const sent = c.quickAnalysis.mock.calls.at(-1)[0]
+    expect(sent).toHaveLength(50)
+  })
+
+  it('if the analysis cannot start, the rows show "—" instead of waiting forever', async () => {
+    const c = client({ quickAnalysis: vi.fn(async () => { throw new Error('422') }) })
+    render(<EngineTestProvider client={c}><DiscoverScreen /></EngineTestProvider>)
+    await screen.findByText('Rec 1')
+    await act(async () => undefined)
+    expect(screen.queryByText('analizando…')).toBeNull()
+  })
 })

@@ -37,6 +37,7 @@ export interface ImportItem {
   duration_s: number | null
   url?: string | null
   id?: string | null
+  preview_only?: boolean
 }
 
 export interface ImportList {

@@ -29,6 +29,16 @@ Objetivo de la spec: al menos 20 recomendaciones, y el 80 % con BPM y tonalidad 
 | BUENAS NOCHES (TNb6aBmx3O8) | 25 | 25 | 39 s | **25 filas, 4 a la vez (final)** |
 | LA GRACIOSA (Kev3r6W4TPo) | 25 | 25 | 32 s | **25 filas, 4 a la vez (final)** |
 
-- Un fragmento tarda unos 10 s: 4 s de descarga y 5 s de análisis.
-- Con la configuración final (25 recomendaciones y 4 análisis a la vez) **se cumple**: 100 % con datos y el 80 % en 32–39 s.
-- Ejemplo de precisión: "ABC" (Hoke, Quevedo) da 138 BPM y 4A con el fragmento de 60 s.
+- **Revisión final:** las cifras anteriores se midieron sin querer con los estimadores de respaldo, porque `quick.py` no registraba DeepRhythm ni CNN. Ya está corregido. Medido otra vez con los estimadores reales de la app:
+
+| Semilla | Recomendaciones | Con datos | 80 % | Configuración |
+|---|---|---|---|---|
+| BUENAS NOCHES | 25 | 25 | 75 s | 60 s de fragmento, 4 a la vez |
+| LA GRACIOSA | 25 | 25 | 66 s | 60 s de fragmento, 4 a la vez |
+| BUENAS NOCHES (en frío) | 25 | 25 | 64 s | **tonalidad sobre los 30 s centrales, 4 a la vez (final)** |
+| LA GRACIOSA (modelos cargados) | 25 | 25 | 55 s | ídem |
+| CONTIGO (en frío) | 25 | 25 | 70 s | ídem, 6 a la vez (sin mejora) |
+| BUENAS NOCHES (modelos cargados) | 25 | 25 | 56 s | ídem, 6 a la vez |
+
+- **Coste por canción, con los modelos ya cargados:** descarga 4 s, decodificación 0,5 s, tempo con DeepRhythm 0,3 s y tonalidad con CNN 2,3 s sobre 60 s (1,2 s sobre 30 s). La CNN se ejecuta de una en una.
+- **Resultado:** con los modelos ya cargados, **cumple** (55–56 s). La primera vez de cada sesión, que incluye cargar los modelos, va algo por encima (64–70 s). Se queda así y se avisa al dueño.

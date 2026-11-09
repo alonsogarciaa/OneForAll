@@ -37,16 +37,33 @@ export function ImportSheet({ list, onClose }: { list: ImportList; onClose(): vo
       )
       .catch(() => undefined)
     if (isSC) return
+    let id: string | null = null
+    let closed = false
     client
       .importMatch(list.items)
-      .then((r: { job: { id: string } }) => setJobId(r.job.id))
+      .then((r: { job: { id: string } }) => {
+        id = r.job.id
+        if (closed) void client.cancelJob(id).catch(() => undefined)
+        else setJobId(id)
+      })
       .catch((e: Error) => toast(e.message, 'error'))
+    return () => {
+      // closing the sheet stops the searches, so the next link does not wait behind them
+      closed = true
+      if (id) void client.cancelJob(id).catch(() => undefined)
+    }
   }, [client, list, isSC, toast])
 
   const rows = useMemo(
     () =>
       list.items.map((item, i) => {
-        if (isSC) return { item, m: { status: 'found', best: soundcloudTarget(item), alternatives: [] } as MatchResult }
+        if (isSC)
+          return {
+            item,
+            m: item.preview_only
+              ? ({ status: 'missing', best: null, alternatives: [] } as MatchResult)
+              : ({ status: 'found', best: soundcloudTarget(item), alternatives: [] } as MatchResult)
+          }
         return { item, m: matches?.[i] }
       }),
     [list, matches, isSC]
@@ -111,7 +128,12 @@ export function ImportSheet({ list, onClose }: { list: ImportList; onClose(): vo
                   {m.best?.title}
                 </span>
               )}
-              {m?.status === 'missing' && <span className="ds-sub">No encontrada</span>}
+              {m?.status === 'missing' &&
+                (item.preview_only ? (
+                  <span className="badge badge-warn">Solo vista previa</span>
+                ) : (
+                  <span className="ds-sub">No encontrada</span>
+                ))}
               {m && m.status !== 'missing' && (m.status === 'review' || picked[i] !== undefined) && (
                 <>
                   {m.status === 'review' && <span className="badge badge-warn">Revisar</span>}
