@@ -160,8 +160,8 @@ class MixerStateBody(BaseModel):
 
 
 class SectionIn(BaseModel):
-    start: float = Field(ge=0)
-    end: float
+    start: float = Field(ge=0, allow_inf_nan=False)
+    end: float = Field(allow_inf_nan=False)
     label: str
 
 
@@ -211,8 +211,9 @@ class DjExportJobBody(BaseModel):
     @field_validator("out")
     @classmethod
     def _xml(cls, v):
-        if v is not None and not v.lower().endswith(".xml"):
-            raise ValueError("el archivo de Rekordbox debe ser .xml")
+        # only our own file: a wrong folder pick must never overwrite another program's XML
+        if v is not None and Path(v).name.lower() != "oneforall rekordbox.xml":
+            raise ValueError("el archivo de Rekordbox debe ser «OneForAll rekordbox.xml»")
         return v
 
 
@@ -279,8 +280,18 @@ def create_app(services: Services, token: str) -> FastAPI:
     async def lifespan(app: FastAPI):
         yield
         await svc.jobs.cancel_all()
+        shutil.rmtree(svc.paths.tmp_dir / "preview", ignore_errors=True)
 
     app = FastAPI(lifespan=lifespan)
+
+    from fastapi.exceptions import RequestValidationError
+    from fastapi.responses import JSONResponse
+
+    @app.exception_handler(RequestValidationError)
+    async def _invalid(request, exc: RequestValidationError):
+        # the default handler echoes the input back, and a NaN in it cannot be written as JSON (500 instead of 422)
+        errors = [{k: v for k, v in e.items() if k in ("type", "loc", "msg")} for e in exc.errors()]
+        return JSONResponse(status_code=422, content={"detail": errors})
     # The Electron renderer loads from file:// (origin "null") or the dev server on localhost.
     # Web pages never get the token, but they are still kept out of CORS.
     app.add_middleware(
@@ -306,6 +317,7 @@ def create_app(services: Services, token: str) -> FastAPI:
 
     @api.put("/settings")
     def put_settings(s: Settings):
+        s.enhance_rtf = svc.settings.enhance_rtf  # measured by the engine, never by the UI
         svc.settings = s
         save_settings(svc.paths.settings_path, s)
         svc.jobs.set_concurrency("download", s.download_concurrency)
@@ -457,7 +469,8 @@ def create_app(services: Services, token: str) -> FastAPI:
         side["grid"] = svc.analysis.get_grid(Path(path)).to_dict()
         side.setdefault("sections", [])
         side["needs_reanalysis"] = rec.version < ANALYSIS_VERSION_NOW
-        return {"record": asdict(rec), "sidecar": side, "info": _audio_info(Path(path))}
+        track = svc.library.track_by_path(path)
+        return {"record": asdict(rec), "sidecar": side, "info": _audio_info(Path(path)), "enhanced": bool(track and track.enhanced)}
 
     @api.put("/analysis/bpm")
     def manual_bpm(body: ManualBpm):
@@ -531,6 +544,11 @@ def create_app(services: Services, token: str) -> FastAPI:
             raise HTTPException(status_code=409, detail={"code": "stale", "message": "El archivo ha cambiado: reanalízalo primero"})
         current = svc.analysis.get_grid(p)
         rec = svc.analysis.get_any(p)
+        side = svc.analysis.read_sidecar(p) or {}
+        if not side.get("grid_auto") and current is not None and current.source != "manual":
+            # version-1 analysis: remember the detected grid before the first edit, so "reset" can go back to it
+            side["grid_auto"] = Grid(current.anchor, current.bpm, "auto").to_dict()
+            svc.analysis._write_sidecar(p, side)
         if body.reset:
             auto = (svc.analysis.read_sidecar(p) or {}).get("grid_auto")
             grid = Grid.from_dict(auto) if auto else Grid(current.anchor, current.bpm, "auto")

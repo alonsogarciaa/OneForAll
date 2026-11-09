@@ -153,6 +153,7 @@ export interface AnalysisSidecar {
   duration: number
   grid?: Grid
   sections?: Section[]
+  sections_auto?: Section[]
   needs_reanalysis?: boolean
 }
 

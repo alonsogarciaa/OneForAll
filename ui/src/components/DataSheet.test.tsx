@@ -122,4 +122,22 @@ describe('DataSheet', () => {
     await userEvent.click(await screen.findByRole('button', { name: /Cambiar BPM y tono/ }))
     expect(useUiStore.getState().retempoFor).toBe('C:/m/a.mp3')
   })
+
+  it('opens Mejorar audio knowing whether the track is already enhanced', async () => {
+    const c = client({ getAnalysis: vi.fn(async () => ({ record, sidecar, info, enhanced: true })) })
+    render(<EngineTestProvider client={c}><DataSheet path="C:/m/a.mp3" onClose={() => undefined} /></EngineTestProvider>)
+    await screen.findByText('128.0')
+    await userEvent.click(screen.getByRole('button', { name: /Mejorar audio/ }))
+    expect(useUiStore.getState().enhanceFor).toEqual([{ path: 'C:/m/a.mp3', enhanced: true }])
+  })
+
+  it('keeps the section editor after deleting every section, so it can go back to automatic', async () => {
+    const grid = { anchor: 0.5, bpm: 128, source: 'auto', meter: 4 }
+    const auto = [{ start: 0, end: 213, label: 'Intro' }]
+    const c = client({ getAnalysis: vi.fn(async () => ({ record, sidecar: { ...sidecar, grid, sections: [], sections_auto: auto }, info })) })
+    render(<EngineTestProvider client={c}><DataSheet path="C:/m/a.mp3" onClose={() => undefined} /></EngineTestProvider>)
+    expect(await screen.findByText('Sin secciones')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Volver al automático' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Partir en el cabezal' })).toBeNull()
+  })
 })

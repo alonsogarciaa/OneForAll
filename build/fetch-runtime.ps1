@@ -95,7 +95,9 @@ $apollo = Join-Path $models 'apollo'
 New-Item -ItemType Directory -Force $apollo | Out-Null
 $apolloBin = Join-Path $apollo 'pytorch_model.bin'
 if (-not (Test-Path $apolloBin)) {
-  Invoke-WebRequest -Uri 'https://huggingface.co/JusperLee/Apollo/resolve/main/pytorch_model.bin' -OutFile $apolloBin
+  # download to a .part name: an interrupted download never looks like a finished checkpoint
+  Invoke-WebRequest -Uri 'https://huggingface.co/JusperLee/Apollo/resolve/main/pytorch_model.bin' -OutFile "$apolloBin.part"
+  Move-Item -Force "$apolloBin.part" $apolloBin
 }
 & $pyexe -c "import sys; from pathlib import Path; from djengine.enhance.models import convert, SAFE; d = Path(sys.argv[1]); convert(d / 'pytorch_model.bin', d / SAFE); print('apollo model ok')" $apollo
 if ($LASTEXITCODE -ne 0) { throw 'apollo model convert failed' }

@@ -28,6 +28,7 @@ export function SectionEditor({ path, sections, bars, position, onChange }: Prop
 
   return (
     <section className="ds-sections" aria-label="Secciones">
+      {sections.length === 0 && <p className="ds-sub">Sin secciones</p>}
       <ul>
         {sections.map((s, i) => (
           <li key={`${s.start}-${i}`}>
@@ -65,9 +66,11 @@ export function SectionEditor({ path, sections, bars, position, onChange }: Prop
         ))}
       </ul>
       <div className="ds-sections-actions">
-        <button className="btn btn-sm" onClick={() => void save(splitAt(sections, position))}>
-          Partir en el cabezal
-        </button>
+        {sections.length > 0 && (
+          <button className="btn btn-sm" onClick={() => void save(splitAt(sections, position))}>
+            Partir en el cabezal
+          </button>
+        )}
         <button className="btn btn-sm btn-ghost" onClick={() => void save(null)}>
           Volver al automático
         </button>

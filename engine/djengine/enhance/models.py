@@ -23,6 +23,10 @@ MISSING = UserError("model_missing", "No se pudo descargar el modelo de mejora")
 _SAFE_BUILTINS = {"dict", "list", "tuple", "set", "frozenset", "int", "float", "str", "bool", "bytes", "bytearray", "slice", "complex", "long", "unicode"}
 
 
+_ALLOWED = {("collections", "OrderedDict"), ("collections", "defaultdict"), ("torch._utils", "_rebuild_tensor_v2"),
+            ("torch._utils", "_rebuild_parameter"), ("torch.torch_version", "TorchVersion"), ("_codecs", "encode")}
+
+
 class _Stub(dict):
     """Stands in for omegaconf configs in the checkpoint's metadata (never used)."""
 
@@ -39,7 +43,7 @@ class _Restricted(pickle.Unpickler):
             return _Stub
         if root in ("builtins", "__builtin__") and name in _SAFE_BUILTINS:
             return super().find_class(module, name)
-        if (root == "collections" and name in ("OrderedDict", "defaultdict")) or root in ("torch", "_codecs") or module.startswith("numpy"):
+        if (module, name) in _ALLOWED or (module == "torch" and name.endswith("Storage")):
             return super().find_class(module, name)
         raise pickle.UnpicklingError(f"blocked {module}.{name}")
 
@@ -98,7 +102,12 @@ def apollo_path() -> Path:
         src = bundled / FILE if bundled and (bundled / FILE).is_file() else cache / FILE
         if not src.is_file():
             _download(src)
-        return convert(src, cache / SAFE)
+        try:
+            return convert(src, cache / SAFE)
+        except OSError:
+            if src.parent == cache:
+                src.unlink(missing_ok=True)  # a bad download must not block the next try
+            raise
     except OSError as e:
         log.warning("apollo model unavailable: %s", e)
         raise MISSING

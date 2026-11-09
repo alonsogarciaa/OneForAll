@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from urllib.parse import quote
 
-from .model import ExportTrack, mp3_decoder_offset
+from .model import ExportTrack, mp3_decoder_offset, clean_text
 
 
 def _location(path: str) -> str:
@@ -18,7 +18,8 @@ def rekordbox_xml(tracks: list[ExportTrack], playlists: list[tuple[str, list[int
     coll = ET.SubElement(root, "COLLECTION", Entries=str(len(tracks)))
     for t in tracks:
         off = mp3_decoder_offset(t.path)  # Rekordbox counts from the first decoded sample, gapless delay included
-        el = ET.SubElement(coll, "TRACK", TrackID=str(t.id), Name=t.title, Artist=t.artist, Album=t.album,
+        el = ET.SubElement(coll, "TRACK", TrackID=str(t.id), Name=clean_text(t.title), Artist=clean_text(t.artist),
+                           Album=clean_text(t.album),
                            Kind=t.kind, Size=str(t.size), TotalTime=str(int(t.duration)),
                            AverageBpm=f"{t.bpm:.2f}", Tonality=t.key, Location=_location(t.path))
         ET.SubElement(el, "TEMPO", Inizio=f"{t.anchor + off:.3f}", Bpm=f"{t.bpm:.2f}", Metro="4/4", Battito="1")
@@ -35,7 +36,7 @@ def rekordbox_xml(tracks: list[ExportTrack], playlists: list[tuple[str, list[int
     top = ET.SubElement(pls, "NODE", Type="0", Name="ROOT", Count="1")
     folder = ET.SubElement(top, "NODE", Type="0", Name="OneForAll", Count=str(len(lists)))
     for name, members in lists:
-        node = ET.SubElement(folder, "NODE", Name=name, Type="1", KeyType="0", Entries=str(len(members)))
+        node = ET.SubElement(folder, "NODE", Name=clean_text(name), Type="1", KeyType="0", Entries=str(len(members)))
         for i in members:
             ET.SubElement(node, "TRACK", Key=str(i))
     ET.indent(root, space="  ")

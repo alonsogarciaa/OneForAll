@@ -52,7 +52,10 @@ export function VideoExportSheet({ trackIds, onClose }: { trackIds: number[]; on
     }
   }
 
-  const notes = result ? [...result.fallbacks, ...result.failed] : []
+  // a track that fell back to the cover and then failed to render is only a failure
+  const failedTitles = new Set(result?.failed.map((f) => f.title))
+  const covers = result ? result.fallbacks.filter((f) => !failedTitles.has(f.title)) : []
+  const notes = result ? [...covers, ...result.failed] : []
 
   return (
     <GlassSheet
@@ -86,7 +89,7 @@ export function VideoExportSheet({ trackIds, onClose }: { trackIds: number[]; on
         {job?.status === 'failed' && <p className="txt-err">{job.error?.message ?? 'No se pudo exportar'}</p>}
         {result && (
           <div className="djx-result">
-            <p>{`${result.exported.length} exportados · ${result.fallbacks.length} con portada`}</p>
+            <p>{`${result.exported.length} exportados · ${covers.length} con portada`}</p>
             {notes.length > 0 && (
               <ul>
                 {notes.map((s, i) => (

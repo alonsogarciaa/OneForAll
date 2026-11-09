@@ -115,10 +115,10 @@ def test_api_422_on_bad_target(svc, tmp_path):  # noqa: F811
         assert c.post("/jobs", json={"type": "dj_export", "target": "traktor"}, headers=H).status_code == 422
         assert c.post("/jobs", json={"type": "dj_export", "target": "rekordbox", "out": str(tmp_path / "x.txt")},
                       headers=H).status_code == 422
-        r = c.post("/jobs", json={"type": "dj_export", "target": "rekordbox", "out": str(tmp_path / "x.xml")}, headers=H)
+        r = c.post("/jobs", json={"type": "dj_export", "target": "rekordbox", "out": str(tmp_path / "OneForAll rekordbox.xml")}, headers=H)
         assert r.status_code == 200
         jid = r.json()["job"]["id"]
         end = time.time() + 10
         while time.time() < end and next(j for j in c.get("/jobs", headers=H).json() if j["id"] == jid)["status"] not in FINAL:
             time.sleep(0.05)
-        assert (tmp_path / "x.xml").exists()
+        assert (tmp_path / "OneForAll rekordbox.xml").exists()
