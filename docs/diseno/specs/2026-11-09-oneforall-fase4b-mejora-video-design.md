@@ -1,7 +1,7 @@
 # OneForAll — Fase 4b: Mejora con IA y vídeo — Especificación
 
 - Fecha: 2026-11-09
-- Estado: borrador, pendiente de revisión del dueño
+- Estado: aprobada (2026-11-09)
 - Base: `docs/diseno/specs/2026-11-01-dj-app-design.md` (§8, hoja de ruta) y la Fase 4a (en `main`).
 - Referencia: [Apollo](https://github.com/JusperLee/Apollo) (Kai Li y Yi Luo, CC BY-SA 4.0). Pesos `JusperLee/Apollo` en Hugging Face: `pytorch_model.bin`, 66,5 MB.
 
@@ -70,12 +70,12 @@ Ajustes nuevos:
 - `enhance_mode: "copy" | "replace" = "replace"`
 - `enhance_format: "same" | "flac" = "same"`
 
-Con `enhance_on_download` activo, la descarga crea un trabajo hijo `enhance`, igual que `ThenStems`. Si la descarga pidió además stems, los stems se separan del archivo ya mejorado. El análisis automático se hace sobre el archivo final.
+Con `enhance_on_download` activo, la descarga lanza un trabajo `enhance` de nivel superior (como `submit_stems`: si falla, no falla la descarga). Si la descarga pidió además stems, los stems se separan del archivo ya mejorado. El análisis automático se hace sobre el archivo final.
 
 ### 3.6 Rutas del servidor
 
-- `POST /jobs/enhance` con `{path, mode, format}` devuelve `{job}`.
-- `POST /jobs/enhance-preview` con `{path}` devuelve `{job}`. El resultado es `{original, enhanced, start}`: dos rutas de archivo y el inicio en segundos.
+- `POST /jobs` con `{type: "enhance", path, mode, format}` devuelve `{job}`.
+- `POST /jobs` con `{type: "enhance_preview", path}` devuelve `{job}`. El resultado es `{original, enhanced, start}`: dos rutas de archivo y el inicio en segundos.
 - `GET /enhance/estimate?path=` devuelve `{seconds}`. Se calcula con la velocidad medida en el banco y guardada en los ajustes tras la primera mejora.
 
 ## 4. Mejorar audio: interfaz
