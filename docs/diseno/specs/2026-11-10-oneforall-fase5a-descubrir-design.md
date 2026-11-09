@@ -1,7 +1,7 @@
 # OneForAll — Fase 5a: Descubrir — Especificación
 
 - Fecha: 2026-11-10
-- Estado: borrador, pendiente de revisión del dueño
+- Estado: aprobada (2026-11-10)
 - Base: `docs/diseno/specs/2026-11-01-dj-app-design.md` (§8, hoja de ruta) y las Fases 1 a 4b (en `main`).
 - La Fase 5 se divide en **5a (descubrir, esta spec)** y **5b (datos de la canción: ficha de MusicBrainz, Wikipedia y Discogs, letras sincronizadas y transcripción)**. Lo decidió el dueño el 2026-11-10.
 
