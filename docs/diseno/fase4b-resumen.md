@@ -21,7 +21,7 @@
 
 | Prueba | Resultado |
 |---|---|
-| Motor (pytest) | 433 pasan |
+| Motor (pytest) | 441 pasan |
 | App (Vitest) | 179 pasan |
 | E2E (Playwright, app compilada) | 10 pasan. Incluye mejorar con escucha A/B y exportar vídeo. |
 | Diseño a 1280 y 375 px | Capturas en `test-results/enhance-*.png` y `test-results/video-*.png`. Sin desbordes. |
@@ -32,3 +32,15 @@
 
 - La escucha a ciegas de las 5 parejas de `engine/bench/data/apollo/`, apuntada en el banco.
 - Probar una mejora completa y una exportación de vídeo en VirtualDJ o Serato Video.
+
+## Revisión final
+
+Se corrigieron estos fallos, cada uno con un test que primero falló:
+
+- Un Opus en el mismo formato fallaba al codificar, porque libopus no acepta 44,1 kHz.
+- Reemplazar un archivo de otra unidad fallaba.
+- Si la mejora al descargar fallaba, se perdían el análisis y los stems pedidos.
+- Un `%` en el título rompía la tarjeta de vídeo.
+- Al reanalizar una copia con otro BPM se perdía `origin_bpm`, y su vídeo se desincronizaba.
+
+Quedan 14 detalles menores apuntados en el informe final.
