@@ -140,4 +140,12 @@ describe('DataSheet', () => {
     expect(screen.getByRole('button', { name: 'Volver al automático' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Partir en el cabezal' })).toBeNull()
   })
+
+  it('Parecidas opens Descubrir with this track', async () => {
+    const c = client({ getAnalysis: vi.fn(async () => ({ record, sidecar, info, track_id: 42 })) })
+    render(<EngineTestProvider client={c}><DataSheet path="C:/m/a.mp3" onClose={() => undefined} /></EngineTestProvider>)
+    await userEvent.click(await screen.findByRole('button', { name: 'Parecidas' }))
+    expect(useUiStore.getState().discoverSeed).toBe(42)
+    expect(useUiStore.getState().route).toBe('descubrir')
+  })
 })

@@ -1,7 +1,4 @@
-import type {
-  AnalysisRecord, AnalysisSidecar, Grid, GridOp, HarmonicRow, Section,
-  ConvertOptions, DownloadRequest, EngineEvent, HistoryEntry, Job, PlaylistInfo, SearchKind, SearchResult, Settings, TrackRecord
-} from './types'
+import type { AnalysisRecord, AnalysisSidecar, ConvertOptions, DownloadRequest, EngineEvent, Grid, GridOp, HarmonicRow, HistoryEntry, ImportItem, ImportList, Job, MoodSection, PlaylistInfo, Rec, SearchKind, SearchResult, Section, Settings, TrackRecord } from './types'
 
 export class EngineError extends Error {
   constructor(public status: number, public code: string, message: string) {
@@ -59,6 +56,18 @@ export function createClient(
     health: () => json<{ ok: boolean }>('/health'),
     info: () => json<{ logs_dir: string; data_dir: string }>('/info'),
     search: (q: string, kind: SearchKind) => json<SearchResult[]>(`/search?${new URLSearchParams({ q, kind })}`),
+    similar: (by: { trackId?: number; videoId?: string }) =>
+      json<{ seed: SearchResult | null; items: Rec[] }>(
+        `/discover/similar?${new URLSearchParams(by.trackId != null ? { track_id: String(by.trackId) } : { video_id: by.videoId ?? '' })}`
+      ),
+    moods: () => json<MoodSection[]>('/discover/moods'),
+    moodPlaylists: (params: string) => json<SearchResult[]>(`/discover/mood?${new URLSearchParams({ params })}`),
+    quickAnalysis: (videoIds: string[], durations: (number | null)[]) =>
+      json<{ job: Job }>('/jobs', post('/jobs', { type: 'quick_analysis', video_ids: videoIds, durations })),
+    discoverLink: (text: string) => json<ImportList>('/discover/link', post('/discover/link', { text })),
+    importMatch: (items: ImportItem[]) => json<{ job: Job }>('/jobs', post('/jobs', { type: 'import_match', items })),
+    startImport: (name: string, targets: SearchResult[], options: ConvertOptions) =>
+      json<{ job: Job }>('/jobs', post('/jobs', { type: 'import', name, targets, options })),
     getPlaylist: (id: string) => json<PlaylistInfo>(`/playlist/${encodeURIComponent(id)}`),
     async download(req: DownloadRequest, dest?: DownloadDest): Promise<{ job: Job } | { duplicate: TrackRecord }> {
       const r = await send('/jobs', post('/jobs', { type: 'download', request: req, ...(dest ?? {}) }))
@@ -80,7 +89,7 @@ export function createClient(
     putSettings: (s: Settings) => json<Settings>('/settings', { method: 'PUT', body: JSON.stringify(s) }),
     analyze: (paths: string[], opts: { force?: boolean; reset_bpm?: boolean } = {}) =>
       json<{ jobs: Job[] }>('/jobs', post('/jobs', { type: 'analysis', paths, ...opts })),
-    getAnalysis: (path: string) => json<{ record: AnalysisRecord; sidecar: AnalysisSidecar; enhanced?: boolean }>(`/analysis?${new URLSearchParams({ path })}`),
+    getAnalysis: (path: string) => json<{ record: AnalysisRecord; sidecar: AnalysisSidecar; enhanced?: boolean; track_id?: number | null }>(`/analysis?${new URLSearchParams({ path })}`),
     setManualBpm: (path: string, bpm: number) => json<AnalysisRecord>('/analysis/bpm', { method: 'PUT', body: JSON.stringify({ path, bpm }) }),
     harmonic: (params: { ref_track?: number; bpm?: number; camelot?: string; bpm_tolerance?: number }) =>
       json<HarmonicRow[]>(`/harmonic?${new URLSearchParams(Object.entries(params).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)]))}`),

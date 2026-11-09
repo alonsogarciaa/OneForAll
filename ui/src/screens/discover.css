@@ -1,0 +1,67 @@
+.discover .result-row {
+  grid-template-columns: 48px minmax(0, 1fr) auto auto auto;
+}
+.disc-facts {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 132px;
+  justify-content: flex-end;
+  font-size: 13px;
+}
+.badge-fit {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--lg-text-primary);
+}
+.disc-seed,
+.disc-ref {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.disc-seed select {
+  min-width: 0;
+  flex: 1 1 260px;
+  max-width: 480px;
+}
+.disc-bpm {
+  width: 90px;
+}
+.disc-key {
+  width: 70px;
+}
+.disc-order {
+  margin-bottom: 10px;
+}
+.disc-moods {
+  margin-bottom: 14px;
+}
+.disc-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.disc-playlists {
+  margin-bottom: 14px;
+}
+.empty-inline {
+  color: var(--lg-text-secondary);
+  padding: 24px 0;
+}
+
+@media (max-width: 640px) {
+  .discover .result-row {
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+  }
+  .discover .result-row .result-meta {
+    display: none;
+  }
+  .disc-facts {
+    grid-column: 2 / -1;
+    justify-content: flex-start;
+    min-width: 0;
+  }
+}

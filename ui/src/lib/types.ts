@@ -1,7 +1,7 @@
 // Mirrors of the engine's JSON shapes (engine/djengine).
 
-export type Kind = 'song' | 'video' | 'playlist'
-export type SearchKind = 'songs' | 'videos' | 'playlists'
+export type Kind = 'song' | 'video' | 'playlist' | 'soundcloud'
+export type SearchKind = 'songs' | 'videos' | 'playlists' | 'soundcloud'
 
 export interface SearchResult {
   kind: Kind
@@ -15,6 +15,41 @@ export interface SearchResult {
   url: string
   track_count: number | null
   in_library: boolean
+  source?: 'youtube' | 'soundcloud'
+  preview_only?: boolean
+}
+
+/** A recommendation: a search result plus what the quick analysis already knows. */
+export interface Rec extends SearchResult {
+  bpm: number | null
+  camelot: string | null
+  analysed: boolean
+}
+
+export interface MoodSection {
+  title: string
+  items: { title: string; params: string }[]
+}
+
+export interface ImportItem {
+  title: string
+  artist: string
+  duration_s: number | null
+  url?: string | null
+  id?: string | null
+}
+
+export interface ImportList {
+  name: string
+  service: 'spotify' | 'apple' | 'soundcloud'
+  items: ImportItem[]
+  truncated: boolean
+}
+
+export interface MatchResult {
+  status: 'found' | 'review' | 'missing'
+  best: SearchResult | null
+  alternatives: SearchResult[]
 }
 
 export interface PlaylistInfo {
@@ -167,5 +202,7 @@ export type EngineEvent =
   | { type: 'engine.hello' }
   | { type: 'job.queued' | 'job.done' | 'job.failed' | 'job.cancelled'; job: Job }
   | { type: 'job.progress'; job: Job; speed?: string | null; eta?: string | null }
+  | { type: 'quick.result'; video_id: string; bpm: number | null; camelot: string | null; failed: boolean }
+  | { type: 'match.result'; job_id: string; index: number; result: MatchResult }
 
 export const FINAL_STATUSES: JobStatus[] = ['done', 'failed', 'cancelled']

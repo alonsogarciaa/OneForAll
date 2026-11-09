@@ -182,6 +182,11 @@ export function DataSheet({ path, onClose }: { path: string; onClose(): void }) 
           <button className="btn" onClick={() => openEnhance([{ path, enhanced: !!(data as { enhanced?: boolean } | null)?.enhanced }])}>
             Mejorar audio…
           </button>
+          {(data as { track_id?: number | null } | null)?.track_id != null && (
+            <button className="btn" onClick={() => useUiStore.getState().openDiscover((data as { track_id: number }).track_id)}>
+              Parecidas
+            </button>
+          )}
           <button className="btn" onClick={reanalyze} disabled={analyzing}>
             <RefreshCw size={15} />
             Reanalizar

@@ -2,6 +2,7 @@ import { AppShell } from './components/AppShell'
 import { EngineProvider, useEngine } from './lib/engine'
 import { useUiStore } from './stores/uiStore'
 import { SearchScreen } from './screens/SearchScreen'
+import { DiscoverScreen } from './screens/DiscoverScreen'
 import { DownloadsScreen } from './screens/DownloadsScreen'
 import { LibraryScreen } from './screens/LibraryScreen'
 import { HistoryScreen } from './screens/HistoryScreen'
@@ -20,6 +21,7 @@ import { StemsSheet } from './components/StemsSheet'
 function Screen() {
   const route = useUiStore((s) => s.route)
   if (route === 'buscar') return <SearchScreen />
+  if (route === 'descubrir') return <DiscoverScreen />
   if (route === 'descargas') return <DownloadsScreen />
   if (route === 'biblioteca') return <LibraryScreen />
   if (route === 'historial') return <HistoryScreen />

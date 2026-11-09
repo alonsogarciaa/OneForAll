@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { ListMusic, Music2 } from 'lucide-react'
 import { DownloadButton } from './DownloadButton'
 import { formatDuration, formatViews } from '../lib/format'
@@ -10,6 +11,8 @@ interface Props {
   onDownload(item: SearchResult): void
   onOpen(item: SearchResult): void
   onStems?(item: SearchResult, stems: string[] | null): void
+  /** Extra cells before the length (Descubrir: BPM, key and fit). */
+  extra?: ReactNode
 }
 
 export function Cover({ src, size = 48, playlist = false }: { src: string | null; size?: number; playlist?: boolean }) {
@@ -20,7 +23,7 @@ export function Cover({ src, size = 48, playlist = false }: { src: string | null
   )
 }
 
-export function ResultRow({ item, options, onOptions, onDownload, onOpen, onStems }: Props) {
+export function ResultRow({ item, options, onOptions, onDownload, onOpen, onStems, extra }: Props) {
   const isPlaylist = item.kind === 'playlist'
   const sub = [item.artist, item.album].filter(Boolean).join(' · ')
   return (
@@ -37,9 +40,11 @@ export function ResultRow({ item, options, onOptions, onDownload, onOpen, onStem
         <div className="result-title">
           <span>{item.title}</span>
           {item.in_library && <span className="badge">En tu biblioteca</span>}
+          {item.preview_only && <span className="badge badge-warn">Solo vista previa</span>}
         </div>
         <div className="result-sub">{sub}</div>
       </div>
+      {extra}
       <div className="result-meta tabular">
         {isPlaylist ? (
           item.track_count != null && <span>{item.track_count} canciones</span>
@@ -50,7 +55,7 @@ export function ResultRow({ item, options, onOptions, onDownload, onOpen, onStem
           </>
         )}
       </div>
-      {isPlaylist ? (
+      {item.preview_only ? null : isPlaylist ? (
         <button className="btn btn-sm" onClick={(e) => (e.stopPropagation(), onOpen(item))}>
           Ver playlist
         </button>

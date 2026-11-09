@@ -91,3 +91,17 @@ def test_no_seed_gives_empty_list(svc, monkeypatch):  # noqa: F811
     tid = svc.library.add_track(TrackRecord(None, None, "Nada", "Nadie", "", 200, None, "C:/n.mp3", "mp3", None, None, ""))
     with TestClient(create_app(svc, token="t")) as c:
         assert c.get("/discover/similar", params={"track_id": tid}, headers=H).json() == {"seed": None, "items": []}
+
+
+def test_analysis_response_has_the_track_id(svc, tmp_path):  # noqa: F811
+    from djengine.analysis.store import AnalysisRecord, file_stamp, now_iso
+
+    p = tmp_path / "a.wav"
+    p.write_bytes(b"x")
+    tid = svc.library.add_track(TrackRecord(None, "v1", "T", "A", "", 200, None, str(p), "wav", None, None, ""))
+    size, mtime = file_stamp(p)
+    svc.analysis.save(AnalysisRecord(path=str(p), size=size, mtime=mtime, bpm=120.0, bpm_confidence=1, bpm_source="auto",
+                                     tonic="A", mode="minor", camelot="8A", key_confidence=1, lufs=None, peak_db=None,
+                                     version=2, created_at=now_iso()), {"beats": [], "duration": 1.0})
+    with TestClient(create_app(svc, token="t")) as c:
+        assert c.get("/analysis", params={"path": str(p)}, headers=H).json()["track_id"] == tid

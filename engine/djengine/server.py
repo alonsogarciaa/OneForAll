@@ -572,7 +572,8 @@ def create_app(services: Services, token: str) -> FastAPI:
         side.setdefault("sections", [])
         side["needs_reanalysis"] = rec.version < ANALYSIS_VERSION_NOW
         track = svc.library.track_by_path(path)
-        return {"record": asdict(rec), "sidecar": side, "info": _audio_info(Path(path)), "enhanced": bool(track and track.enhanced)}
+        return {"record": asdict(rec), "sidecar": side, "info": _audio_info(Path(path)), "enhanced": bool(track and track.enhanced),
+                "track_id": track.id if track else None}
 
     @api.put("/analysis/bpm")
     def manual_bpm(body: ManualBpm):
