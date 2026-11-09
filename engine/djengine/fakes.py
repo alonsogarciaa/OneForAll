@@ -23,9 +23,20 @@ PLAYLIST = SearchResult(kind="playlist", id="PLfake", title="Fake Playlist", art
                         track_count=len(PLAYLIST_TRACKS))
 
 
+SC_TRACKS = [
+    SearchResult(kind="soundcloud", id="sc:101", title="Fake SC Remix", artist="Fake SC", duration_s=200, views=10,
+                 thumbnail=None, url="https://soundcloud.com/fake/remix", source="soundcloud"),
+    SearchResult(kind="soundcloud", id="sc:102", title="Fake Go+ Track", artist="Fake SC", duration_s=30, views=10,
+                 thumbnail=None, url="https://soundcloud.com/fake/goplus", source="soundcloud", preview_only=True),
+]
+
+
 class FakeSearch:
     def search(self, q: str, kind: str) -> list[SearchResult]:
-        return {"songs": list(SONGS), "videos": [VIDEO], "playlists": [PLAYLIST]}[kind]
+        return {"songs": list(SONGS), "videos": [VIDEO], "playlists": [PLAYLIST], "soundcloud": list(SC_TRACKS)}[kind]
+
+    def soundcloud(self, q: str) -> list[SearchResult]:
+        return list(SC_TRACKS)
 
     def get_playlist(self, playlist_id: str) -> PlaylistInfo:
         return PlaylistInfo(id="PLfake", title="Fake Playlist", tracks=list(PLAYLIST_TRACKS))

@@ -329,7 +329,7 @@ def create_app(services: Services, token: str) -> FastAPI:
         return s.model_dump()
 
     @api.get("/search")
-    async def search(q: str, kind: Literal["songs", "videos", "playlists"] = "songs"):
+    async def search(q: str, kind: Literal["songs", "videos", "playlists", "soundcloud"] = "songs"):
         try:
             results = await asyncio.to_thread(svc.search.search, q, kind)
         except Exception as e:
@@ -353,6 +353,8 @@ def create_app(services: Services, token: str) -> FastAPI:
 
     @api.post("/jobs")
     async def create_job(body: JobBody = Body(...)):
+        if isinstance(body, DownloadJobBody) and body.request.target.preview_only:
+            raise HTTPException(status_code=422, detail={"code": "preview_only", "message": "Solo vista previa"})
         if isinstance(body, DownloadJobBody):
             t = body.request.target
             if not body.request.force:
