@@ -51,7 +51,8 @@ def check_range(src_bpm: float, bpm: float) -> None:
         raise UserError("bad_request", "El BPM destino debe estar entre el 50 % y el 150 % del original")
 
 
-def _light_analysis(svc, src_rec: AnalysisRecord, src_side: dict, out: Path, ratio: float, bpm: float, semis: int):
+def _light_analysis(svc, src_rec: AnalysisRecord, src_side: dict, out: Path, ratio: float, bpm: float, semis: int,
+                    src_bpm: float):
     """BPM, key, grid and sections come from the source (scaled); only loudness and the waveform are measured."""
     from ..analysis.audio_io import decode
     from ..analysis.loudness import measure
@@ -78,7 +79,7 @@ def _light_analysis(svc, src_rec: AnalysisRecord, src_side: dict, out: Path, rat
     svc.analysis.save(rec, {"beats": beats(grid, duration), "grid": grid.to_dict(), "grid_auto": grid.to_dict(),
                             "sections": [s.to_dict() for s in sections],
                             "sections_auto": [s.to_dict() for s in sections],
-                            "waveform": wf, "duration": duration})
+                            "waveform": wf, "duration": duration, "origin_bpm": round(src_side.get("origin_bpm") or src_bpm, 4)})
     return rec
 
 
@@ -145,7 +146,7 @@ def make_retempo_runner(svc, path: Path, bpm: float, semis: int, fmt: str | None
             write_tags(final, TrackMeta(title, meta.artist, meta.album, meta.year, meta.source_url), cover)
         except Exception as e:  # e.g. a format mutagen cannot tag: the audio still counts
             log.info("tags not written for %s: %s", final.name, e)
-        rec = await asyncio.to_thread(_light_analysis, svc, src, side, final, ratio, bpm, semis)
+        rec = await asyncio.to_thread(_light_analysis, svc, src, side, final, ratio, bpm, semis, base_bpm)
         try:
             key = tag_key(rec.tonic, rec.mode, svc.settings.key_notation) if rec.tonic and rec.mode else None
             set_bpm_key(final, rec.bpm, key)
@@ -153,7 +154,8 @@ def make_retempo_runner(svc, path: Path, bpm: float, semis: int, fmt: str | None
             log.info("bpm/key tags not written for %s: %s", final.name, e)
         svc.analysis.restamp(final)
         svc.library.add_track(TrackRecord(None, None, title, meta.artist or (track.artist if track else ""),
-                                          meta.album or "", int(total) or None, None, str(final), ext, None, None, ""))
+                                          meta.album or "", int(total) or None, None, str(final), ext, None, None, "",
+                                          origin_video_id=svc.library.video_source(track)))
         musical = tag_key(rec.tonic, rec.mode, "musical") if rec.tonic and rec.mode else None
         svc.library.set_track_analysis(str(final), rec.bpm, musical, rec.camelot, rec.lufs)
         svc.library.add_history(None, title, meta.artist or "", "retempo", "done")

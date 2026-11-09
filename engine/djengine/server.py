@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import shutil
 import threading
 import secrets
 from contextlib import asynccontextmanager
@@ -57,6 +58,7 @@ class Services:
     mixer: Any = None
     allowed_paths: set = field(default_factory=set)  # files the user picked this session (/audio)
     shutdown: Callable[[], None] | None = None
+    video_downloader: Any = None
 
 
 def _tools_on_path() -> None:
@@ -75,7 +77,8 @@ def _tools_on_path() -> None:
 def build_services(paths: AppPaths, fake: bool) -> Services:
     settings = load_settings(paths.settings_path)
     hub = EventHub()
-    jobs = JobManager(paths.tmp_dir, hub.broadcast, {"download": settings.download_concurrency, "convert": CONVERT_CONCURRENCY, "analysis": ANALYSIS_CONCURRENCY, "stems": 1, "mix_export": 1, "retempo": 1, "dj_export": 1})
+    jobs = JobManager(paths.tmp_dir, hub.broadcast, {"download": settings.download_concurrency, "convert": CONVERT_CONCURRENCY, "analysis": ANALYSIS_CONCURRENCY, "stems": 1, "mix_export": 1, "retempo": 1, "dj_export": 1, "enhance": 1, "enhance_preview": 1, "video_export": 1})
+    shutil.rmtree(paths.tmp_dir / "preview", ignore_errors=True)  # A/B clips live for one session
     jobs.purge_orphans()
     _tools_on_path()
     from .pipelines import sweep_parts
@@ -85,11 +88,13 @@ def build_services(paths: AppPaths, fake: bool) -> Services:
     library = Library(paths.db_path)
     library.refresh_missing()
     if fake:
-        from .fakes import FakeSearch, fake_downloader
+        from .fakes import FakeSearch, fake_downloader, fake_video_downloader
 
-        search, downloader = FakeSearch(), fake_downloader
+        search, downloader, video_downloader = FakeSearch(), fake_downloader, fake_video_downloader
     else:
-        search, downloader = SearchService(), download_audio
+        from .download import download_video
+
+        search, downloader, video_downloader = SearchService(), download_audio, download_video
     from .analysis.store import AnalysisStore
 
     from .mixer.state import MixerStore
@@ -97,7 +102,7 @@ def build_services(paths: AppPaths, fake: bool) -> Services:
 
     analysis = AnalysisStore(paths.db_path, paths.root / "analysis")
     return Services(paths, settings, library, jobs, search, downloader, fake, hub, analysis=analysis,
-                    stems=StemsStore(paths.db_path), mixer=MixerStore(paths.db_path))
+                    stems=StemsStore(paths.db_path), mixer=MixerStore(paths.db_path), video_downloader=video_downloader)
 
 
 # --- request bodies -----------------------------------------------------------
@@ -211,7 +216,27 @@ class DjExportJobBody(BaseModel):
         return v
 
 
-JobBody = Annotated[Union[DownloadJobBody, PlaylistJobBody, ConvertJobBody, AnalysisJobBody, StemsJobBody, MixExportJobBody, RetempoJobBody, DjExportJobBody],
+class VideoExportJobBody(BaseModel):
+    type: Literal["video_export"]
+    track_ids: list[int] = Field(min_length=1)
+    quality: Literal["720", "1080", "max"] = "1080"
+    out_dir: str | None = None
+
+
+class EnhancePreviewJobBody(BaseModel):
+    type: Literal["enhance_preview"]
+    path: str
+
+
+class EnhanceJobBody(BaseModel):
+    type: Literal["enhance"]
+    path: str
+    mode: Literal["copy", "replace"]
+    format: Literal["same", "flac"]
+
+
+JobBody = Annotated[Union[DownloadJobBody, PlaylistJobBody, ConvertJobBody, AnalysisJobBody, StemsJobBody, MixExportJobBody, RetempoJobBody, DjExportJobBody,
+                          EnhanceJobBody, EnhancePreviewJobBody, VideoExportJobBody],
                     Field(discriminator="type")]
 
 AUDIO_EXT = {".mp3", ".m4a", ".aac", ".wav", ".aif", ".aiff", ".flac", ".ogg", ".opus", ".webm"}
@@ -345,6 +370,24 @@ def create_app(services: Services, token: str) -> FastAPI:
             runner = make_dj_export_runner(svc, body.target, body.track_ids, body.out)
             return {"job": svc.jobs.submit("dj_export", f"Exportar a {TITLES[body.target]}", runner,
                                            payload=body.model_dump()).to_dict()}
+        if isinstance(body, VideoExportJobBody):
+            from .export.video import make_video_export_runner
+
+            n = len(body.track_ids)
+            return {"job": svc.jobs.submit("video_export", f"Exportar vídeo ({n})" if n > 1 else "Exportar vídeo",
+                                           make_video_export_runner(svc, body.track_ids, body.quality, body.out_dir),
+                                           payload=body.model_dump()).to_dict()}
+        if isinstance(body, EnhancePreviewJobBody):
+            from .enhance.runner import make_preview_runner
+
+            return {"job": svc.jobs.submit("enhance_preview", f"Escuchar · {Path(body.path).stem}",
+                                           make_preview_runner(svc, Path(body.path)), payload=body.model_dump()).to_dict()}
+        if isinstance(body, EnhanceJobBody):
+            from .enhance.runner import submit_enhance
+
+            if not Path(body.path).is_file():
+                raise HTTPException(status_code=404, detail={"code": "not_found", "message": "No se encuentra el archivo"})
+            return {"job": submit_enhance(svc, Path(body.path), body.mode, body.format).to_dict()}
         if isinstance(body, RetempoJobBody):
             from .errors import UserError as _UE
             from .prep.retempo import check_range, make_retempo_runner
@@ -394,6 +437,13 @@ def create_app(services: Services, token: str) -> FastAPI:
     @api.delete("/jobs/{job_id}")
     async def cancel_job(job_id: str):
         return {"cancelled": await svc.jobs.cancel(job_id)}
+
+    @api.get("/enhance/estimate")
+    def enhance_estimate(path: str):
+        from .stems.runner import _duration
+
+        rtf, seconds = svc.settings.enhance_rtf, _duration(Path(path))
+        return {"seconds": round(seconds * rtf, 1) if rtf and seconds else None}
 
     @api.get("/analysis")
     def get_analysis(path: str):

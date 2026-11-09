@@ -120,3 +120,12 @@ def test_silent_file_gets_no_key_tag(svc, ctx, write_wav):
     run(svc, ctx, p)
     assert svc.analysis.get(p).camelot is None
     assert read_tags(p).key is None
+
+
+def test_origin_bpm_survives_reanalysis(svc, ctx, song):
+    run(svc, ctx, song)
+    side = svc.analysis.read_sidecar(song)
+    side["origin_bpm"] = 120.0
+    svc.analysis._write_sidecar(song, side)
+    run(svc, ctx, song, force=True)
+    assert svc.analysis.read_sidecar(song)["origin_bpm"] == 120.0  # a retempo copy keeps its video tempo

@@ -112,3 +112,33 @@ def fetch_thumbnail(url: str | None) -> bytes | None:
     except Exception as e:
         log.info("thumbnail fetch failed for %s: %s", url, e)
         return None
+
+
+_HEIGHT = {"720": 720, "1080": 1080}
+
+
+async def download_video(ctx, url: str, quality: str) -> Path:
+    """Video stream only (no audio), H.264 preferred, at most 720/1080 lines or the best there is ("max")."""
+    h = _HEIGHT.get(quality)
+    fmt = f"bv*[height<={h}][vcodec^=avc1]/bv*[height<={h}]" if h else "bv*[vcodec^=avc1]/bv*"
+    out_tpl = str(ctx.tmp_dir / "video.%(ext)s")
+    proc = await asyncio.create_subprocess_exec(
+        *ytdlp_cmd(), "-f", fmt, "--no-playlist", "--newline", "--no-part", "--no-mtime", "-o", out_tpl, url,
+        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+    )
+    ctx.register_process(proc)
+    stderr_task = asyncio.create_task(proc.stderr.read())
+    async for raw in proc.stdout:
+        parsed = parse_progress(raw.decode("utf-8", "replace"))
+        if parsed:
+            ctx.report("fetching_video", parsed[0], parsed[1], parsed[2])
+    await proc.wait()
+    stderr = (await stderr_task).decode("utf-8", "replace")
+    ctx.check_cancelled()
+    if proc.returncode != 0:
+        log.warning("yt-dlp video failed (%s) for %s: %s", proc.returncode, url, stderr[-2000:])
+        raise map_ytdlp_error(stderr)
+    files = [p for p in ctx.tmp_dir.glob("video.*") if p.is_file()]
+    if len(files) != 1:
+        raise user_error("extractor_outdated")
+    return files[0]

@@ -92,6 +92,8 @@ class TrackRecord:
     missing: bool = False
     lufs: float | None = None
     analyzed_at: str | None = None
+    enhanced: bool = False
+    origin_video_id: str | None = None  # copies (retempo, enhanced): the YouTube video of the original
 
 
 @dataclass
@@ -118,7 +120,8 @@ class Library:
         with self._lock:
             self._conn.executescript(_SCHEMA)
             cols = {r[1] for r in self._conn.execute("PRAGMA table_info(tracks)")}
-            for col, decl in (("lufs", "REAL"), ("analyzed_at", "TEXT")):  # phase 2 migration
+            for col, decl in (("lufs", "REAL"), ("analyzed_at", "TEXT"),  # phase 2 migration
+                              ("enhanced", "INTEGER NOT NULL DEFAULT 0"), ("origin_video_id", "TEXT")):  # phase 4b
                 if col not in cols:
                     self._conn.execute(f"ALTER TABLE tracks ADD COLUMN {col} {decl}")
             self._conn.commit()
@@ -137,6 +140,7 @@ class Library:
     def _to_track(r: sqlite3.Row) -> TrackRecord:
         d = {k: r[k] for k in _TRACK_COLS}
         d["missing"] = bool(d["missing"])
+        d["enhanced"] = bool(d["enhanced"])
         return TrackRecord(**d)
 
     def add_track(self, rec: TrackRecord) -> int:
@@ -144,6 +148,7 @@ class Library:
         d.pop("id")
         d["added_at"] = d["added_at"] or _now()
         d["missing"] = int(d["missing"])
+        d["enhanced"] = int(d["enhanced"])
         d["norm_key"] = normalize_key(rec.artist, rec.title)
         cols = ", ".join(d)
         marks = ", ".join("?" for _ in d)
@@ -189,6 +194,16 @@ class Library:
     def track_by_path(self, path: str) -> TrackRecord | None:
         rows = self._query("SELECT * FROM tracks WHERE path=?", (str(path),))
         return self._to_track(rows[0]) if rows else None
+
+    @staticmethod
+    def video_source(track: TrackRecord | None) -> str | None:
+        return (track.video_id or track.origin_video_id) if track else None
+
+    def set_enhanced(self, path: str) -> None:
+        self._exec("UPDATE tracks SET enhanced=1 WHERE path=?", (str(path),))
+
+    def update_track_path(self, old: str, new: str, fmt: str) -> None:
+        self._exec("UPDATE tracks SET path=?, format=?, missing=0 WHERE path=?", (str(new), fmt, str(old)))
 
     def set_track_analysis(self, path: str, bpm: float | None, musical_key: str, camelot: str, lufs: float | None) -> bool:
         cur = self._exec(

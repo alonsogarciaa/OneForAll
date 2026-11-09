@@ -72,3 +72,29 @@ def test_playlist_tracks(lib):
 def test_deleted_file_is_not_a_duplicate(lib, tmp_path):
     lib.add_track(rec(video_id="abc", artist="Quevedo", title="La Graciosa", path=str(tmp_path / "gone.mp3")))
     assert lib.find_duplicate("abc", "Quevedo", "La Graciosa") is None
+
+
+def test_phase4b_migration_is_idempotent(tmp_path):
+    Library(tmp_path / "l.db")
+    lib = Library(tmp_path / "l.db")
+    assert {"enhanced", "origin_video_id"} <= columns(lib, "tracks")
+
+
+def test_video_source_and_enhanced(lib):
+    lib.add_track(rec(video_id="abc", path="C:/a.mp3"))
+    lib.add_track(rec(path="C:/a (124 BPM).mp3", origin_video_id="abc"))
+    lib.add_track(rec(path="C:/own.mp3"))
+    assert lib.video_source(lib.track_by_path("C:/a.mp3")) == "abc"
+    assert lib.video_source(lib.track_by_path("C:/a (124 BPM).mp3")) == "abc"
+    assert lib.video_source(lib.track_by_path("C:/own.mp3")) is None
+    lib.set_enhanced("C:/a.mp3")
+    assert lib.track_by_path("C:/a.mp3").enhanced is True
+
+
+def test_update_track_path_keeps_analysis(lib):
+    lib.add_track(rec(path="C:/a.mp3"))
+    lib.set_track_analysis("C:/a.mp3", 128.0, "A minor", "8A", -9.0)
+    lib.update_track_path("C:/a.mp3", "C:/a.flac", "flac")
+    t = lib.track_by_path("C:/a.flac")
+    assert t and t.format == "flac" and t.bpm == 128.0 and t.camelot == "8A"
+    assert lib.track_by_path("C:/a.mp3") is None

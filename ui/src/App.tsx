@@ -11,6 +11,8 @@ import { HarmonyScreen } from './screens/HarmonyScreen'
 import { MixerSheet } from './components/MixerSheet'
 import { RetempoSheet } from './components/RetempoSheet'
 import { DjExportSheet } from './components/DjExportSheet'
+import { EnhanceSheet } from './components/EnhanceSheet'
+import { VideoExportSheet } from './components/VideoExportSheet'
 import { PlaylistSummaryHost } from './components/PlaylistSummarySheet'
 import { DataSheet } from './components/DataSheet'
 import { StemsSheet } from './components/StemsSheet'
@@ -50,6 +52,18 @@ function RetempoSheetHost() {
   return path ? <RetempoSheet key={path} path={path} onClose={close} /> : null
 }
 
+function EnhanceSheetHost() {
+  const items = useUiStore((s) => s.enhanceFor)
+  const close = useUiStore((s) => s.closeEnhance)
+  return items ? <EnhanceSheet items={items} onClose={close} /> : null
+}
+
+function VideoExportSheetHost() {
+  const v = useUiStore((s) => s.videoExport)
+  const close = useUiStore((s) => s.closeVideoExport)
+  return v ? <VideoExportSheet trackIds={v.trackIds} onClose={close} /> : null
+}
+
 function DjExportSheetHost() {
   const djExport = useUiStore((s) => s.djExport)
   const close = useUiStore((s) => s.closeDjExport)
@@ -86,6 +100,8 @@ function Body() {
       <MixerSheetHost />
       <RetempoSheetHost />
       <DjExportSheetHost />
+      <EnhanceSheetHost />
+      <VideoExportSheetHost />
     </>
   )
 }

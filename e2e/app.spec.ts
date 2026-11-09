@@ -264,3 +264,51 @@ test('DJ tools: grid edit, change BPM into a new analysed file, export to Rekord
   expect(text.match(/<TRACK TrackID=/g)?.length).toBe(2)
   expect(text).toContain('<TEMPO ')
 })
+
+async function fitsAt375(shot: string) {
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: `test-results/${shot}-375.png` })
+  expect(await page.locator('.sheet').evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1)
+  expect(await page.locator('.sheet-body').evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1)
+  const outside = await page.locator('.sheet').evaluate((sheet) => {
+    const box = sheet.getBoundingClientRect()
+    return [...sheet.querySelectorAll('.btn')].filter((b) => {
+      const r = b.getBoundingClientRect()
+      return r.left < box.left - 1 || r.right > box.right + 1
+    }).length
+  })
+  expect(outside).toBe(0)
+  await page.setViewportSize({ width: 1280, height: 800 })
+}
+
+test('enhance a copy with A/B preview, then export the video', async () => {
+  await launch()
+  await search('graciosa')
+  await downloadFirstSong()
+  await nav('Biblioteca')
+  const rows = page.locator('.stable-row:not(.stable-head)')
+  await expect(rows.first()).toBeVisible({ timeout: 30_000 })
+  await rows.first().getByRole('checkbox').check()
+
+  await page.getByRole('button', { name: 'Mejorar audio…' }).click()
+  await page.getByRole('button', { name: 'Escuchar antes' }).click()
+  await expect(page.getByRole('button', { name: 'Mejorado' })).toBeVisible({ timeout: 30_000 })
+  await page.screenshot({ path: 'test-results/enhance-desktop.png' })
+  await fitsAt375('enhance')
+  await page.getByRole('button', { name: 'Mejorar', exact: true }).click()
+  await expect(rows).toHaveCount(2, { timeout: 60_000 })
+  await expect(rows.filter({ hasText: 'La Graciosa (Mejorado)' })).toHaveCount(1)
+  await expect(rows.filter({ hasText: 'Mejorado' }).locator('.badge', { hasText: 'Mejorado' })).toHaveCount(1)
+
+  await rows.filter({ hasText: '(Mejorado)' }).getByRole('checkbox').check()
+  await page.getByRole('button', { name: 'Exportar vídeo…' }).click()
+  await page.getByRole('radio', { name: '720p' }).check()
+  await page.screenshot({ path: 'test-results/video-desktop.png' })
+  await page.getByRole('button', { name: 'Exportar', exact: true }).click()
+  await expect(page.getByText(/2 exportados/)).toBeVisible({ timeout: 60_000 })
+  await expect(page.getByRole('button', { name: 'Mostrar en carpeta' })).toBeVisible()
+  await fitsAt375('video')
+  const videos = join(musicDir, 'Videos')
+  expect(readdirSync(videos).filter((f) => f.endsWith('.mp4')).length).toBe(2)
+})

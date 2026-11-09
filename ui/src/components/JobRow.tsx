@@ -22,7 +22,10 @@ const STAGE_LABEL: Record<string, string> = {
   loading_model: 'Cargando modelo',
   separating: 'Separando',
   karaoke: 'Separando voces',
-  encoding: 'Codificando'
+  encoding: 'Codificando',
+  restoring: 'Mejorando',
+  fetching_video: 'Bajando vídeo',
+  rendering: 'Creando vídeo'
 }
 
 export function statusLabel(j: Job): string {

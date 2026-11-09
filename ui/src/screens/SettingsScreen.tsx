@@ -154,6 +154,53 @@ export function SettingsScreen() {
         </Row>
       </div>
 
+      <h2 className="settings-group">Mejora de audio</h2>
+      <div className="settings-card">
+        <Row label="Mejorar audio al descargar" hint="Restaura cada descarga con IA. En la CPU tarda unos 3,5 s por cada segundo de canción.">
+          <button
+            role="switch"
+            aria-checked={!!s.enhance_on_download}
+            aria-label="Mejorar audio al descargar"
+            className="switch"
+            onClick={() => save({ enhance_on_download: !s.enhance_on_download })}
+          >
+            <span />
+          </button>
+        </Row>
+        {s.enhance_on_download && (
+          <>
+            <Row label="Guardar como" hint={(s.enhance_mode ?? 'replace') === 'replace' ? 'El original se guarda en Originales' : undefined}>
+              <div className="segmented" role="group" aria-label="Modo de la mejora">
+                <button aria-pressed={(s.enhance_mode ?? 'replace') === 'copy'} onClick={() => save({ enhance_mode: 'copy' })}>Copia nueva</button>
+                <button aria-pressed={(s.enhance_mode ?? 'replace') === 'replace'} onClick={() => save({ enhance_mode: 'replace' })}>Reemplazar</button>
+              </div>
+            </Row>
+            <Row label="Formato">
+              <div className="segmented" role="group" aria-label="Formato de la mejora">
+                <button aria-pressed={(s.enhance_format ?? 'same') === 'same'} onClick={() => save({ enhance_format: 'same' })}>Mismo formato</button>
+                <button aria-pressed={(s.enhance_format ?? 'same') === 'flac'} onClick={() => save({ enhance_format: 'flac' })}>FLAC</button>
+              </div>
+            </Row>
+          </>
+        )}
+      </div>
+
+      <h2 className="settings-group">Vídeos</h2>
+      <div className="settings-card">
+        <Row label="Carpeta de vídeos" hint={s.videos_dir ?? `${s.music_dir}${s.music_dir.includes('/') ? '/' : '\\'}Videos`}>
+          <button
+            className="btn btn-sm"
+            aria-label="Cambiar carpeta de vídeos"
+            onClick={async () => {
+              const dir = await window.oneforall.pickFolder()
+              if (dir) save({ videos_dir: dir })
+            }}
+          >
+            Cambiar…
+          </button>
+        </Row>
+      </div>
+
       <h2 className="settings-group">Análisis</h2>
       <div className="settings-card">
         <Row label="Analizar al descargar" hint="Calcula BPM, tonalidad y volumen de cada canción descargada.">
@@ -282,7 +329,8 @@ export function SettingsScreen() {
       <div className="settings-card">
         <p className="settings-about">
           La tonalidad se detecta con el modelo CNN de madmom (Korzeniowski y Widmer), con licencia CC BY-NC-SA 4.0:
-          solo uso personal, no comercial. El tempo usa DeepRhythm (AGPL-3.0). Más detalles en el README del proyecto.
+          solo uso personal, no comercial. El tempo usa DeepRhythm (AGPL-3.0). La mejora de audio usa Apollo (Kai Li y Yi Luo),
+          con licencia CC BY-SA 4.0. Más detalles en el README del proyecto.
         </p>
       </div>
     </section>

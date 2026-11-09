@@ -17,6 +17,7 @@ const COLUMNS: Column<TrackRecord>[] = [
       <span className="cell-title">
         <span className="cell-strong">{t.title}</span>
         {t.missing && <span className="badge badge-warn">No encontrado</span>}
+        {t.enhanced && <span className="badge badge-muted">Mejorado</span>}
       </span>
     )
   },
@@ -57,6 +58,8 @@ export function LibraryScreen() {
   const openData = useUiStore((s) => s.openData)
   const openStems = useUiStore((s) => s.openStems)
   const openRetempo = useUiStore((s) => s.openRetempo)
+  const openEnhance = useUiStore((s) => s.openEnhance)
+  const openVideoExport = useUiStore((s) => s.openVideoExport)
   const openDjExport = useUiStore((s) => s.openDjExport)
 
   const load = useCallback(() => {
@@ -110,6 +113,19 @@ export function LibraryScreen() {
             }}
           >
             Cambiar BPM y tono…
+          </button>
+          <button
+            className="btn btn-sm"
+            disabled={selected.size === 0}
+            onClick={() => {
+              const picked = (rows ?? []).filter((t) => selected.has(t.id) && !t.missing)
+              if (picked.length) openEnhance(picked.map((t) => ({ path: t.path, enhanced: !!t.enhanced })))
+            }}
+          >
+            Mejorar audio…
+          </button>
+          <button className="btn btn-sm" disabled={selected.size === 0} onClick={() => openVideoExport([...selected])}>
+            Exportar vídeo…
           </button>
           <button className="btn btn-sm" onClick={() => openDjExport(selected.size ? [...selected] : null)}>
             Exportar a…

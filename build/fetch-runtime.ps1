@@ -90,4 +90,16 @@ if ($LASTEXITCODE -ne 0) { throw 'separation smoke test failed' }
 # analysis models must really run (an import alone would let a silent fallback ship)
 & $pyexe -c "import numpy as np; from djengine.analysis import tempo_deeprhythm as td, key_cnn as kc; sr = 22050; t = np.arange(sr * 20) / sr; y = (np.sin(2 * np.pi * 440 * t) * (np.mod(t, 0.5) < 0.05)).astype(np.float32); td._get(); r = td.deeprhythm_tempo(y, sr, 70, 180); assert r.bpm > 0, r; p = kc.probabilities(np.repeat(y, 2), 44100); assert p.shape[-1] == 24, p.shape; print('analysis models ok', r.bpm)"
 if ($LASTEXITCODE -ne 0) { throw 'analysis models smoke test failed' }
+# Apollo (audio enhancement): official checkpoint, checked and converted to safetensors (no pickle at runtime)
+$apollo = Join-Path $models 'apollo'
+New-Item -ItemType Directory -Force $apollo | Out-Null
+$apolloBin = Join-Path $apollo 'pytorch_model.bin'
+if (-not (Test-Path $apolloBin)) {
+  Invoke-WebRequest -Uri 'https://huggingface.co/JusperLee/Apollo/resolve/main/pytorch_model.bin' -OutFile $apolloBin
+}
+& $pyexe -c "import sys; from pathlib import Path; from djengine.enhance.models import convert, SAFE; d = Path(sys.argv[1]); convert(d / 'pytorch_model.bin', d / SAFE); print('apollo model ok')" $apollo
+if ($LASTEXITCODE -ne 0) { throw 'apollo model convert failed' }
+Remove-Item $apolloBin  # only the safetensors copy ships
+& $pyexe -c "import numpy as np; from djengine.enhance.apollo import ApolloRestorer; y = ApolloRestorer().restore(np.zeros((2, 44100), dtype=np.float32), lambda p: None, lambda: False); assert y.shape == (2, 44100); print('enhance ok')"
+if ($LASTEXITCODE -ne 0) { throw 'enhance smoke test failed' }
 Remove-Item Env:\ONEFORALL_MODELS

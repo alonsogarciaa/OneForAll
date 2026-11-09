@@ -164,3 +164,16 @@ async def test_retempo_ratio_follows_the_grid_bpm(svc, song):
     g = svc.analysis.get_grid(j.result["path"])
     assert abs(g.anchor - 1.0 / ratio) < 1e-4 and g.bpm == 100.0
     assert abs(sf.info(j.result["path"]).duration - 4.0 / ratio) < 0.05
+
+
+async def test_retempo_keeps_origin_video_and_bpm(svc, song):
+    from djengine.library import TrackRecord
+
+    svc.library.add_track(TrackRecord(None, "vid1", "Song", "A", "", 4, None, str(song), "wav", None, None, ""))
+    job = await _run(svc, song, 108, 0)
+    out = job.result["path"]
+    assert svc.library.track_by_path(out).origin_video_id == "vid1"
+    assert svc.analysis.read_sidecar(out)["origin_bpm"] == 120.0
+    copy2 = await _run(svc, out, 100, 0)
+    assert svc.library.video_source(svc.library.track_by_path(copy2.result["path"])) == "vid1"
+    assert svc.analysis.read_sidecar(copy2.result["path"])["origin_bpm"] == 120.0  # the video's tempo, not the copy's
