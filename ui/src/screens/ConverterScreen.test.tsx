@@ -44,7 +44,8 @@ const settings = {
   music_dir: 'C:/Users/me/Music/OneForAll', default_format: 'mp3', default_quality: '320',
   name_template: '{artist} - {title}', download_concurrency: 3, tinted: false,
   analyze_on_download: true, key_notation: 'camelot', bpm_min: 70, bpm_max: 180,
-  stems_dir: null, stems_format: 'wav16', stems_backend: 'auto'
+  stems_dir: null, stems_format: 'wav16', stems_backend: 'auto',
+  videos_dir: null, enhance_on_download: false, enhance_mode: 'replace', enhance_format: 'same'
 }
 
 describe('SettingsScreen', () => {
@@ -107,5 +108,25 @@ describe('SettingsScreen', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Solo CPU' }))
     expect(c.putSettings).toHaveBeenLastCalledWith(expect.objectContaining({ stems_backend: 'cpu' }))
     expect(await screen.findByText('Usando: CPU')).toBeInTheDocument()
+  })
+
+  it('enhance on download: the mode and format only show when it is on', async () => {
+    const c = setup()
+    const sw = await screen.findByRole('switch', { name: 'Mejorar audio al descargar' })
+    expect(screen.queryByLabelText('Modo de la mejora')).toBeNull()
+    await userEvent.click(sw)
+    expect(c.putSettings).toHaveBeenLastCalledWith(expect.objectContaining({ enhance_on_download: true }))
+    await userEvent.click(screen.getByRole('button', { name: 'Copia nueva' }))
+    expect(c.putSettings).toHaveBeenLastCalledWith(expect.objectContaining({ enhance_mode: 'copy' }))
+    await userEvent.click(screen.getByRole('button', { name: 'FLAC' }))
+    expect(c.putSettings).toHaveBeenLastCalledWith(expect.objectContaining({ enhance_format: 'flac' }))
+  })
+
+  it('videos folder and the Apollo credit', async () => {
+    const c = setup()
+    expect(await screen.findByText('C:/Users/me/Music/OneForAll/Videos')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Cambiar carpeta de vídeos' }))
+    expect(c.putSettings).toHaveBeenLastCalledWith(expect.objectContaining({ videos_dir: 'D:/Musica' }))
+    expect(screen.getByText(/Apollo \(Kai Li y Yi Luo\), con licencia CC BY-SA 4\.0/)).toBeInTheDocument()
   })
 })

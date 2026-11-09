@@ -108,6 +108,10 @@ export interface Settings {
   stems_dir: string | null
   stems_format: 'wav16' | 'wav24' | 'flac' | 'mp3'
   stems_backend: 'auto' | 'cpu'
+  videos_dir?: string | null
+  enhance_on_download?: boolean
+  enhance_mode?: 'copy' | 'replace'
+  enhance_format?: 'same' | 'flac'
 }
 
 export interface AnalysisRecord {

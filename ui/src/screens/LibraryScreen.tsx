@@ -59,6 +59,7 @@ export function LibraryScreen() {
   const openStems = useUiStore((s) => s.openStems)
   const openRetempo = useUiStore((s) => s.openRetempo)
   const openEnhance = useUiStore((s) => s.openEnhance)
+  const openVideoExport = useUiStore((s) => s.openVideoExport)
   const openDjExport = useUiStore((s) => s.openDjExport)
 
   const load = useCallback(() => {
@@ -122,6 +123,9 @@ export function LibraryScreen() {
             }}
           >
             Mejorar audio…
+          </button>
+          <button className="btn btn-sm" disabled={selected.size === 0} onClick={() => openVideoExport([...selected])}>
+            Exportar vídeo…
           </button>
           <button className="btn btn-sm" onClick={() => openDjExport(selected.size ? [...selected] : null)}>
             Exportar a…
