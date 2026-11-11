@@ -23,7 +23,7 @@ from .analysis.config import ANALYSIS_VERSION as ANALYSIS_VERSION_NOW
 from .mixer.state import MixState
 from .pipelines import (DownloadRequest, make_convert_runner, make_download_runner, start_playlist, submit_analysis,
                         submit_stems)
-from .search import SearchService
+from .search import SearchResult, SearchService
 from .settings import Settings, load_settings, save_settings
 
 log = logging.getLogger(__name__)
@@ -59,6 +59,7 @@ class Services:
     allowed_paths: set = field(default_factory=set)  # files the user picked this session (/audio)
     shutdown: Callable[[], None] | None = None
     video_downloader: Any = None
+    clip_downloader: Any = None
 
 
 def _tools_on_path() -> None:
@@ -77,7 +78,7 @@ def _tools_on_path() -> None:
 def build_services(paths: AppPaths, fake: bool) -> Services:
     settings = load_settings(paths.settings_path)
     hub = EventHub()
-    jobs = JobManager(paths.tmp_dir, hub.broadcast, {"download": settings.download_concurrency, "convert": CONVERT_CONCURRENCY, "analysis": ANALYSIS_CONCURRENCY, "stems": 1, "mix_export": 1, "retempo": 1, "dj_export": 1, "enhance": 1, "enhance_preview": 1, "video_export": 1})
+    jobs = JobManager(paths.tmp_dir, hub.broadcast, {"download": settings.download_concurrency, "convert": CONVERT_CONCURRENCY, "analysis": ANALYSIS_CONCURRENCY, "stems": 1, "mix_export": 1, "retempo": 1, "dj_export": 1, "enhance": 1, "enhance_preview": 1, "video_export": 1, "import_match": 1, "quick_analysis": 1})
     shutil.rmtree(paths.tmp_dir / "preview", ignore_errors=True)  # A/B clips live for one session
     jobs.purge_orphans()
     _tools_on_path()
@@ -88,13 +89,17 @@ def build_services(paths: AppPaths, fake: bool) -> Services:
     library = Library(paths.db_path)
     library.refresh_missing()
     if fake:
-        from .fakes import FakeSearch, fake_downloader, fake_video_downloader
+        from .fakes import FakeSearch, fake_clip_downloader, fake_downloader, fake_video_downloader
 
         search, downloader, video_downloader = FakeSearch(), fake_downloader, fake_video_downloader
+        clip_downloader = fake_clip_downloader
     else:
         from .download import download_video
 
+        from .discover.quick import download_clip
+
         search, downloader, video_downloader = SearchService(), download_audio, download_video
+        clip_downloader = download_clip
     from .analysis.store import AnalysisStore
 
     from .mixer.state import MixerStore
@@ -102,7 +107,8 @@ def build_services(paths: AppPaths, fake: bool) -> Services:
 
     analysis = AnalysisStore(paths.db_path, paths.root / "analysis")
     return Services(paths, settings, library, jobs, search, downloader, fake, hub, analysis=analysis,
-                    stems=StemsStore(paths.db_path), mixer=MixerStore(paths.db_path), video_downloader=video_downloader)
+                    stems=StemsStore(paths.db_path), mixer=MixerStore(paths.db_path), video_downloader=video_downloader,
+                    clip_downloader=clip_downloader)
 
 
 # --- request bodies -----------------------------------------------------------
@@ -217,6 +223,28 @@ class DjExportJobBody(BaseModel):
         return v
 
 
+class ImportJobBody(BaseModel):
+    type: Literal["import"]
+    name: str = Field(min_length=1, max_length=200)
+    targets: list[SearchResult] = Field(min_length=1, max_length=500)
+    options: ConvertOptions
+
+
+class LinkBody(BaseModel):
+    text: str = Field(max_length=2000)
+
+
+class QuickAnalysisJobBody(BaseModel):
+    type: Literal["quick_analysis"]
+    video_ids: list[str] = Field(min_length=1, max_length=200)
+    durations: list[int | None] = []
+
+
+class ImportMatchJobBody(BaseModel):
+    type: Literal["import_match"]
+    items: list[dict] = Field(min_length=1, max_length=500)
+
+
 class VideoExportJobBody(BaseModel):
     type: Literal["video_export"]
     track_ids: list[int] = Field(min_length=1)
@@ -237,7 +265,8 @@ class EnhanceJobBody(BaseModel):
 
 
 JobBody = Annotated[Union[DownloadJobBody, PlaylistJobBody, ConvertJobBody, AnalysisJobBody, StemsJobBody, MixExportJobBody, RetempoJobBody, DjExportJobBody,
-                          EnhanceJobBody, EnhancePreviewJobBody, VideoExportJobBody],
+                          EnhanceJobBody, EnhancePreviewJobBody, VideoExportJobBody, ImportMatchJobBody,
+                          QuickAnalysisJobBody, ImportJobBody],
                     Field(discriminator="type")]
 
 AUDIO_EXT = {".mp3", ".m4a", ".aac", ".wav", ".aif", ".aiff", ".flac", ".ogg", ".opus", ".webm"}
@@ -324,7 +353,7 @@ def create_app(services: Services, token: str) -> FastAPI:
         return s.model_dump()
 
     @api.get("/search")
-    async def search(q: str, kind: Literal["songs", "videos", "playlists"] = "songs"):
+    async def search(q: str, kind: Literal["songs", "videos", "playlists", "soundcloud"] = "songs"):
         try:
             results = await asyncio.to_thread(svc.search.search, q, kind)
         except Exception as e:
@@ -334,6 +363,54 @@ def create_app(services: Services, token: str) -> FastAPI:
             if r.kind != "playlist":
                 r.in_library = svc.library.find_duplicate(r.id, r.artist, r.title) is not None
         return [r.model_dump() for r in results]
+
+    @api.get("/discover/similar")
+    async def discover_similar(track_id: int | None = None, video_id: str | None = None):
+        from .discover.recs import rec_rows, seed_for_track
+
+        if track_id is None and not video_id:
+            raise HTTPException(status_code=422, detail={"code": "bad_request", "message": "Falta la canción"})
+        if track_id is not None:
+            track = svc.library.track_by_id(track_id)
+            if track is None:
+                raise HTTPException(status_code=404, detail={"code": "not_found", "message": "No está en la biblioteca"})
+            video_id = await asyncio.to_thread(seed_for_track, svc, track)
+        if not video_id:
+            return {"seed": None, "items": []}
+        try:
+            seed = await asyncio.to_thread(svc.search.get_song, video_id)
+            items = await asyncio.to_thread(svc.search.similar, video_id)
+        except Exception as e:
+            log.warning("recommendations failed: %s", e)
+            raise HTTPException(status_code=502, detail={"code": "offline", "message": "Sin conexión"})
+        return {"seed": seed.model_dump(), "items": rec_rows(svc, items)}
+
+    @api.post("/discover/link")
+    async def discover_link(body: LinkBody):
+        from .errors import UserError as _UE
+
+        try:
+            lst = await asyncio.to_thread(svc.search.read_link, body.text)
+        except _UE as e:
+            raise HTTPException(status_code=422, detail={"code": e.code, "message": e.message})
+        return lst.model_dump()
+
+    @api.get("/discover/moods")
+    async def discover_moods():
+        try:
+            return await asyncio.to_thread(svc.search.moods)
+        except Exception as e:
+            log.warning("moods failed: %s", e)
+            raise HTTPException(status_code=502, detail={"code": "offline", "message": "Sin conexión"})
+
+    @api.get("/discover/mood")
+    async def discover_mood(params: str):
+        try:
+            pls = await asyncio.to_thread(svc.search.mood_playlists, params)
+        except Exception as e:
+            log.warning("mood playlists failed: %s", e)
+            raise HTTPException(status_code=502, detail={"code": "offline", "message": "Sin conexión"})
+        return [p.model_dump() for p in pls]
 
     @api.get("/playlist/{playlist_id}")
     async def playlist(playlist_id: str):
@@ -348,6 +425,8 @@ def create_app(services: Services, token: str) -> FastAPI:
 
     @api.post("/jobs")
     async def create_job(body: JobBody = Body(...)):
+        if isinstance(body, DownloadJobBody) and body.request.target.preview_only:
+            raise HTTPException(status_code=422, detail={"code": "preview_only", "message": "Solo vista previa"})
         if isinstance(body, DownloadJobBody):
             t = body.request.target
             if not body.request.force:
@@ -382,6 +461,29 @@ def create_app(services: Services, token: str) -> FastAPI:
             runner = make_dj_export_runner(svc, body.target, body.track_ids, body.out)
             return {"job": svc.jobs.submit("dj_export", f"Exportar a {TITLES[body.target]}", runner,
                                            payload=body.model_dump()).to_dict()}
+        if isinstance(body, ImportJobBody):
+            from .pipelines import start_import
+
+            if any(t.preview_only for t in body.targets):
+                raise HTTPException(status_code=422, detail={"code": "preview_only", "message": "Solo vista previa"})
+            return {"job": start_import(svc, body.name, body.targets, body.options).to_dict()}
+        if isinstance(body, QuickAnalysisJobBody):
+            from .discover.quick import make_quick_runner
+
+            durations = (body.durations + [None] * len(body.video_ids))[: len(body.video_ids)]
+            return {"job": svc.jobs.submit("quick_analysis", f"Analizar recomendaciones ({len(body.video_ids)})",
+                                           make_quick_runner(svc, body.video_ids, durations),
+                                           payload={"type": "quick_analysis", "count": len(body.video_ids)}).to_dict()}
+        if isinstance(body, ImportMatchJobBody):
+            from .discover.links import ImportItem
+            from .discover.match import make_match_runner
+
+            try:
+                items = [ImportItem.model_validate(i) for i in body.items]
+            except ValueError:
+                raise HTTPException(status_code=422, detail={"code": "bad_request", "message": "Lista no válida"})
+            return {"job": svc.jobs.submit("import_match", f"Emparejar ({len(items)})", make_match_runner(svc, items),
+                                           payload={"type": "import_match", "count": len(items)}).to_dict()}
         if isinstance(body, VideoExportJobBody):
             from .export.video import make_video_export_runner
 
@@ -470,7 +572,8 @@ def create_app(services: Services, token: str) -> FastAPI:
         side.setdefault("sections", [])
         side["needs_reanalysis"] = rec.version < ANALYSIS_VERSION_NOW
         track = svc.library.track_by_path(path)
-        return {"record": asdict(rec), "sidecar": side, "info": _audio_info(Path(path)), "enhanced": bool(track and track.enhanced)}
+        return {"record": asdict(rec), "sidecar": side, "info": _audio_info(Path(path)), "enhanced": bool(track and track.enhanced),
+                "track_id": track.id if track else None}
 
     @api.put("/analysis/bpm")
     def manual_bpm(body: ManualBpm):

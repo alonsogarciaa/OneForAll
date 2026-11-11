@@ -124,6 +124,13 @@ export function LibraryScreen() {
           >
             Mejorar audio…
           </button>
+          <button
+            className="btn btn-sm"
+            disabled={selected.size !== 1}
+            onClick={() => useUiStore.getState().openDiscover([...selected][0])}
+          >
+            Parecidas
+          </button>
           <button className="btn btn-sm" disabled={selected.size === 0} onClick={() => openVideoExport([...selected])}>
             Exportar vídeo…
           </button>

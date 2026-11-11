@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type Route = 'buscar' | 'descargas' | 'biblioteca' | 'armonia' | 'historial' | 'conversor' | 'ajustes'
+export type Route = 'buscar' | 'descubrir' | 'descargas' | 'biblioteca' | 'armonia' | 'historial' | 'conversor' | 'ajustes'
 export type ToastKind = 'info' | 'error' | 'success'
 
 export interface Toast {
@@ -35,6 +35,13 @@ interface UiState {
   retempoFor: string | null
   openRetempo(path: string): void
   closeRetempo(): void
+  /** Library track whose similar songs the Descubrir screen shows. */
+  discoverSeed: number | null
+  openDiscover(trackId: number): void
+  /** List read from a pasted Spotify / Apple Music / SoundCloud link. */
+  importList: import('../lib/types').ImportList | null
+  openImport(list: import('../lib/types').ImportList): void
+  closeImport(): void
   /** Tracks waiting for the "Mejorar audio" sheet. */
   enhanceFor: { path: string; enhanced: boolean }[] | null
   openEnhance(items: { path: string; enhanced: boolean }[]): void
@@ -88,6 +95,11 @@ export const useUiStore = create<UiState>((set, get) => ({
   retempoFor: null,
   openRetempo: (path) => set({ retempoFor: path }),
   closeRetempo: () => set({ retempoFor: null }),
+  discoverSeed: null,
+  openDiscover: (trackId) => set({ discoverSeed: trackId, route: 'descubrir', dataSheet: null }),
+  importList: null,
+  openImport: (list) => set({ importList: list }),
+  closeImport: () => set({ importList: null }),
   enhanceFor: null,
   openEnhance: (items) => set({ enhanceFor: items }),
   closeEnhance: () => set({ enhanceFor: null }),

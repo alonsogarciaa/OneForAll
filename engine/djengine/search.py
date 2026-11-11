@@ -7,8 +7,12 @@ from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
 
-Kind = Literal["song", "video", "playlist"]
-SearchKind = Literal["songs", "videos", "playlists"]
+Kind = Literal["song", "video", "playlist", "soundcloud"]
+SearchKind = Literal["songs", "videos", "playlists", "soundcloud"]
+SC_RESULTS = 25
+RADIO_LIMIT = 50
+SIMILAR_MAX = 25  # each row gets a quick analysis: 25 keeps 80 % of them under a minute
+SC_PREVIEW_S = 31  # Go+ tracks only stream a 30 s preview
 MAX_RESULTS = 30
 PLAYLIST_LIMIT = 500
 SONG_MIN_S, SONG_MAX_S = 60, 1200
@@ -27,6 +31,8 @@ class SearchResult(BaseModel):
     url: str
     track_count: int | None = None
     in_library: bool = False
+    source: Literal["youtube", "soundcloud"] = "youtube"
+    preview_only: bool = False
 
 
 class PlaylistInfo(BaseModel):
@@ -83,6 +89,17 @@ def resolve_url(text: str) -> tuple[Literal["song", "playlist"], str] | None:
     return None
 
 
+def _length_s(text: str) -> int | None:
+    try:
+        parts = [int(p) for p in text.split(":")]
+    except ValueError:
+        return None
+    s = 0
+    for p in parts:
+        s = s * 60 + p
+    return s
+
+
 def _thumb(item: dict) -> str | None:
     thumbs = item.get("thumbnails") or []
     return thumbs[-1]["url"] if thumbs else None
@@ -125,6 +142,34 @@ def _from_flat(entry: dict) -> SearchResult:
     )
 
 
+def soundcloud_results(entries: list[dict]) -> list[SearchResult]:
+    """yt-dlp flat SoundCloud entries → results; Go+ previews stay (marked) so the user sees why they cannot download."""
+    out = []
+    for e in entries:
+        if not e.get("id") or not (e.get("title") or "").strip():
+            continue
+        dur = float(e["duration"]) if e.get("duration") else None
+        preview = e.get("availability") == "premium_only" or (dur is not None and 29 <= dur <= SC_PREVIEW_S)
+        if not preview and (dur is None or dur < SONG_MIN_S):
+            continue
+        thumbs = e.get("thumbnails") or []
+        out.append(SearchResult(
+            kind="soundcloud", id=f"sc:{e['id']}", title=e["title"], artist=e.get("uploader") or "",
+            duration_s=round(dur) if dur else None, views=e.get("view_count"),
+            thumbnail=thumbs[-1]["url"] if thumbs else None, url=e.get("webpage_url") or e.get("url") or "",
+            source="soundcloud", preview_only=preview,
+        ))
+    return out
+
+
+def _sc_flat(q: str) -> list[dict]:
+    import yt_dlp
+
+    with yt_dlp.YoutubeDL({"extract_flat": True, "quiet": True, "skip_download": True}) as ydl:
+        info = ydl.extract_info(q, download=False)
+    return info.get("entries") or []
+
+
 def _ytdlp_flat_search(q: str) -> list[dict]:
     import yt_dlp
 
@@ -134,9 +179,23 @@ def _ytdlp_flat_search(q: str) -> list[dict]:
 
 
 class SearchService:
-    def __init__(self, ytm=None, fallback: Callable[[str], list[dict]] | None = None):
+    def __init__(self, ytm=None, fallback: Callable[[str], list[dict]] | None = None,
+                 sc_fetch: Callable[[str], list[dict]] | None = None):
         self._ytm = ytm
         self._fallback = fallback or _ytdlp_flat_search
+        self._sc_fetch = sc_fetch or _sc_flat
+
+    def read_link(self, text: str):
+        from .discover.links import BAD_LINK, parse_link, read_link
+        from .errors import UserError
+
+        link = parse_link(text)
+        if link is None:
+            raise UserError(*BAD_LINK)
+        return read_link(link)
+
+    def soundcloud(self, q: str) -> list[SearchResult]:
+        return soundcloud_results(self._sc_fetch(f"scsearch{SC_RESULTS}:{q}"))
 
     @property
     def ytm(self):
@@ -147,6 +206,8 @@ class SearchService:
         return self._ytm
 
     def search(self, q: str, kind: SearchKind) -> list[SearchResult]:
+        if kind == "soundcloud":
+            return self.soundcloud(q)
         resolved = resolve_url(q)
         if resolved:
             rkind, rid = resolved
@@ -170,6 +231,27 @@ class SearchService:
         if single == "playlist":
             return [i for i in items if i.id and i.title.strip()][:MAX_RESULTS]
         return filter_results(items)[:MAX_RESULTS]
+
+    def similar(self, video_id: str) -> list[SearchResult]:
+        """YouTube Music radio of a song, without the song itself."""
+        w = self.ytm.get_watch_playlist(videoId=video_id, radio=True, limit=RADIO_LIMIT)
+        items = []
+        for t in w.get("tracks") or []:
+            if not t.get("videoId") or t["videoId"] == video_id:
+                continue
+            r = _from_ytm(t, "song")
+            if r.duration_s is None and t.get("length"):
+                r.duration_s = _length_s(t["length"])
+            items.append(r)
+        return filter_results(items)[:SIMILAR_MAX]
+
+    def moods(self) -> list[dict]:
+        cats = self.ytm.get_mood_categories()
+        return [{"title": title, "items": [{"title": i["title"], "params": i["params"]} for i in items]}
+                for title, items in cats.items()]
+
+    def mood_playlists(self, params: str) -> list[SearchResult]:
+        return [r for r in (_from_ytm(p, "playlist") for p in self.ytm.get_mood_playlists(params)) if r.id]
 
     def get_song(self, video_id: str) -> SearchResult:
         d = self.ytm.get_song(video_id)["videoDetails"]

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { createClient, type EngineClient } from './engineClient'
 import { useJobsStore } from '../stores/jobsStore'
+import { useDiscoverStore, type DiscoverEvent } from '../stores/discoverStore'
 import { useUiStore } from '../stores/uiStore'
 
 type Status = 'connecting' | 'ready' | 'failed'
@@ -48,6 +49,8 @@ export function EngineProvider({ children }: { children: ReactNode }) {
         disconnect = c.connectEvents((e) => {
           if (e.type === 'engine.hello') {
             c.listJobs().then((jobs) => useJobsStore.getState().setAll(jobs)).catch(() => undefined)
+          } else if (e.type === 'quick.result' || e.type === 'match.result') {
+            useDiscoverStore.getState().applyEvent(e as DiscoverEvent)
           } else {
             useJobsStore.getState().applyEvent(e)
           }

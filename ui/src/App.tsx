@@ -2,6 +2,7 @@ import { AppShell } from './components/AppShell'
 import { EngineProvider, useEngine } from './lib/engine'
 import { useUiStore } from './stores/uiStore'
 import { SearchScreen } from './screens/SearchScreen'
+import { DiscoverScreen } from './screens/DiscoverScreen'
 import { DownloadsScreen } from './screens/DownloadsScreen'
 import { LibraryScreen } from './screens/LibraryScreen'
 import { HistoryScreen } from './screens/HistoryScreen'
@@ -13,6 +14,7 @@ import { RetempoSheet } from './components/RetempoSheet'
 import { DjExportSheet } from './components/DjExportSheet'
 import { EnhanceSheet } from './components/EnhanceSheet'
 import { VideoExportSheet } from './components/VideoExportSheet'
+import { ImportSheet } from './components/ImportSheet'
 import { PlaylistSummaryHost } from './components/PlaylistSummarySheet'
 import { DataSheet } from './components/DataSheet'
 import { StemsSheet } from './components/StemsSheet'
@@ -20,6 +22,7 @@ import { StemsSheet } from './components/StemsSheet'
 function Screen() {
   const route = useUiStore((s) => s.route)
   if (route === 'buscar') return <SearchScreen />
+  if (route === 'descubrir') return <DiscoverScreen />
   if (route === 'descargas') return <DownloadsScreen />
   if (route === 'biblioteca') return <LibraryScreen />
   if (route === 'historial') return <HistoryScreen />
@@ -56,6 +59,12 @@ function EnhanceSheetHost() {
   const items = useUiStore((s) => s.enhanceFor)
   const close = useUiStore((s) => s.closeEnhance)
   return items ? <EnhanceSheet items={items} onClose={close} /> : null
+}
+
+function ImportSheetHost() {
+  const list = useUiStore((s) => s.importList)
+  const close = useUiStore((s) => s.closeImport)
+  return list ? <ImportSheet key={list.name} list={list} onClose={close} /> : null
 }
 
 function VideoExportSheetHost() {
@@ -102,6 +111,7 @@ function Body() {
       <DjExportSheetHost />
       <EnhanceSheetHost />
       <VideoExportSheetHost />
+      <ImportSheetHost />
     </>
   )
 }

@@ -191,6 +191,14 @@ class Library:
             self._conn.commit()
         return len(missing)
 
+    def track_by_video_id(self, video_id: str) -> TrackRecord | None:
+        rows = self._query("SELECT * FROM tracks WHERE video_id=? AND missing=0", (video_id,))
+        return self._to_track(rows[0]) if rows else None
+
+    def track_by_id(self, track_id: int) -> TrackRecord | None:
+        rows = self._query("SELECT * FROM tracks WHERE id=?", (track_id,))
+        return self._to_track(rows[0]) if rows else None
+
     def track_by_path(self, path: str) -> TrackRecord | None:
         rows = self._query("SELECT * FROM tracks WHERE path=?", (str(path),))
         return self._to_track(rows[0]) if rows else None

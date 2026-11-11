@@ -98,4 +98,49 @@ describe('SearchScreen', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Solo voz' }))
     expect(download).toHaveBeenCalledWith(expect.objectContaining({ then_stems: { stems: ['vocals'], karaoke: false } }))
   })
+
+  it('SoundCloud tab searches SoundCloud and marks Go+ previews without a download button', async () => {
+    const c = setup(makeClient({ search: vi.fn(async () => [
+      song({ kind: 'soundcloud', id: 'sc:1', title: 'Remix', source: 'soundcloud' }),
+      song({ kind: 'soundcloud', id: 'sc:2', title: 'Preview', source: 'soundcloud', preview_only: true })
+    ]) }))
+    await userEvent.click(screen.getByRole('button', { name: 'SoundCloud' }))
+    useUiStore.getState().submitQuery('remix')
+    const row = (await screen.findByText('Preview')).closest('[data-row]') as HTMLElement
+    expect(c.search).toHaveBeenCalledWith('remix', 'soundcloud')
+    expect(within(row).getByText('Solo vista previa')).toBeInTheDocument()
+    expect(within(row).queryByRole('button', { name: /Descargar en/ })).toBeNull()
+  })
+
+  it('a pasted Spotify link opens the Importar sheet instead of searching', async () => {
+    const list = { name: 'Lista', service: 'spotify', items: [{ title: 'A', artist: 'B', duration_s: 200 }], truncated: false }
+    const c = setup(makeClient({ discoverLink: vi.fn(async () => list) }))
+    useUiStore.getState().submitQuery('https://open.spotify.com/playlist/abc?si=1')
+    await waitFor(() => expect(useUiStore.getState().importList).toEqual(list))
+    expect(c.discoverLink).toHaveBeenCalledWith('https://open.spotify.com/playlist/abc?si=1')
+    expect(c.search).not.toHaveBeenCalled()
+  })
+
+  it('a link that cannot be read shows the exact error', async () => {
+    const { EngineError } = await import('../lib/engineClient')
+    setup(makeClient({ discoverLink: vi.fn(async () => { throw new EngineError(422, 'bad_link', 'No se pudo leer el enlace') }) }))
+    useUiStore.setState({ importList: null })
+    useUiStore.getState().submitQuery('https://music.apple.com/es/playlist/x/pl.u-1')
+    await waitFor(() => expect(useUiStore.getState().toasts.at(-1)?.text).toBe('No se pudo leer el enlace'))
+  })
+
+  it('coming back to Buscar after reading a link does not open the import again', async () => {
+    const list = { name: 'Lista', service: 'spotify', items: [], truncated: false }
+    const c = makeClient({ discoverLink: vi.fn(async () => list) })
+    window.oneforall = { showInFolder: vi.fn() } as any
+    const { unmount } = render(<EngineTestProvider client={c}><SearchScreen /></EngineTestProvider>)
+    useUiStore.getState().submitQuery('https://open.spotify.com/playlist/abc')
+    await waitFor(() => expect(useUiStore.getState().importList).toEqual(list))
+    unmount()
+    useUiStore.setState({ importList: null })
+    render(<EngineTestProvider client={c}><SearchScreen /></EngineTestProvider>)
+    await new Promise((r) => setTimeout(r, 50))
+    expect(c.discoverLink).toHaveBeenCalledTimes(1)
+    expect(useUiStore.getState().importList).toBeNull()
+  })
 })

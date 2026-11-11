@@ -23,9 +23,55 @@ PLAYLIST = SearchResult(kind="playlist", id="PLfake", title="Fake Playlist", art
                         track_count=len(PLAYLIST_TRACKS))
 
 
+SC_TRACKS = [
+    SearchResult(kind="soundcloud", id="sc:101", title="Fake SC Remix", artist="Fake SC", duration_s=200, views=10,
+                 thumbnail=None, url="https://soundcloud.com/fake/remix", source="soundcloud"),
+    SearchResult(kind="soundcloud", id="sc:102", title="Fake Go+ Track", artist="Fake SC", duration_s=30, views=10,
+                 thumbnail=None, url="https://soundcloud.com/fake/goplus", source="soundcloud", preview_only=True),
+]
+
+
+def _rec(i: int, title: str) -> SearchResult:
+    # ids ending in 8 analyse at 128 BPM in the fake clip downloader, the rest at 120
+    vid = f"fakerec{i}"
+    return SearchResult(kind="song", id=vid, title=title, artist="Fake Recs", album="", duration_s=200, views=100,
+                        thumbnail=None, url=f"https://music.youtube.com/watch?v={vid}")
+
+
+RECS = [_rec(i, f"Recomendada {i}") for i in range(1, 9)]
+
+
 class FakeSearch:
     def search(self, q: str, kind: str) -> list[SearchResult]:
-        return {"songs": list(SONGS), "videos": [VIDEO], "playlists": [PLAYLIST]}[kind]
+        return {"songs": list(SONGS), "videos": [VIDEO], "playlists": [PLAYLIST], "soundcloud": list(SC_TRACKS)}[kind]
+
+    def soundcloud(self, q: str) -> list[SearchResult]:
+        return list(SC_TRACKS)
+
+    def read_link(self, text: str):
+        from .discover.links import BAD_LINK, ImportItem, ImportList, parse_link
+
+        link = parse_link(text)
+        if link is None:
+            from .errors import UserError
+
+            raise UserError(*BAD_LINK)
+        if link.service == "soundcloud":
+            return ImportList(name="Fake SC Set", service="soundcloud", items=[
+                ImportItem(title=t.title, artist=t.artist, duration_s=t.duration_s, url=t.url, id=t.id)
+                for t in SC_TRACKS if not t.preview_only])
+        return ImportList(name="Lista Fake", service=link.service, items=[
+            ImportItem(title=s.title, artist=s.artist, duration_s=s.duration_s) for s in SONGS])
+
+    def similar(self, video_id: str) -> list[SearchResult]:
+        return [r for r in RECS if r.id != video_id]
+
+    def moods(self) -> list[dict]:
+        return [{"title": "Moods & moments", "items": [{"title": "Fiesta", "params": "fake-fiesta"}]},
+                {"title": "Genres", "items": [{"title": "Reggaetón", "params": "fake-reggaeton"}]}]
+
+    def mood_playlists(self, params: str) -> list[SearchResult]:
+        return [PLAYLIST]
 
     def get_playlist(self, playlist_id: str) -> PlaylistInfo:
         return PlaylistInfo(id="PLfake", title="Fake Playlist", tracks=list(PLAYLIST_TRACKS))
@@ -51,6 +97,27 @@ async def fake_downloader(ctx, url: str) -> Path:
     ctx.register_process(proc)
     await proc.wait()
     ctx.check_cancelled()
+    return out
+
+
+async def fake_clip_downloader(ctx, url: str, start_s: float, seconds: float = 60) -> Path:
+    """A 20 s click track standing in for the 60 s clip: 128 BPM when the id ends in 8, else 120."""
+    import numpy as np
+    import soundfile as sf
+
+    if "private" in url.lower():
+        raise user_error("unavailable")
+    bpm = 128 if url.rstrip("/").endswith("8") else 120
+    sr, n = 44100, int(0.02 * 44100)
+    y = np.zeros(20 * sr, dtype=np.float32)
+    click = (np.sin(2 * np.pi * 1000 * np.arange(n) / sr) * np.hanning(n)).astype(np.float32)
+    t = 0.0
+    while t < 19.9:
+        i = int(t * sr)
+        y[i:i + n] += click[: len(y) - i]
+        t += 60.0 / bpm
+    out = ctx.tmp_dir / f"clip-{abs(hash(url))}.wav"
+    await asyncio.to_thread(sf.write, out, y, sr)
     return out
 
 
