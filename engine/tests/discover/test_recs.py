@@ -105,3 +105,8 @@ def test_analysis_response_has_the_track_id(svc, tmp_path):  # noqa: F811
                                      version=2, created_at=now_iso()), {"beats": [], "duration": 1.0})
     with TestClient(create_app(svc, token="t")) as c:
         assert c.get("/analysis", params={"path": str(p)}, headers=H).json()["track_id"] == tid
+
+
+def test_similar_rows_have_their_cover():
+    rs = SearchService(ytm=Ytm()).similar("Kev3r6W4TPo")
+    assert all(r.thumbnail and r.thumbnail.startswith("https://") for r in rs)

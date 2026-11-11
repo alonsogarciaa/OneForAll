@@ -101,7 +101,7 @@ def _length_s(text: str) -> int | None:
 
 
 def _thumb(item: dict) -> str | None:
-    thumbs = item.get("thumbnails") or []
+    thumbs = item.get("thumbnails") or item.get("thumbnail") or []  # radio tracks use the singular key
     return thumbs[-1]["url"] if thumbs else None
 
 
@@ -242,6 +242,8 @@ class SearchService:
             r = _from_ytm(t, "song")
             if r.duration_s is None and t.get("length"):
                 r.duration_s = _length_s(t["length"])
+            if r.thumbnail:  # radio covers come at 60 px: ask for a sharper size
+                r.thumbnail = re.sub(r"=w\d+-h\d+", "=w226-h226", r.thumbnail)
             items.append(r)
         return filter_results(items)[:SIMILAR_MAX]
 
